@@ -13,8 +13,8 @@ export const getInitialLocationsState = (districtName: string, districtId: strin
     Id: districtName + "-" + locIndex.toString(),
     name,
     districtId: districtId,
-    cost: getInitialLocationCost(districtId),      
-    reward: getInitialLocationReward(),     
+    cost: getInitialLocationCost(districtId),
+    reward: getInitialLocationReward(),
     isSelected: false,
     isDisabled: false
 }));
@@ -22,15 +22,15 @@ export const getInitialLocationsState = (districtName: string, districtId: strin
 export const getInitialLocationCost = (districtId: string): LocationCost => ({
     districtIconIds: [districtId],
     resources: [
-        {resourceId: ResourceEnum.Candy, amount: 1},
-        {resourceId: ResourceEnum.Loot, amount: 1},
+        { resourceId: ResourceEnum.Candy, amount: 1 },
+        { resourceId: ResourceEnum.Loot, amount: 1 },
     ]
 });
 export const getInitialPlayersViewModel = (G: GameState, numberOfPlayers: number) => {
 
 }
 export const getInitialPlayersState = (numberOfPlayers: number, plugins: DefaultPluginAPIs): Dictionary<PlayerGameState> => {
-    let initialPlayersState: {[key: string]: PlayerGameState} = {};
+    let initialPlayersState: { [key: string]: PlayerGameState } = {};
 
 
     Array.from({ length: numberOfPlayers }).forEach((value: any, Id: number) => {
@@ -58,24 +58,12 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
     return initialPlayersState;
 }
 
-export const isPlayCardValid = (playerState: PlayerGameState, selectedCardId: string): boolean => {
-    return !playerState.hasPlayedCard && selectedCardId !== NO_CARD_SELECTED;
-}
 
-export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLocation: Location, cardInPlay: Card): boolean => {
-    return (
-        !playerState.hasPlayedCard && playerState.currentNumberOfWorkers > 0 && 
-        isNullOrEmpty(currentLocation.takenByPlayerID)
-        && currentLocation.cost.districtIconIds.every(lid => cardInPlay!.districtIds.includes(lid))
-        && (
-            currentLocation.cost.resources ? currentLocation.cost.resources.every(resource => playerState[resource.resourceId] >= resource.amount) : true)
-    );
-}
 
 export const resetEndPhaseTriggers = (G: GameState) => {
     G.roundEndingCounter = 0;
     getPlayersList(G).forEach(p => p.hasRevealed = false);
-} 
+}
 
 export const playersSetup = (G: GameState) => {
     getPlayersList(G).forEach(p => {
@@ -84,7 +72,7 @@ export const playersSetup = (G: GameState) => {
 }
 
 export const districtsSetup = (G: GameState) => {
-    
+
     G.districts.forEach(d => {
         d.combatWinnerId = undefined;
         d.presence = {};
@@ -100,7 +88,7 @@ export const districtsSetup = (G: GameState) => {
 export const calculateCombatWinner = (district: District): string | undefined => {
 
     if (!isNullOrEmpty(district.presence)) {
-        const ranking = 
+        const ranking =
             Object.keys(district.presence)
                 .map(key => district.presence[key])
                 .sort((a, b) => b.amount - a.amount);

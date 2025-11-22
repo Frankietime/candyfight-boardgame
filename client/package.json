@@ -1,5 +1,5 @@
 {
-  "name": "turnbased-starter-client",
+  "name": "candyfight-client",
   "version": "0.1.0",
   "private": true,
   "compilerOptions": {

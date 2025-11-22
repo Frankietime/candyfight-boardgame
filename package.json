@@ -1,5 +1,5 @@
 {
-  "name": "turnbased-starter",
+  "name": "candyfight",
   "private": true,
   "workspaces": [
     "client",

@@ -1,12 +1,12 @@
 import { Ctx, DefaultPluginAPIs, PlayerID } from "boardgame.io";
-import { DistrictIconsEnum, ResourceEnum } from "./enums";
+import { DistrictIconsEnum, LocationMovesEnum, ResourceEnum } from "./enums";
 
 export type MetaGameState = {
-    G: GameState;
-    ctx: Ctx;
-    playerID?: PlayerID;
-    random?: any;
-    plugins?: DefaultPluginAPIs;
+  G: GameState;
+  ctx: Ctx;
+  playerID?: PlayerID;
+  random?: any;
+  plugins?: DefaultPluginAPIs;
 }
 
 export interface GameState {
@@ -34,8 +34,8 @@ export type PlayerGameState = {
   trashPile: Card[];
   hand: Card[];
   hasRevealed: boolean;
-  
- }
+
+}
 
 export type PlayerViewModel = {
   id: string;
@@ -50,10 +50,10 @@ export type PlayerViewModel = {
   loot: number;
 }
 
-export type PlayerState = { 
-  playerID: string; 
-  name: string; 
-  matchID: string;  
+export type PlayerState = {
+  playerID: string;
+  name: string;
+  matchID: string;
   playerCredentials: string;
 }
 
@@ -90,7 +90,7 @@ export type Location = {
 export type LocationCost = {
   districtIconIds: string[];
   resources?: ResourceBag[];
-  moves?: BoardMove[]; 
+  moves?: BoardMove[];
 }
 
 export type ResourceBag = {
@@ -105,12 +105,22 @@ export type LocationReward = {
   moves?: BoardMove[];
 }
 
-export type BoardMove = {
-  moveId: string;
-  name: string;
-  params?: any;
-  location?: Location;
-}
+export type BoardMove =
+  | { moveId: LocationMovesEnum.DRAW; name: string; params: { selectionNumber?: number }; location?: Location }
+  | { moveId: LocationMovesEnum.DISCARD; name: string; params: Card[]; location?: Location }
+  | { moveId: LocationMovesEnum.TRASH; name: string; params: Card[]; location?: Location }
+  | { moveId: LocationMovesEnum.BUY_CARD; name: string; params: { cardId: string }; location?: Location }
+  | { moveId: LocationMovesEnum.ADD_PRESENCE_TOKEN; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.GET_LOOT; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.GET_SWORD_MASTER; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.ADD_REPAIR_TOKEN; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.ADVANCE_TRACKER; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.COOLDOWN; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.DEAL; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.SIGNET_TRIGGER; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.STRANGE_CANDY_PUZZLE; name: string; params?: never; location?: Location }
+  | { moveId: LocationMovesEnum.SELECT_AND_DISCARD; name: string; params?: never; location?: Location }
+  | { moveId: string; name: string; params?: any; location?: Location }; // Fallback for custom moves
 
 export type Card = {
   id: string;
@@ -120,6 +130,7 @@ export type Card = {
   // card effects must be atomic in case we need rollback
   primaryEffects?: BoardMove;
   secondaryEffects?: BoardMove;
+  cost?: ResourceBag[];
 }
 
 // Utils
