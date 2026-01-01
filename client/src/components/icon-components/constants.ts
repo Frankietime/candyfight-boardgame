@@ -15,8 +15,8 @@ import DISCARD from "../../assets/board/C-discard.png";
 import TRASH from "../../assets/board/C-trash.png";
 import DRAW from "../../assets/board/C-draw.png";
 
-import { Dictionary } from "../../../../shared/types";
-import { DistrictIconsEnum, LocationMovesEnum, ResourceEnum } from "../../../../shared/enums";
+import { Dictionary } from "@candyfight/shared/types";
+import { DistrictIconsEnum, LocationMovesEnum, ResourceEnum } from "@candyfight/shared/enums";
 
 export const districtIconsDict: Dictionary<any> = {
     [DistrictIconsEnum.D1]: D1,

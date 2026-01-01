@@ -1,4 +1,4 @@
-import { Card } from "../../shared/types";
+import { Card } from "../types";
 import { DistrictIconsEnum, LocationMovesEnum } from "../enums";
 import { getEnumStringKeys } from "../common-methods";
 import _ from "lodash";

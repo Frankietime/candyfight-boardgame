@@ -1,12 +1,12 @@
 import "./LocationComponent.scss";
-import { isNullOrEmpty } from "../../../../shared/common-methods";
-import { Card, District, Location, PlayerGameState } from "../../../../shared/types";
+import { isNullOrEmpty } from "@candyfight/shared/common-methods";
+import { Card, District, Location, PlayerGameState } from "@candyfight/shared/types";
 import { useBoardComponent } from "../board-component/UseBoardComponent";
 import { ResourceComponent } from "../icon-components/ResourceComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { workerIconsByPlayerId } from "../icon-components/constants";
-import { LocationMovesEnum } from "../../../../shared/enums";
-import { isWorkerPlacementValid } from "../../../../shared/game-helper";
+import { LocationMovesEnum } from "@candyfight/shared/enums";
+import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
 import { useAppStore } from "../../store";
 
 export interface LocationComponentProps extends Location {

@@ -1,4 +1,4 @@
-import { Card } from "../../../../shared/types";
+import { Card } from "@candyfight/shared/types";
 import { useBoardComponent } from "../board-component/UseBoardComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import "./CardComponent.scss"

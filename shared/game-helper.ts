@@ -2,8 +2,8 @@ import { LocationCost, PlayerGameState, Location, Dictionary, GameState, Distric
 import { isNullOrEmpty } from "./common-methods";
 import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "./constants";
 import { ResourceEnum } from "./enums";
-import { Card } from "../shared/types";
-import { getInitialDeck } from "../shared/services/cardServices";
+import { Card } from "./types";
+import { getInitialDeck } from "./services/cardServices";
 import _ from "lodash";
 import { DefaultPluginAPIs } from "boardgame.io";
 import { getInitialLocationReward } from "./services/locationServices";

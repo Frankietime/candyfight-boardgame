@@ -1,5 +1,5 @@
 import { Server, Origins } from 'boardgame.io/server';
-import { Game } from '../shared/Game';
+import { Game } from '@candyfight/shared/Game';
 import KoaCors from '@koa/cors';
 import type { StorageAPI } from 'boardgame.io';
 

@@ -1,15 +1,13 @@
 import mapBg from "../../assets/board/prodis-tablero-estilo-y-char-v1.png";
 import { BoardProps } from "boardgame.io/react";
-import {  GameState, PlayerGameState } from "../../../../shared/types";
-import { Location } from "../../../../shared/types";
+import { GameState, PlayerGameState, Location, Card } from "@candyfight/shared/types";
 import { LocationComponent } from "../location-component/LocationComponent";
 import { GameInfoComponent } from "../game-info-component/GameInfoComponent";
-import { isNullOrEmpty } from "../../../../shared/common-methods";
+import { isNullOrEmpty } from "@candyfight/shared/common-methods";
 import { locsXPos, locsYPos } from "./constants";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Card } from "../../../../shared/types";
 import "./BoardComponent.scss";
-import { LocationMovesEnum, PlayerColorsEnum } from "../../../../shared/enums";
+import { LocationMovesEnum, PlayerColorsEnum } from "@candyfight/shared/enums";
 import _ from "lodash";
 import { Button, Dialog, Table } from "@radix-ui/themes";
 import { useAppStore } from "../../store";

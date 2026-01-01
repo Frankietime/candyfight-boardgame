@@ -1,5 +1,5 @@
 import { Button, Dialog, Flex, Tooltip } from "@radix-ui/themes";
-import { Card, GameState, PlayerGameState, PlayerViewModel } from "../../../../shared/types"
+import { Card, GameState, PlayerGameState, PlayerViewModel } from "@candyfight/shared/types"
 import { useBoardComponent } from "../board-component/UseBoardComponent";
 import { WorkerComponent } from "../icon-components/WorkerComponent"
 import { CardComponent } from "../card-components/CardComponent";

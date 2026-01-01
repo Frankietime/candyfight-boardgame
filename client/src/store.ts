@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import { PlayerState } from "../../shared/types";
+import { PlayerState } from "@candyfight/shared/types";
 import { LobbyAPI } from "boardgame.io";
-import { getRandomPlayerName } from "../../shared/services/moves/playerServices";
+import { getRandomPlayerName } from "@candyfight/shared/services/moves/playerServices";
 
 type AppState = {
   playerState: PlayerState;

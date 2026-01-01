@@ -1,7 +1,7 @@
 import { Ctx, DefaultPluginAPIs, Game as GameInterface, PlayerID} from "boardgame.io";
 import { ActivePlayers, INVALID_MOVE, PlayerView, Stage } from "boardgame.io/core";
 import { GAME_NAME, NO_CARD_SELECTED } from "./constants";
-import { BoardMove, GameState, Location, MetaGameState, PlayerGameState, PlayerViewModel } from "../shared/types";
+import { BoardMove, GameState, Location, MetaGameState, PlayerGameState, PlayerViewModel } from "./types";
 import { 
     calculateCombatWinner,
     districtsSetup,
@@ -13,8 +13,8 @@ import {
     resetEndPhaseTriggers
 } from "./game-helper";
 import { LocationMovesEnum } from "./enums";
-import { Card } from "../shared/types";
-import { getMarketTierOneCards } from "../shared/services/cardServices";
+import { Card } from "./types";
+import { getMarketTierOneCards } from "./services/cardServices";
 import _, { get } from "lodash";
 
 import { getInitialDistrictsState } from "./services/locationServices";

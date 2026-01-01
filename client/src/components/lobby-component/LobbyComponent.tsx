@@ -6,7 +6,7 @@ import { useLobbyServices } from '../../services/lobbyServices';
 import { BACKEND_URL } from '../../config';
 import { UpdateIcon } from "@radix-ui/react-icons"
 import { Button, Tooltip } from '@radix-ui/themes';
-import { getRandomPlayerName } from '../../../../shared/services/moves/playerServices';
+import { getRandomPlayerName } from '@candyfight/shared/services/moves/playerServices';
 import { generateBattleEvent } from './helper';
 
 

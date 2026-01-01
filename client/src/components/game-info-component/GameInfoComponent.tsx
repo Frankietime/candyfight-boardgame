@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import "./GameInfoComponent.scss"
 import { Ctx } from "boardgame.io";
 import _ from "lodash";
-import { GameState, PlayerViewModel } from "../../../../shared/types";
+import { GameState, PlayerViewModel } from "@candyfight/shared/types";
 
 interface GameInfoComponentProps {
     ctx: Ctx;

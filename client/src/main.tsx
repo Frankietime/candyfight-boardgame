@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LobbyProvider } from "./lib/LobbyProvider";
-import { Game } from "../../shared/Game";
+import { Game } from "@candyfight/shared/Game";
 import { BoardComponent } from "./components/board-component/BoardComponent";
 import { BACKEND_URL } from "./config";
 import { Theme } from "@radix-ui/themes";

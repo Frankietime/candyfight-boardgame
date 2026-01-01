@@ -1,12 +1,18 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "esModuleInterop": true,
     "outDir": "dist",
-    "strict": true,
-    "skipLibCheck": true
+    "paths": {
+      "@candyfight/shared": ["../shared"],
+      "@candyfight/shared/*": ["../shared/*"]
+    }
   },
-  "include": ["*.js", "*.cjs", "*.ts", "*.d.ts", "../shared/*.ts", "../shared/types.ts"]
+  "include": ["*.ts"],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }
 }
