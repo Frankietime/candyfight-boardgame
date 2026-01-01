@@ -1,0 +1,13 @@
+.victory-points {
+    top: -39px;
+    position: relative;
+    left: 3px;
+    font-size: 15pt;
+    color: rgb(66, 1, 141);
+    text-shadow: -1px -1px 0 goldenrod, 1px -1px 0 goldenrod, -1px 1px 0 goldenrod, 2px 2px 0 goldenrod;
+    
+
+    &.enemy {
+        top: -8px
+    }
+}

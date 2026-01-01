@@ -100,7 +100,6 @@
 
 
 .candy {
-    border-radius: 10px;
     height: 5px;
     width: 12px;
     background-color: red;
@@ -112,7 +111,6 @@
 }
 
 .loot {
-    border-radius: 10px;
     height: 5px;
     width: 12px;
     background-color: rgb(140, 140, 140);
@@ -121,4 +119,54 @@
     text-align: center;
     color: yellow;
     border: 1pt solid aqua;
+}
+
+/* Glow intermitente para outlines sin mover el layout */
+.proto-glow {
+  position: relative; /* Necesario para posicionar ::after */
+  --glow-color: aqua;        /* celeste por defecto */
+  --glow-alpha: 0.7;            /* opacidad del halo */
+  --glow-size: 8px;             /* tamaño del halo */
+  --glow-border: 2px;           /* grosor del borde */
+  --glow-speed: 1.8s;           /* velocidad del pulso */
+}
+
+.proto-glow::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--glow-border) * -1);
+  pointer-events: none;
+  /* Borde visible + halo externo */
+  outline: var(--glow-border) solid var(--glow-color);
+  box-shadow:
+    0 0 var(--glow-size) calc(var(--glow-size) * 0.35)
+    color-mix(in oklab, var(--glow-color) var(--glow-alpha), transparent);
+  animation: proto-glow-pulse var(--glow-speed) ease-in-out infinite;
+  opacity: 0.85;
+  /* Para pantallas con muchos elementos, ayuda el rendimiento */
+  will-change: box-shadow, opacity;
+}
+
+/* Pulso leve */
+@keyframes proto-glow-pulse {
+  0%, 100% {
+    opacity: 0.65;
+    box-shadow:
+      0 0 calc(var(--glow-size) * 0.9) calc(var(--glow-size) * 0.25)
+      color-mix(in oklab, var(--glow-color) var(--glow-alpha), transparent);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 calc(var(--glow-size) * 1.2) calc(var(--glow-size) * 0.45)
+      color-mix(in oklab, var(--glow-color) 100%, transparent);
+  }
+}
+
+/* Respeta usuarios con reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .proto-glow::after {
+    animation: none;
+    opacity: 0.9;
+  }
 }

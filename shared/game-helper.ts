@@ -40,10 +40,11 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
 
         initialPlayersState[Id.toString()] = {
             id: Id.toString(),
-            numberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
+            currentNumberOfWorkers: 0,
+            maxNumberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
             selectedCard: NO_CARD_SELECTED,
             hasPlayedCard: false,
-            [ResourceEnum.Candy]: 2,
+            [ResourceEnum.Candy]: 8,
             [ResourceEnum.Loot]: 2,
             victoryPoints: 0,
             deck: deck,
@@ -63,7 +64,7 @@ export const isPlayCardValid = (playerState: PlayerGameState, selectedCardId: st
 
 export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLocation: Location, cardInPlay: Card): boolean => {
     return (
-        !playerState.hasPlayedCard && playerState.numberOfWorkers > 0 && 
+        !playerState.hasPlayedCard && playerState.currentNumberOfWorkers > 0 && 
         isNullOrEmpty(currentLocation.takenByPlayerID)
         && currentLocation.cost.districtIconIds.every(lid => cardInPlay!.districtIds.includes(lid))
         && (
@@ -78,7 +79,7 @@ export const resetEndPhaseTriggers = (G: GameState) => {
 
 export const playersSetup = (G: GameState) => {
     getPlayersList(G).forEach(p => {
-        p.numberOfWorkers = 2;
+        p.currentNumberOfWorkers = p.maxNumberOfWorkers;
     })
 }
 

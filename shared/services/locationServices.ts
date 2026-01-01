@@ -50,6 +50,7 @@ export const getInitialDistrictsState = (): District[] => {
                 },
                 reward: {moves: [], resources: []},
                 dominanceBy: [],
+                isRestrictedArea: true,
             },
             {
                 Id: DistrictIconsEnum.D1 + 1,
@@ -117,7 +118,8 @@ export const getInitialDistrictsState = (): District[] => {
                 reward: {
                     moves: [{ moveId: LocationMovesEnum.DEAL, name: "deal"}]
                 },
-                dominanceBy: []
+                dominanceBy: [],
+                isRestrictedArea: true
             },
             { ...getHighCouncil(DistrictIconsEnum.D2, 3) }
             ],
@@ -171,7 +173,8 @@ export const getInitialDistrictsState = (): District[] => {
                     },
                     reward: {
                         resources: []
-                    }
+                    },
+                    isRestrictedArea: true
                 },
                 { ...getHighCouncil(DistrictIconsEnum.D3, 3) }
             ],
@@ -226,7 +229,8 @@ export const getInitialDistrictsState = (): District[] => {
                     districtIconIds: [DistrictIconsEnum.D4],
                     resources: [],
                 },
-                reward: {}
+                reward: {},
+                isRestrictedArea: true
             }
         ],
         }

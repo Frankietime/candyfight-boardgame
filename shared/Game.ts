@@ -39,7 +39,9 @@ export const Game: GameInterface<GameState> = {
         cardMarket: plugins.random.Shuffle([
             ...getMarketTierOneCards(),
         ]),
-        roundEndingCounter: 0
+        roundEndingCounter: 0,
+        gameEndingCounter: 0,
+        ranking: []
     }),
 
     playerView: PlayerView.STRIP_SECRETS,
@@ -65,9 +67,11 @@ export const Game: GameInterface<GameState> = {
                     discardPile: p.discardPile,
                     handLength: p.hand.length,
                     hasRevealed: false,
-                    numberOfWorkers: p.numberOfWorkers,
+                    currentNumberOfWorkers: p.currentNumberOfWorkers,
                     trashPile: p.trashPile,
                     victoryPoints: p.victoryPoints,
+                    candy: p.candy,
+                    loot: p.loot,
                  }))
                 log();
                 log("HAND DEAL");
@@ -142,7 +146,7 @@ export const Game: GameInterface<GameState> = {
                             executeMove(mgState, {...selectedCard.primaryEffects!, params: { ...selectedCard.primaryEffects.params }, location: currentLocation });
                     
                         // update resources
-                        playerState.numberOfWorkers -= 1;
+                        playerState.currentNumberOfWorkers -= 1;
                         playerState.hasPlayedCard = true;
                         playerState.cardsInPlay?.push(selectedCard);
                         
@@ -188,7 +192,7 @@ export const Game: GameInterface<GameState> = {
             },
         },
         combatPhase: {
-            next: "maintenancePhase",
+            next: ({ G }) => getPlayersList(G).some(p => p.victoryPoints >= 6) ? "endGamePhase" : "maintenancePhase",
             turn: {
                 activePlayers: { all: Stage.NULL },  
             },
@@ -201,7 +205,10 @@ export const Game: GameInterface<GameState> = {
                 log("COMBAT PHASE", true);
                 G.districts.forEach(d => {
                     d.combatWinnerId = calculateCombatWinner(d);
-                });
+                    if (d.combatWinnerId) {
+                        G.players[d.combatWinnerId].victoryPoints += 1;
+                    }
+                })
             },
             onEnd: ({ G, events }) => {
                 getPlayersList(G).forEach(p => {
@@ -210,9 +217,33 @@ export const Game: GameInterface<GameState> = {
                 });
             },
             endIf: (mgState) => mgState.G.roundEndingCounter >= mgState.ctx.numPlayers
+        },
+        endGamePhase: {
+            onBegin: ({ G }) => {
+                
+                // calculate players ranking
+                G.ranking = getPlayersList(G).sort((a, b) => {
+                    return (
+                        (b.victoryPoints - a.victoryPoints) == 0 ? 
+                        (b.candy - a.candy) == 0 ? 
+                        (b.loot - a.loot)
+                        : (b.victoryPoints - a.victoryPoints) 
+                        : (b.candy - a.candy)
+                    );
+                });
+            },
+            turn: {
+                activePlayers: { all: Stage.NULL }
+            },
+            moves: {
+                goToLobby: {
+                    move: ({ G }) => {G.gameEndingCounter += 1}
+                }
+            },
+            onEnd: ({ events }) => events.endGame()
         }
     },
-
+    
     events: {
         // prevents player from ending a game
         endGame: false,
@@ -220,16 +251,9 @@ export const Game: GameInterface<GameState> = {
     
     ai: {
         enumerate: (G, ctx) => {
-            // let moves = [];
-            // for (let i = 0; i < 9; i++) {
-            //     if (G.cells[i] === null) {
-            //         moves.push({ move: 'clickCell', args: [i] });
-            //     }
-            // }
             return [];
         },
     },
-
-    endIf: (context) => {
-    },
+            
+    endIf: (mgState) => mgState.G.gameEndingCounter >= mgState.ctx.numPlayers,
 }

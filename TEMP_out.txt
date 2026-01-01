@@ -56,14 +56,10 @@
 .board-outer {
   position: relative;
   width: 100vw;
-  height: 100vh;           /* fallback */
-  height: 100svh;          /* viewport estable en mobile */
+  height: 100vh;           /* o el alto que quieras usar */
   display: grid;
   place-items: center;
   overflow: auto;          /* permite scroll si hace falta */
-  overscroll-behavior: contain;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 .board-viewport {
@@ -86,3 +82,4 @@
   image-rendering: crisp-edges;   /* pixel-art look */
   /* image-rendering: auto;       // suavizado */
 }
+

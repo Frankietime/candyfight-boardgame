@@ -15,6 +15,7 @@ import { Button, Dialog, Table } from "@radix-ui/themes";
 import { useAppStore } from "../../store";
 import { CardSelectionModalOptions } from "./types";
 import { PlayerAreaComponent } from "../player-area-component/PlayerAreaComponent";
+import { useLobbyServices } from "../../services/lobbyServices";
 
 interface BoardGameProps extends BoardProps<GameState> {};
 
@@ -37,13 +38,18 @@ export const BoardComponent = ({
   const outerRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState(1);
 
+    const { leaveMatch } = useLobbyServices();
+
+    const { playerState, setPlayerState } = useAppStore();
+
   useLayoutEffect(() => {
     const el = outerRef.current!;
     const update = () => {
       const availW = el.clientWidth;
       const availH = el.clientHeight;
       const s = Math.min(availW / BASE_W, availH / BASE_H);
-      setScale(Math.max(1, s));
+      // Allow scaling down on small (mobile) viewports
+      setScale(s);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -76,6 +82,17 @@ export const BoardComponent = ({
       return G.players[playerID] as PlayerGameState;    
     return {} as PlayerGameState;
   }, [G]);
+
+  const onLeaveMatch = async () => {
+        leaveMatch(playerState)
+            .then(() => {
+                setPlayerState({ 
+                ...playerState, 
+                matchID: "", 
+                playerCredentials: ""
+            });
+        });
+    };
 
   const onSelectToDiscard = (selectedCard: Card, limit: number) => {
 
@@ -136,7 +153,7 @@ export const BoardComponent = ({
   }
 
   const isLocationDisabled = (location: Location): boolean => {
-    return location.isDisabled || !G.players[ctx.currentPlayer]?.selectedCard || player.numberOfWorkers == 0;
+    return (location.name.includes("Sword Master") && player.maxNumberOfWorkers >= 3) || location.isDisabled || !G.players[ctx.currentPlayer]?.selectedCard || player.currentNumberOfWorkers == 0;
   }
 
   const getSelectedCard = (): Card | undefined => {
@@ -144,6 +161,61 @@ export const BoardComponent = ({
   }
 
   const [roundIsEnding, setRoundIsEnding] = useState(false);
+
+  const EndGameInfo = useMemo(() => {
+    if (ctx.phase == "endGamePhase")
+    return (
+      <Dialog.Root open={ctx.phase == "endGamePhase"}>
+        <Dialog.Content style={{
+          top: "230px",
+          width: "100%",
+          height: "100%"
+        }}>
+          <Table.Root size="1">
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeaderCell>#</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Player</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Victory Points</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Candy</Table.ColumnHeaderCell>
+                <Table.ColumnHeaderCell>Loot</Table.ColumnHeaderCell>
+              </Table.Row>
+            </Table.Header>
+
+            <Table.Body>
+              {G.ranking.map((player, index) => (
+                <Table.Row>
+                  <Table.RowHeaderCell><span style={{ fontWeight: 600 }}>{index + 1}</span></Table.RowHeaderCell>
+                  <Table.Cell>
+                    <span style={{fontStyle: "italic", fontWeight: 600, color: PlayerColorsEnum[parseInt(player.id)]}}>
+                      {matchData.players[parseInt(player.id)].name}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {player.victoryPoints}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {player.candy}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {player.loot}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+              
+            </Table.Body>
+          </Table.Root>
+          <Button 
+            style={{ marginTop: "25px", width: "100%"}}
+            highContrast={true} 
+            color="red" 
+            size={"3"}
+            onClick={() => onLeaveMatch()}
+          >Go to Lobby </Button>
+        </Dialog.Content>
+      </Dialog.Root>
+    )
+  }, [ctx])
 
 return (
   <div className='game-container'>
@@ -156,6 +228,7 @@ return (
                 playersPublicInfo={G.playersViewModel}
                 G={G}
                 ctx={ctx}
+                onLeaveMatch={onLeaveMatch}
               />
 
               {/* Board Area */}
@@ -219,8 +292,10 @@ return (
                           x={locsXPos[dIndex][locIndex]} y={locsYPos[dIndex][locIndex]}
                           show={true}
                           district={district}
-                          onClick={(e: Event) => onLocationSelect(dIndex, locIndex, e)} 
+                          onClick={(e) => onLocationSelect(dIndex, locIndex, e)} 
                           isDisabled={isLocationDisabled(location)}
+                          selectedCard={getSelectedCard()}
+                          player={player}
                         />
                       </div>)
                     )}
@@ -231,6 +306,7 @@ return (
                 {/* Player Area Component */}
                 <PlayerAreaComponent 
                   G={G}
+                  playerView={G.playersViewModel}
                   cancelCardSelection={cancelCardSelection}
                   cardSelectionModalOptions={cardSelectionModalOptions}
                   confirmCardSelection={confirmCardSelection}
@@ -289,6 +365,7 @@ return (
                     >{ roundIsEnding ? "Waiting for other players..." : "End Round"} </Button>
                   </Dialog.Content>
                 </Dialog.Root>
+                {EndGameInfo}
               </div>
             </div>
           </div>

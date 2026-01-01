@@ -1,11 +1,13 @@
 import "./LocationComponent.scss";
 import { isNullOrEmpty } from "../../../../shared/common-methods";
-import { District, Location } from "../../../../shared/types";
+import { Card, District, Location, PlayerGameState } from "../../../../shared/types";
 import { useBoardComponent } from "../board-component/UseBoardComponent";
 import { ResourceComponent } from "../icon-components/ResourceComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { workerIconsByPlayerId } from "../icon-components/constants";
 import { LocationMovesEnum } from "../../../../shared/enums";
+import { isWorkerPlacementValid } from "../../../../shared/game-helper";
+import { useAppStore } from "../../store";
 
 export interface LocationComponentProps extends Location {
     x: number,
@@ -13,7 +15,10 @@ export interface LocationComponentProps extends Location {
     district: District,
     show?: boolean,
     isSelected?: boolean;
-    onClick: () => void,
+    onClick: (event: any) => void,
+    isDisabled: boolean;
+    selectedCard?: Card;
+    player: PlayerGameState;
 }
 
 export const LocationComponent = ({
@@ -26,19 +31,25 @@ export const LocationComponent = ({
     reward,
     isSelected,
     isDisabled,
-    takenByPlayerID
+    takenByPlayerID,
+    selectedCard,
+    player,
+    isRestrictedArea
 }: LocationComponentProps) => {
 
     const { ClickBox } = useBoardComponent();
 
-    return (
+    const { playerState } = useAppStore();
+
+    return ( 
         <ClickBox 
             _onClick={onClick}
-            disabled={isDisabled}
+            disabled={isDisabled || isRestrictedArea}
             x={x} y={y} 
             show={true}>
             <div className="location-component-container">                
-                <div className="location-container" style={{backgroundColor: isSelected ? "RGB(75,0,130, 0.3)" : "none"}}>
+                {/* <div className="location-container" style={{outline: !isSelected && !isDisabled && isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card) ? "3px solid aqua" : "none"}}> */}
+                <div className={!isRestrictedArea && !isSelected && !isDisabled && isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card) ? "location-container proto-glow" : "location-container"}>
                     
                     {/* Name */}
                     <div className="location-name-container">{name}</div>

@@ -15,6 +15,7 @@ interface GameInfoComponentProps {
     sendChatMessage?: (message: string) => void;
     errorNotification?: string;
     children?: React.ReactNode;
+    onLeaveMatch: () => void;
 }
 
 export const GameInfoComponent = ({
@@ -23,7 +24,8 @@ export const GameInfoComponent = ({
     chatMessages,
     sendChatMessage,
     children,
-    playersPublicInfo
+    playersPublicInfo,
+    onLeaveMatch
 }: GameInfoComponentProps) => {
 
     const { 
@@ -83,17 +85,6 @@ export const GameInfoComponent = ({
           observer.disconnect();
         };
     }, [chatMessages]);
-
-    const onLeaveMatch = async () => {
-        leaveMatch(playerState)
-            .then(() => {
-                setPlayerState({ 
-                ...playerState, 
-                matchID: "", 
-                playerCredentials: ""
-            });
-        });
-    };
       
     return (
         <div

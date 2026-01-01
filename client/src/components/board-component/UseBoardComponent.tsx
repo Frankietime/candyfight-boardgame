@@ -152,7 +152,7 @@ export const useBoardComponent = () => {
         }) => {
         return (
             <div key={props.x + "-" + props.y} className={"event-box absolute" + (props.show ? " border-2 border-solid" : "") + (props.disabled ? " disabled" : "")}
-                style={{top: props.y, left: props.x, backgroundColor: props.isSelected ? "RGB(75,0,130, 0.3)" : "none", width: props.w ?? "fit-content", height: props.h ?? "fit-content"}}
+                style={{top: props.y, left: props.x, backgroundColor: props.isSelected  || props.disabled ? "RGB(75,0,130, 0.3)" : "none", width: props.w ?? "fit-content", height: props.h ?? "fit-content"}}
                 onClick={props.disabled ? () => {} : props.onClick}
             >
                 {props.children}

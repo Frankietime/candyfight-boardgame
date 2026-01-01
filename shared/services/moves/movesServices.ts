@@ -47,6 +47,8 @@ export const locationMoves: { [key: string]: MoveFunction } = {
         
     },
     [LocationMovesEnum.GET_SWORD_MASTER]: ({ mgState, playerState, move }: MoveFunctionArgs) => {
+        playerState.currentNumberOfWorkers += 1;
+        playerState.maxNumberOfWorkers += 1;
         
     },
     [LocationMovesEnum.SIGNET_TRIGGER]: ({ mgState, playerState, move }: MoveFunctionArgs) => {
