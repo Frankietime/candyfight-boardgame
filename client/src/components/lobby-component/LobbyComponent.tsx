@@ -36,10 +36,11 @@ export const LobbyComponent = () => {
       // Initial fetch
       listMatches().then((data) => setMatchList(data));
 
+      // TODO: implement websockets instead of polling
       const intervalId = setInterval(() => {
         listMatches()
           .then((data) => setMatchList(data))
-      }, 3000);
+      }, 500);
       return () => clearInterval(intervalId);
   }, []);
 
