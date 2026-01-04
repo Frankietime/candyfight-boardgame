@@ -8,6 +8,7 @@ import _ from "lodash";
 import { DefaultPluginAPIs } from "boardgame.io";
 import { getInitialLocationReward } from "./services/locationServices";
 import { getPlayersList } from "./services/moves/playerServices";
+import { canPayLocationCosts } from "./services/actions/requirements";
 
 export const getInitialLocationsState = (districtName: string, districtId: string, names: string[]): Location[] => names.map<Location>((name, locIndex) => ({
     Id: districtName + "-" + locIndex.toString(),
@@ -26,9 +27,7 @@ export const getInitialLocationCost = (districtId: string): LocationCost => ({
         {resourceId: ResourceEnum.Loot, amount: 1},
     ]
 });
-export const getInitialPlayersViewModel = (G: GameState, numberOfPlayers: number) => {
 
-}
 export const getInitialPlayersState = (numberOfPlayers: number, plugins: DefaultPluginAPIs): Dictionary<PlayerGameState> => {
     let initialPlayersState: {[key: string]: PlayerGameState} = {};
 
@@ -58,17 +57,25 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
     return initialPlayersState;
 }
 
+/**
+ * Check if player has a card selected.
+ * Prefer this over `!player.selectedCard` for semantic clarity.
+ */
+export const hasSelectedCard = (player: PlayerGameState): boolean => {
+    return player.selectedCard !== NO_CARD_SELECTED && player.selectedCard !== undefined;
+}
+
 export const isPlayCardValid = (playerState: PlayerGameState, selectedCardId: string): boolean => {
     return !playerState.hasPlayedCard && selectedCardId !== NO_CARD_SELECTED;
 }
 
 export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLocation: Location, cardInPlay: Card): boolean => {
     return (
-        !playerState.hasPlayedCard && playerState.currentNumberOfWorkers > 0 && 
-        isNullOrEmpty(currentLocation.takenByPlayerID)
-        && currentLocation.cost.districtIconIds.every(lid => cardInPlay!.districtIds.includes(lid))
-        && (
-            currentLocation.cost.resources ? currentLocation.cost.resources.every(resource => playerState[resource.resourceId] >= resource.amount) : true)
+        !playerState.hasPlayedCard &&
+        playerState.currentNumberOfWorkers > 0 &&
+        isNullOrEmpty(currentLocation.takenByPlayerID) &&
+        currentLocation.cost.districtIconIds.every(lid => cardInPlay.districtIds.includes(lid)) &&
+        canPayLocationCosts(playerState, currentLocation, cardInPlay)
     );
 }
 

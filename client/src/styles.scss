@@ -8,7 +8,7 @@ body {
   user-select: none;        /* Standard syntax */
 
   .disabled {
-    pointer-events: 'none'!important;
+    pointer-events: none !important;
   }
 }
 

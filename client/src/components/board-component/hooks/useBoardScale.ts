@@ -1,0 +1,89 @@
+import { useLayoutEffect, useRef, useState } from "react";
+
+/** Base dimensions for the game board */
+export const BOARD_DIMENSIONS = {
+  WIDTH: 1280,
+  HEIGHT: 720,
+} as const;
+
+/** Minimum scale to prevent illegible UI on very small viewports */
+const MIN_SCALE = 0.5;
+
+export interface UseBoardScaleResult {
+  /** Current scale factor */
+  scale: number;
+  /** Ref to attach to the outer container element */
+  outerRef: React.RefObject<HTMLDivElement>;
+  /** Board base width */
+  baseWidth: number;
+  /** Board base height */
+  baseHeight: number;
+}
+
+/**
+ * Custom hook for responsive board scaling.
+ * Scales the board to fit the available viewport (both up and down).
+ */
+export function useBoardScale(): UseBoardScaleResult {
+  const outerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const availW = el.clientWidth;
+      const availH = el.clientHeight;
+      const s = Math.max(MIN_SCALE, Math.min(availW / BOARD_DIMENSIONS.WIDTH, availH / BOARD_DIMENSIONS.HEIGHT));
+      setScale(s);
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  return {
+    scale,
+    outerRef: outerRef as React.RefObject<HTMLDivElement>,
+    baseWidth: BOARD_DIMENSIONS.WIDTH,
+    baseHeight: BOARD_DIMENSIONS.HEIGHT,
+  };
+}
+
+/**
+ * Utility to generate CSS custom property style object for scale
+ */
+export function getScaleStyle(scale: number): React.CSSProperties {
+  return {
+    "--scale": scale,
+  } as React.CSSProperties;
+}
+
+/**
+ * Utility to generate board container styles with transform applied
+ */
+export function getBoardContainerStyle(
+  scale: number,
+  backgroundImage?: string
+): React.CSSProperties {
+  return {
+    width: BOARD_DIMENSIONS.WIDTH,
+    height: BOARD_DIMENSIONS.HEIGHT,
+    transform: `scale(${scale})`,
+    transformOrigin: "top left",
+    ...(backgroundImage && {
+      backgroundImage: `url(${backgroundImage})`,
+      backgroundSize: "100% 100%",
+    }),
+    imageRendering: "crisp-edges",
+  } as React.CSSProperties;
+}

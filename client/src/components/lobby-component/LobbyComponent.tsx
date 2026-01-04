@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { LobbyAPI } from 'boardgame.io';
 import { useAppStore } from '../../store';
 import { useLobbyStore } from './store';
 import { useLobbyServices } from '../../services/lobbyServices';
 import { BACKEND_URL } from '../../config';
 import { UpdateIcon } from "@radix-ui/react-icons"
-import { Button, Tooltip } from '@radix-ui/themes';
+import { Button } from '@radix-ui/themes';
 import { getRandomPlayerName } from '@candyfight/shared/services/moves/playerServices';
 import { generateBattleEvent } from './helper';
 
@@ -14,7 +13,6 @@ export const LobbyComponent = () => {
 
   const {
     createMatch,
-    getMatch,
     joinMatch,
     listMatches,
   } = useLobbyServices();
@@ -33,12 +31,15 @@ export const LobbyComponent = () => {
 
   const [numberOfPlayers, setNumberOfPlayers] = useState(2);
 
-  // Polling
+  // Polling - reduced from 500ms to 3000ms for better performance
   useEffect(() => {
+      // Initial fetch
+      listMatches().then((data) => setMatchList(data));
+
       const intervalId = setInterval(() => {
         listMatches()
           .then((data) => setMatchList(data))
-      }, 500);
+      }, 3000);
       return () => clearInterval(intervalId);
   }, []);
 
@@ -60,14 +61,12 @@ export const LobbyComponent = () => {
       }
     );
 
-    const match: LobbyAPI.Match = await getMatch(matchID);
-    useAppStore.getState().setMatchData(match);
-    
-    useAppStore.getState().setPlayerState({ 
-      ...useAppStore.getState().playerState, 
-      matchID, 
-      playerID, 
-      playerCredentials 
+    // Set player state - React Query will fetch match data automatically
+    useAppStore.getState().setPlayerState({
+      ...useAppStore.getState().playerState,
+      matchID,
+      playerID,
+      playerCredentials
     });
   }
 

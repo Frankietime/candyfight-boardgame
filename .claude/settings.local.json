@@ -5,7 +5,27 @@
       "Bash(cat:*)",
       "Bash(find:*)",
       "Bash(npm install:*)",
-      "Bash(timeout 10 npm run dev:server:*)"
+      "Bash(timeout 10 npm run dev:server:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 15 npm run dev:server:*)",
+      "Bash(cd:*)",
+      "Bash(tree:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(timeout 15 npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(just-prompt:*)",
+      "Bash(npx just-prompt:*)",
+      "Bash(pip show:*)",
+      "Bash(pip3 show:*)",
+      "Bash(echo:*)",
+      "Bash(python -m pip show:*)",
+      "Bash(python3 -m pip show:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m just_prompt:*)",
+      "Bash(python:*)",
+      "Bash(dir /b clientsrcstyles)"
     ]
   }
 }

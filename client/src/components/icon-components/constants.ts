@@ -16,7 +16,7 @@ import TRASH from "../../assets/board/C-trash.png";
 import DRAW from "../../assets/board/C-draw.png";
 
 import { Dictionary } from "@candyfight/shared/types";
-import { DistrictIconsEnum, LocationMovesEnum, ResourceEnum } from "@candyfight/shared/enums";
+import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "@candyfight/shared/enums";
 
 export const districtIconsDict: Dictionary<any> = {
     [DistrictIconsEnum.D1]: D1,
@@ -28,9 +28,9 @@ export const districtIconsDict: Dictionary<any> = {
 export const resourceIconsDict: Dictionary<any> = {
     [ResourceEnum.Candy]: CANDY,
     [ResourceEnum.Loot]: LOOT,
-    [LocationMovesEnum.DISCARD]: DISCARD,
-    [LocationMovesEnum.TRASH]: TRASH,
-    [LocationMovesEnum.DRAW]: DRAW,
+    [LocationActionsEnum.DISCARD]: DISCARD,
+    [LocationActionsEnum.TRASH]: TRASH,
+    [LocationActionsEnum.DRAW]: DRAW,
 }
 
 export const workerIconsByPlayerId = [redWorker, greenWorker, violetWorker, yellowWorker];
