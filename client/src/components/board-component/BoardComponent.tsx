@@ -128,10 +128,8 @@ export const BoardComponent = ({
     setRoundIsEnding(true);
   }, [moves]);
 
-  // Don't render if no match
-  if (isNullOrEmpty(matchID)) {
-    return <div className="game-container" />;
-  }
+  // Check if we're ready to render the full board
+  const isReady = !isNullOrEmpty(matchID) && G.districts && G.players && player && matchData;
 
   // Show error state if match query failed
   if (matchError) {
@@ -142,11 +140,7 @@ export const BoardComponent = ({
     );
   }
 
-  // Don't render if game data not ready
-  if (!G.districts || !G.players || !player || !matchData) {
-    return <div className="game-container" />;
-  }
-
+  // Always render the board-outer div so the ref is connected and scale hook works
   return (
     <div className="game-container">
       <div
@@ -154,67 +148,69 @@ export const BoardComponent = ({
         ref={outerRef}
         style={getScaleStyle(scale)}
       >
-        <div className="board-viewport">
-          {/* Game Info Header */}
-          <GameInfoComponent
-            playersPublicInfo={G.playersViewModel}
-            G={G}
-            ctx={ctx}
-            onLeaveMatch={onLeaveMatch}
-          />
-
-          {/* Board Area */}
-          <div
-            style={getBoardContainerStyle(scale, mapBg)}
-            className="board-container relative mx-auto"
-          >
-            {/* Districts Layer */}
-            <BoardDistrictsLayer
-              districts={G.districts}
-              playersViewModel={G.playersViewModel}
-              phase={ctx.phase ?? ""}
-              matchData={matchData!}
-              player={player}
-              selectedCard={selectedCard}
-              onLocationSelect={onLocationSelect}
-              isLocationDisabled={isLocationDisabled}
-            />
-
-            {/* Action Orchestrator Renderer */}
-            <ActionOrchestratorRenderer
-              pendingRequest={actionOrchestrator.pendingRequest}
-              player={player}
-              excludeCardId={selectedCard?.id}
-            />
-
-            {/* Player Area */}
-            <PlayerAreaComponent
+        {isReady && (
+          <div className="board-viewport">
+            {/* Game Info Header */}
+            <GameInfoComponent
+              playersPublicInfo={G.playersViewModel}
               G={G}
-              playerView={G.playersViewModel}
-              events={events}
-              moves={moves}
-              player={player}
-              selectedCard={selectedCard}
-            />
-
-            {/* Combat Phase Dialog */}
-            <CombatPhaseDialog
-              open={ctx.phase === "combatPhase"}
-              districts={G.districts}
-              matchData={matchData!}
-              isRoundEnding={roundIsEnding}
-              onEndRound={onEndRound}
-            />
-
-            {/* End Game Dialog */}
-            <EndGameDialog
-              open={ctx.phase === "endGamePhase"}
-              ranking={G.ranking}
-              matchData={matchData!}
+              ctx={ctx}
               onLeaveMatch={onLeaveMatch}
             />
+
+            {/* Board Area */}
+            <div
+              style={getBoardContainerStyle(mapBg)}
+              className="board-container relative mx-auto"
+            >
+              {/* Districts Layer */}
+              <BoardDistrictsLayer
+                districts={G.districts}
+                playersViewModel={G.playersViewModel}
+                phase={ctx.phase ?? ""}
+                matchData={matchData}
+                player={player}
+                selectedCard={selectedCard}
+                onLocationSelect={onLocationSelect}
+                isLocationDisabled={isLocationDisabled}
+              />
+
+              {/* Action Orchestrator Renderer */}
+              <ActionOrchestratorRenderer
+                pendingRequest={actionOrchestrator.pendingRequest}
+                player={player}
+                excludeCardId={selectedCard?.id}
+              />
+
+              {/* Player Area */}
+              <PlayerAreaComponent
+                G={G}
+                playerView={G.playersViewModel}
+                events={events}
+                moves={moves}
+                player={player}
+                selectedCard={selectedCard}
+              />
+
+              {/* Combat Phase Dialog */}
+              <CombatPhaseDialog
+                open={ctx.phase === "combatPhase"}
+                districts={G.districts}
+                matchData={matchData}
+                isRoundEnding={roundIsEnding}
+                onEndRound={onEndRound}
+              />
+
+              {/* End Game Dialog */}
+              <EndGameDialog
+                open={ctx.phase === "endGamePhase"}
+                ranking={G.ranking}
+                matchData={matchData}
+                onLeaveMatch={onLeaveMatch}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

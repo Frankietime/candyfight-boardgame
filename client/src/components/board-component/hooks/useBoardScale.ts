@@ -69,17 +69,14 @@ export function getScaleStyle(scale: number): React.CSSProperties {
 }
 
 /**
- * Utility to generate board container styles with transform applied
+ * Utility to generate board container styles (transform handled by CSS class via --scale variable)
  */
 export function getBoardContainerStyle(
-  scale: number,
   backgroundImage?: string
 ): React.CSSProperties {
   return {
     width: BOARD_DIMENSIONS.WIDTH,
     height: BOARD_DIMENSIONS.HEIGHT,
-    transform: `scale(${scale})`,
-    transformOrigin: "top left",
     ...(backgroundImage && {
       backgroundImage: `url(${backgroundImage})`,
       backgroundSize: "100% 100%",
