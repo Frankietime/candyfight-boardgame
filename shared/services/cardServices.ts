@@ -12,8 +12,6 @@ export const getInitialDeck = (): Card[] => {
     ]
 }
 
-
-
 export const getTierOneCards = () => {
     return Object.values(DistrictIconsEnum).map<Card>(
         (districtId) => ({

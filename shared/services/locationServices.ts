@@ -2,7 +2,6 @@ import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../enums";
 import { District, Location, LocationReward } from "../types";
 import { discardCost, trashCost } from "./actions/requirements";
 
-
 export const getInitialLocationReward = (): LocationReward => ({
     resources: [
         // {resourceId: ResourceEnum.Candy, amount: 1},

@@ -2,6 +2,9 @@ import { Server, Origins } from 'boardgame.io/server';
 import { Game } from '@candyfight/shared/Game';
 import KoaCors from '@koa/cors';
 import type { StorageAPI } from 'boardgame.io';
+import serve from 'koa-static';
+import mount from 'koa-mount';
+import path from 'path';
 
 const allowed = new Set([
   '*',
@@ -60,5 +63,11 @@ server.router.delete('/admin/matches/:matchID', async (ctx) => {
 
   ctx.status = 204;
 });
+
+// Serve Docusaurus static site at /docs
+// Build the docs first: cd documentation && npm run build
+// __dirname is dist/server when compiled, so go up 2 levels to reach server/
+const docsPath = path.join(__dirname, '..', 'docs');
+server.app.use(mount('/docs', serve(docsPath)));
 
 server.run({ port: 4000 });
