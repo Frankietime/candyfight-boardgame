@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { useLobbyServices } from "../../services/lobbyServices";
 import { useAppStore } from "../../store";
-import { useQuery } from "@tanstack/react-query";
-import "./GameInfoComponent.scss"
 import { Ctx } from "boardgame.io";
-import _ from "lodash";
-import { GameState, PlayerViewModel } from "../../../../shared/types";
+import { GameState, PlayerViewModel } from "@candyfight/shared/types";
+import { useMatchQuery } from "../../hooks/useMatchQuery";
+
+/**
+ * Format phase name for display (replaces lodash kebabCase)
+ * Example: "mainPhase" -> "MAIN PHASE"
+ */
+function formatPhase(phase: string | null): string {
+    if (!phase) return "UNKNOWN";
+    // Convert camelCase to space-separated uppercase
+    return phase
+        .replace(/([A-Z])/g, " $1")
+        .trim()
+        .toUpperCase();
+}
 
 interface GameInfoComponentProps {
     ctx: Ctx;
@@ -28,33 +38,23 @@ export const GameInfoComponent = ({
     onLeaveMatch
 }: GameInfoComponentProps) => {
 
-    const { 
-        matchData, 
-        setMatchData,
-        playerState, 
-        setPlayerState 
-    } = useAppStore();
+    const { playerState } = useAppStore();
 
-    const { leaveMatch, getMatch } = useLobbyServices();
+    // Fetch match data with React Query
+    const { data: matchData, error: matchError } = useMatchQuery(playerState?.matchID);
 
     const [errorNotification, setErrorNotification] = useState("");
     const [chatMessage, setChatMessage] = useState("");
 
     const chatRef = useRef<HTMLDivElement | null>(null);
 
-    useQuery({
-        queryKey: ["fetch-match-data"], 
-        queryFn: () => getMatch(playerState.matchID)    
-        .then((match) => {
-            setMatchData(match);
-            return match;
-        },
-        (error) => {
-            setErrorNotification(error)
+    // Show error notification if match fetch fails
+    useEffect(() => {
+        if (matchError) {
+            const errorMessage = matchError instanceof Error ? matchError.message : String(matchError);
+            setErrorNotification(errorMessage);
         }
-        ),
-        enabled: playerState != null && playerState.matchID != ""}
-    );
+    }, [matchError]);
 
     // Chat auto-scroll
     useEffect(() => {
@@ -101,27 +101,27 @@ export const GameInfoComponent = ({
                 opacity: "0.7"
             }}
             >
-            <h2 style={{ textDecoration: "underline", fontSize: 10}}>Game | {matchData.setupData.name}</h2>
+            <h2 style={{ textDecoration: "underline", fontSize: 10}}>Game | {matchData?.setupData?.name ?? "Loading..."}</h2>
 
             <div className="message-list">
                 <div className="nes-text is-primary">
                     <p className="content-text">{playerState.name} | ID: {playerState.playerID}</p>
                 </div>
                 <div className="nes-text is-primary">
-                    <p><strong>PHASE: </strong><span className="content-text">{_.kebabCase(ctx.phase).replace("-", " ").toUpperCase()}</ span></p>
+                    <p><strong>PHASE: </strong><span className="content-text">{formatPhase(ctx.phase)}</span></p>
                 </div>
 
                 <div className="nes-text is-primary">
                     <strong>TURN</strong>
                 </div>
                 <ul className="nes-list is-circle" style={{ marginLeft: "1rem" }}>
-                
+
                 {playersPublicInfo.map((p: PlayerViewModel, index: number) => (
                     <li
                         key={index}
                         className={ctx.currentPlayer == p.id ? "nes-text is-success" : "nes-text"}
                     >
-                        {matchData.players[index].name} { p.hasRevealed ? "- REVEALED" : ""}
+                        {matchData?.players?.[index]?.name ?? `Player ${index + 1}`} { p.hasRevealed ? "- REVEALED" : ""}
                     </li>
                 ))}
                 </ul>
@@ -177,7 +177,7 @@ export const GameInfoComponent = ({
                             }}
                         >
                             <span className="nes-text is-info">
-                            {matchData.players[msj.sender].name}:
+                            {matchData?.players?.[msj.sender]?.name ?? `Player ${msj.sender}`}:
                             </span>{" "}
                             {msj.payload}
                         </p>

@@ -1,5 +1,4 @@
 import { workerIconsByPlayerId } from "./constants";
-import "./WorkerComponent.scss";
 
 export interface WorkerComponentProps {
     mirror: number,

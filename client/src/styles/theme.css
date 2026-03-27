@@ -1,0 +1,489 @@
+/* Candy Fight - Centralized Theme Configuration */
+/* All colors extracted from scattered SCSS files */
+
+@layer base {
+  :root {
+    /* ===== Player Colors ===== */
+    --color-player-0: red;
+    --color-player-1: green;
+    --color-player-2: violet;
+    --color-player-3: yellow;
+
+    /* ===== Card Colors ===== */
+    --color-card-header: rgb(170, 184, 251);
+    --color-card-districts: rgb(170, 251, 202);
+    --color-card-play: rgb(207, 255, 226);
+    --color-card-reveal: rgb(255, 163, 163);
+    --color-card-play-effect: rgb(223, 248, 248);
+    --color-card-reveal-effect: rgb(253, 245, 229);
+    --color-card-selected-play: rgb(99, 248, 248);
+
+    /* ===== Location Colors ===== */
+    --color-location-bg: rgb(218, 218, 218);
+    --color-location-cost: rgb(56, 69, 255);
+    --color-location-name-bg: violet;
+    --color-location-reward-text: rgb(255, 217, 0);
+    --color-location-reward-hr: rgb(255, 149, 0);
+
+    /* ===== UI Accent Colors ===== */
+    --color-selection: aqua;
+    --color-glow: aqua;
+    --color-vp-text: rgb(66, 1, 141);
+    --color-vp-shadow: goldenrod;
+
+    /* ===== Glow Animation Settings ===== */
+    --glow-alpha: 0.7;
+    --glow-size: 8px;
+    --glow-border: 2px;
+    --glow-speed: 1.8s;
+  }
+}
+
+/* ===== Utility Classes ===== */
+
+/* Player color utilities */
+.text-player-0 { color: var(--color-player-0); }
+.text-player-1 { color: var(--color-player-1); }
+.text-player-2 { color: var(--color-player-2); }
+.text-player-3 { color: var(--color-player-3); }
+
+.bg-player-0 { background-color: var(--color-player-0); }
+.bg-player-1 { background-color: var(--color-player-1); }
+.bg-player-2 { background-color: var(--color-player-2); }
+.bg-player-3 { background-color: var(--color-player-3); }
+
+/* Card section utilities */
+.bg-card-header { background-color: var(--color-card-header); }
+.bg-card-districts { background-color: var(--color-card-districts); }
+.bg-card-play { background-color: var(--color-card-play); }
+.bg-card-reveal { background-color: var(--color-card-reveal); }
+.bg-card-play-effect { background-color: var(--color-card-play-effect); }
+.bg-card-reveal-effect { background-color: var(--color-card-reveal-effect); }
+
+/* Selection utilities */
+.border-selection { border-color: var(--color-selection); }
+.bg-selection { background-color: var(--color-selection); }
+
+/* Victory points styling */
+.text-vp {
+  color: var(--color-vp-text);
+  text-shadow:
+    -1px -1px 0 var(--color-vp-shadow),
+    1px -1px 0 var(--color-vp-shadow),
+    -1px 1px 0 var(--color-vp-shadow),
+    2px 2px 0 var(--color-vp-shadow);
+}
+
+/* ===== Proto-Glow Animation ===== */
+/* Intermittent glow effect for outlines */
+.proto-glow {
+  position: relative;
+  --glow-color: var(--color-glow);
+}
+
+.proto-glow::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--glow-border) * -1);
+  pointer-events: none;
+  outline: var(--glow-border) solid var(--glow-color);
+  box-shadow:
+    0 0 var(--glow-size) calc(var(--glow-size) * 0.35)
+    color-mix(in oklab, var(--glow-color) var(--glow-alpha), transparent);
+  animation: proto-glow-pulse var(--glow-speed) ease-in-out infinite;
+  opacity: 0.85;
+  will-change: box-shadow, opacity;
+}
+
+@keyframes proto-glow-pulse {
+  0%, 100% {
+    opacity: 0.65;
+    box-shadow:
+      0 0 calc(var(--glow-size) * 0.9) calc(var(--glow-size) * 0.25)
+      color-mix(in oklab, var(--glow-color) var(--glow-alpha), transparent);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 calc(var(--glow-size) * 1.2) calc(var(--glow-size) * 0.45)
+      color-mix(in oklab, var(--glow-color) 100%, transparent);
+  }
+}
+
+/* Respect users with reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .proto-glow::after {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
+/* ===== Common UI Patterns ===== */
+
+/* Disabled state */
+.game-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Reward action text styling */
+.reward-action-text {
+  text-align: center;
+  color: var(--color-location-reward-text);
+  font-weight: 600;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 2px 2px 0 #000;
+}
+
+/* ===== Responsive Utilities ===== */
+
+/* Game container - must fill viewport for scaling to work */
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+}
+
+/* Board container - responsive scaling */
+.board-outer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh; /* Stable viewport height for mobile */
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.board-viewport {
+  position: relative;
+  /* Width/height calculated via CSS custom property --scale */
+  width: calc(1280px * var(--scale, 1));
+  height: calc(720px * var(--scale, 1));
+}
+
+.board-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1280px;
+  height: 720px;
+  transform: scale(var(--scale, 1));
+  transform-origin: top left;
+  image-rendering: crisp-edges; /* Pixel-art look */
+}
+
+/* Touch-friendly tap targets for mobile */
+@media (pointer: coarse) {
+  .location-component-container,
+  .card {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Reduce animations on mobile to improve performance */
+@media (max-width: 768px) {
+  .proto-glow::after {
+    animation-duration: 3s;
+  }
+}
+
+/* Font size adjustments for small screens */
+@media (max-width: 640px) {
+  .player-resource-container {
+    font-size: 10px;
+  }
+
+  .victory-points {
+    font-size: 12pt;
+  }
+}
+
+/* ===== Component-specific Utilities ===== */
+/* Migrated from GameInfoComponent.scss */
+.content-text {
+  color: white;
+}
+
+/* Migrated from WorkerComponent.scss */
+.worker-container {
+  top: 530px;
+  left: 256px;
+  width: 16%;
+}
+
+.worker-container .worker-image-container {
+  display: inline-block;
+  margin-right: 3px;
+}
+
+/* Migrated from PlayerAreaComponent.scss */
+.victory-points {
+  top: -39px;
+  position: relative;
+  left: 3px;
+  font-size: 15pt;
+  color: var(--color-vp-text);
+  text-shadow:
+    -1px -1px 0 var(--color-vp-shadow),
+    1px -1px 0 var(--color-vp-shadow),
+    -1px 1px 0 var(--color-vp-shadow),
+    2px 2px 0 var(--color-vp-shadow);
+}
+
+.victory-points.enemy {
+  top: -8px;
+}
+
+/* ===== CardComponent Styles ===== */
+.card {
+  font-size: 12px;
+  overflow-wrap: break-word;
+  background-color: white;
+  height: 157px;
+  border: 2px solid black;
+}
+
+.card:hover {
+  border: 2pt solid var(--color-selection);
+}
+
+.card.disabled {
+  opacity: 0.5;
+}
+
+.card.red {
+  border: 2pt solid red !important;
+}
+
+.card.selected {
+  border: 2pt solid var(--color-selection);
+}
+
+.card.selected .card-name {
+  background-color: var(--color-selection);
+}
+
+.card.selected .card-body .districts {
+  background-color: var(--color-selection);
+}
+
+.card.selected .card-body .play {
+  background-color: var(--color-card-selected-play);
+}
+
+.card.selected .card-body .play-effect {
+  border-bottom: 2pt solid var(--color-card-selected-play);
+}
+
+.card.selected .card-body .reveal {
+  background-color: rgb(190, 190, 190);
+  color: grey;
+  font-style: italic;
+}
+
+.card.selected .card-body .reveal-effect {
+  color: rgb(193, 193, 193);
+  background-color: rgb(236, 236, 236);
+  font-style: italic;
+}
+
+.card-name {
+  background-color: var(--color-card-header);
+  height: 25px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.card-body {
+  max-height: 137px;
+}
+
+.card-body .districts {
+  background-color: var(--color-card-districts);
+}
+
+.card-body .play {
+  background-color: var(--color-card-play);
+}
+
+.card-body .reveal {
+  background-color: var(--color-card-reveal);
+}
+
+.card-body .play-effect {
+  background-color: var(--color-card-play-effect);
+  border-bottom: 1px solid black;
+}
+
+.card-body .reveal-effect {
+  background-color: var(--color-card-reveal-effect);
+  border-bottom: 1px solid black;
+}
+
+/* ===== BoardComponent Styles ===== */
+.pass-btn {
+  position: absolute;
+  border: 3px solid black;
+  top: 455px;
+  left: 970px;
+  width: 8%;
+  height: 7%;
+}
+
+.reveal-btn {
+  position: absolute;
+  border: 3px solid black;
+  top: 455px;
+  left: 1087px;
+  width: 8%;
+  height: 7%;
+}
+
+.pass-btn:hover,
+.reveal-btn:hover {
+  background-color: var(--color-selection);
+  opacity: 0.5;
+}
+
+.pass-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.player-resource-container {
+  color: white;
+  font-size: 9px;
+  font-weight: 600;
+  text-align: center;
+  width: 35px;
+  height: 220px;
+  top: 310px;
+  left: 255px;
+}
+
+.player-resource-container div div {
+  color: rgb(155, 255, 155);
+  margin-bottom: 3px;
+}
+
+.card-selection-dialog-content {
+  z-index: 9999;
+  background-color: white;
+  width: 1500px;
+  height: 500px;
+}
+
+/* ===== LocationComponent Styles ===== */
+.location-component-container {
+  width: calc(1280px / 12);
+  height: calc(720px / 12);
+  background-color: var(--color-location-bg);
+  font-size: 12px;
+}
+
+.location-component-container.disabled {
+  opacity: 0.5;
+}
+
+.location-component-container .worker-image-container {
+  width: 10px;
+  height: 10px;
+  position: relative;
+  top: -25px;
+  left: 11px;
+}
+
+.location-component-container .location-container {
+  max-height: 60px;
+  display: grid;
+}
+
+.location-component-container .location-container.selected {
+  border: 1px solid var(--color-selection);
+}
+
+.location-cost-container {
+  margin-right: 7px;
+  border-right: 1pt solid;
+  overflow-wrap: break-word;
+  height: 45px;
+  color: var(--color-location-cost);
+}
+
+.location-name-container {
+  width: 100%;
+  height: 13px;
+  background-color: var(--color-location-name-bg);
+  font-size: 8pt;
+  font-weight: 600;
+  text-align: center;
+}
+
+.location-icons-container {
+  width: 38px;
+  height: 20px;
+}
+
+.location-resource-cost-container {
+  width: 73px;
+  height: 50px;
+  padding-top: 2px;
+}
+
+.location-actions-cost-container {
+  padding-top: 10px;
+  padding-left: 2px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.location-reward-container {
+  padding-top: 10px;
+}
+
+.location-reward-container hr {
+  color: var(--color-location-reward-hr);
+}
+
+.resource-container {
+  display: inline-block;
+}
+
+.reward-actions-container {
+  text-align: center;
+  color: var(--color-location-reward-text);
+  font-weight: 600;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 2px 2px 0 #000;
+}
+
+.reward-action-item {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* Resource icons */
+.candy {
+  height: 5px;
+  width: 12px;
+  background-color: red;
+  margin: 3px;
+  display: inline;
+  text-align: center;
+  color: yellow;
+  border: 1pt solid rgb(16, 28, 255);
+}
+
+.loot {
+  height: 5px;
+  width: 12px;
+  background-color: rgb(140, 140, 140);
+  margin: 3px;
+  display: inline;
+  text-align: center;
+  color: yellow;
+  border: 1pt solid var(--color-selection);
+}

@@ -1,129 +1,148 @@
-import { Button, Dialog, Flex, Tooltip } from "@radix-ui/themes";
-import { Card, GameState, PlayerGameState, PlayerViewModel } from "../../../../shared/types"
-import { useBoardComponent } from "../board-component/UseBoardComponent";
+import { memo, useCallback, useMemo } from "react";
+import { Tooltip } from "@radix-ui/themes";
+import { Card, GameState, PlayerGameState, PlayerViewModel } from "@candyfight/shared/types"
 import { WorkerComponent } from "../icon-components/WorkerComponent"
 import { CardComponent } from "../card-components/CardComponent";
-import { CardSelectionModalOptions } from "../board-component/types";
-import "./PlayerAreaComponent.scss"
 
 export type PlayerAreaComponentProps = {
     G: GameState;
     player: PlayerGameState;
-    events: any;
     moves: any;
-    cardSelectionModalOptions: CardSelectionModalOptions;
     selectedCard?: Card;
     playerView: PlayerViewModel[];
-    onSelectToDiscard: (selectedCard: Card, limit: number) => void;
-    confirmCardSelection: () => void;
-    cancelCardSelection: () => void;
 }
 
-export const PlayerAreaComponent = ({
+export const PlayerAreaComponent = memo(({
     G,
     player,
-    events,
     moves,
-    cardSelectionModalOptions,
     selectedCard,
     playerView,
-    onSelectToDiscard,
-    confirmCardSelection,
-    cancelCardSelection,
 }: PlayerAreaComponentProps) => {
+    // Stable callbacks - no longer depend on G changing every render
+    const onSelectCard = useCallback((card: Card) => {
+        moves.selectCard(card);
+    }, [moves]);
 
-    const { Hud } = useBoardComponent();
+    const onPass = useCallback(() => moves.pass(), [moves]);
 
-    const onSelectCard = (selectedCard: Card) => {
-        moves.selectCard(G, selectedCard)
-    }
+    const onReveal = useCallback(() => moves.reveal(), [moves]);
 
-    const onPass = () => G.playersViewModel.filter(p => !p.hasRevealed).length == 1 ? null : events.endTurn();
-    
-    const onReveal = () => moves.reveal();
-    
+    // Memoize tooltip content strings
+    const discardPileTooltip = useMemo(() =>
+        player.discardPile.length > 0 ? player.discardPile.map(t => t.name).join(" - ") : "Discard Pile",
+        [player.discardPile]
+    );
+
+    const trashPileTooltip = useMemo(() =>
+        player.trashPile.length > 0 ? player.trashPile.map(t => t.name).join(" - ") : "Trash Pile",
+        [player.trashPile]
+    );
+
+    // Memoize enemies list
+    const enemies = useMemo(() =>
+        playerView.filter(p => p.id !== player.id),
+        [playerView, player.id]
+    );
+
     return (<>
         <WorkerComponent
             numerOfWorkers={player.currentNumberOfWorkers}
             x={281} y={463}
             mirror={0}
             playerID={parseInt(player.id!)}
-            />  
-            <div className="player-resource-container absolute">
-                    <div className="victory-points">{player.victoryPoints}</div>
-                    <div>Candy<hr /><div>{player.candy}</div></div>
-                    <div>Loot<hr /><div>{player.loot}</div></div>        
-                    <div>Deck<hr /><div>{player.deck.length}</div></div>        
-                    <Tooltip content={player.discardPile.length > 0 ? player.discardPile.map(t => t.name).join(" - ") : "Discard Pile"}><div>Discard<hr /><div>{player.discardPile.length}</div></div></Tooltip>  
-                    <Tooltip content={player.trashPile.length > 0 ? player.trashPile.map(t => t.name).join(" - ") : "Trash Pile"}><div>Trash<hr /><div>{player.trashPile.length}</div></div></Tooltip>   
-                </div>            
-            {playerView.filter(p => p.id != player.id).map((enemy, seatIndex) => (
-                // if (player.id != player.id)
-                <div className="player-resource-container absolute" style={{
-                    top: seatIndex == 0 || seatIndex == 2 ? 90 : 0, left: seatIndex == 0 ? 968 : 260, fontSize: "7px"
-                }}>
-                    <div className="enemy victory-points">{player.victoryPoints}</div>
-                    <div>Candy<hr /><div>{player.candy}</div></div>
-                    <div>Loot<hr /><div>{player.loot}</div></div>        
-                    <div>Deck<hr /><div>{player.deck.length}</div></div>        
-                    <Tooltip content={player.discardPile.length > 0 ? player.discardPile.map(t => t.name).join(" - ") : "Discard Pile"}><div>Discard<hr /><div>{player.discardPile.length}</div></div></Tooltip>  
-                    <Tooltip content={player.trashPile.length > 0 ? player.trashPile.map(t => t.name).join(" - ") : "Trash Pile"}><div>Trash<hr /><div>{player.trashPile.length}</div></div></Tooltip>   
-                </div>
-            ))}
-    
-            <div className="hand-container" style={{
-            width: "200px", position: "relative", top: "-14px"
-            }}>
+        />
 
-            {!cardSelectionModalOptions.isOpen ? player.hand?.map((card: Card, index) => 
-                
-                // hand
+        {/* Current Player Resources */}
+        <div className="player-resource-container absolute">
+            <div className="victory-points">{player.victoryPoints}</div>
+            <div>Candy<hr /><div>{player.candy}</div></div>
+            <div>Loot<hr /><div>{player.loot}</div></div>
+            <div>Deck<hr /><div>{player.deck.length}</div></div>
+            <Tooltip content={discardPileTooltip}>
+                <div>Discard<hr /><div>{player.discardPile.length}</div></div>
+            </Tooltip>
+            <Tooltip content={trashPileTooltip}>
+                <div>Trash<hr /><div>{player.trashPile.length}</div></div>
+            </Tooltip>
+        </div>
+
+        {/* Enemy Player Resources */}
+        {enemies.map((enemy, seatIndex) => (
+            <EnemyResourceDisplay
+                key={`enemy-${enemy.id}`}
+                enemy={enemy}
+                seatIndex={seatIndex}
+            />
+        ))}
+
+        {/* Player Hand */}
+        <div className="hand-container" style={{
+            width: "200px", position: "relative", top: "-14px"
+        }}>
+            {player.hand?.map((card: Card, index) => (
                 <CardComponent
                     isDisabled={player.currentNumberOfWorkers == 0}
                     isSelected={card?.id == selectedCard?.id}
-                    y={540} x={390 + index*105} show={true} 
-                    key={`card-${card?.id}-${index}`} 
+                    y={540} x={390 + index * 105} show={true}
+                    key={`card-${card?.id}-${index}`}
                     onClick={() => onSelectCard(card)}
                     card={card}
-                >
-                </CardComponent>
-            ) :
-            (
-            // card selection for discard or trash
-            <Dialog.Root open={cardSelectionModalOptions.isOpen}>
+                />
+            ))}
+        </div>
 
-                <Dialog.Content height={"300px"} maxWidth={"1000px"}>
-                <Dialog.Title><Flex justify={"center"}>{cardSelectionModalOptions.actionName}</Flex></Dialog.Title>
-                <Flex>
-                    {cardSelectionModalOptions.cardOptions.map((card, index) => (
-                    <CardComponent
-                        isSelected={cardSelectionModalOptions.cardsSelected?.map(c => c.id).includes(card.id)}
-                        y={120} x={20 + index*105} show={true} 
-                        key={`select-card-${card.id}-${index }`} 
-                        onClick={() => onSelectToDiscard(card, cardSelectionModalOptions.selectionLimit)}
-                        card={card}
-                        selectionColor={"red"}
-                    >
-                    </CardComponent>
-                    ))}
-                </Flex>
+        {/* Action Buttons */}
+        <div
+            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}`}
+            onClick={player.hasPlayedCard ? onPass : undefined}
+        />
+        <div className="reveal-btn" onClick={onReveal} />
+    </>);
+});
 
-                <Flex gap="3" justify="center">
-                    <Dialog.Close>
-                    <Button variant="soft" color="gray" onClick={confirmCardSelection}>
-                        Confirm Selection
-                    </Button>
-                    </Dialog.Close>
-                    <Dialog.Close>
-                    <Button onClick={cancelCardSelection}>Cancel Selection</Button>
-                    </Dialog.Close>
-                </Flex>
-                </Dialog.Content>
-            </Dialog.Root>
-            )}  
-            </div>
-            <div className="pass-btn" onClick={onPass} />
-            <div className="reveal-btn" onClick={onReveal} />
-        </>
-    )
+PlayerAreaComponent.displayName = "PlayerAreaComponent";
+
+/**
+ * Memoized enemy resource display component
+ */
+interface EnemyResourceDisplayProps {
+    enemy: PlayerViewModel;
+    seatIndex: number;
 }
+
+const EnemyResourceDisplay = memo(({ enemy, seatIndex }: EnemyResourceDisplayProps) => {
+    const discardTooltip = useMemo(() =>
+        enemy.discardPile.length > 0 ? enemy.discardPile.map(t => t.name).join(" - ") : "Discard Pile",
+        [enemy.discardPile]
+    );
+
+    const trashTooltip = useMemo(() =>
+        enemy.trashPile.length > 0 ? enemy.trashPile.map(t => t.name).join(" - ") : "Trash Pile",
+        [enemy.trashPile]
+    );
+
+    return (
+        <div
+            className="player-resource-container absolute"
+            style={{
+                top: seatIndex === 0 || seatIndex === 2 ? 90 : 0,
+                left: seatIndex === 0 ? 968 : 260,
+                fontSize: "7px"
+            }}
+        >
+            <div className="enemy victory-points">{enemy.victoryPoints}</div>
+            <div>Candy<hr /><div>{enemy.candy}</div></div>
+            <div>Loot<hr /><div>{enemy.loot}</div></div>
+            <div>Deck<hr /><div>{enemy.deckLength}</div></div>
+            <Tooltip content={discardTooltip}>
+                <div>Discard<hr /><div>{enemy.discardPile.length}</div></div>
+            </Tooltip>
+            <Tooltip content={trashTooltip}>
+                <div>Trash<hr /><div>{enemy.trashPile.length}</div></div>
+            </Tooltip>
+        </div>
+    );
+});
+
+EnemyResourceDisplay.displayName = "EnemyResourceDisplay";

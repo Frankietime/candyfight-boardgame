@@ -1,12 +1,13 @@
-
 import _ from "lodash";
-import { BoardMove, MetaGameState } from "../../types";
-import { executeMove } from "./movesServices";
+import { RewardAction, MetaGameState } from "../../types";
+import { actionRegistry } from "../../actions";
+import { getCurrentPlayer } from "./helper";
 
-export const checlInvalidMoves = (mgState: MetaGameState ,moves: BoardMove[]) => {
+export const checkInvalidActions = (mgState: MetaGameState, actions: RewardAction[]) => {
     const clonedState = _.cloneDeep(mgState);
-    for (let i = 0; i <= moves.length, i++;) {
-        const clonedMove = _.cloneDeep(moves[i]);
-        executeMove(clonedState, clonedMove)
+    const player = getCurrentPlayer(clonedState);
+    for (const action of actions) {
+        const clonedAction = _.cloneDeep(action);
+        actionRegistry.execute(clonedAction.actionId, clonedAction.params ?? {}, clonedState, player, { location: clonedAction.location });
     }
 }

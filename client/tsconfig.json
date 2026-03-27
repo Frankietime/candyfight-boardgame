@@ -1,17 +1,16 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": false,
-    "noEmitOnError": false,
+    "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true
+    "paths": {
+      "@candyfight/shared": ["../shared"],
+      "@candyfight/shared/*": ["../shared/*"]
+    }
   },
-  "include": ["src", "../shared"]
+  "include": ["src"]
 }

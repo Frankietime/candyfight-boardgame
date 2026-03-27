@@ -1,13 +1,11 @@
-import "./LocationComponent.scss";
-import { isNullOrEmpty } from "../../../../shared/common-methods";
-import { Card, District, Location, PlayerGameState } from "../../../../shared/types";
-import { useBoardComponent } from "../board-component/UseBoardComponent";
+import { memo, useMemo } from "react";
+import { isNullOrEmpty } from "@candyfight/shared/common-methods";
+import { Card, District, Location, PlayerGameState } from "@candyfight/shared/types";
 import { ResourceComponent } from "../icon-components/ResourceComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { workerIconsByPlayerId } from "../icon-components/constants";
-import { LocationMovesEnum } from "../../../../shared/enums";
-import { isWorkerPlacementValid } from "../../../../shared/game-helper";
-import { useAppStore } from "../../store";
+import { LocationActionsEnum } from "@candyfight/shared/enums";
+import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
 
 export interface LocationComponentProps extends Location {
     x: number,
@@ -15,13 +13,13 @@ export interface LocationComponentProps extends Location {
     district: District,
     show?: boolean,
     isSelected?: boolean;
-    onClick: (event: any) => void,
+    onClick: () => void,
     isDisabled: boolean;
     selectedCard?: Card;
     player: PlayerGameState;
 }
 
-export const LocationComponent = ({
+export const LocationComponent = memo(({
     x, y,
     district,
     show = true,
@@ -36,20 +34,65 @@ export const LocationComponent = ({
     player,
     isRestrictedArea
 }: LocationComponentProps) => {
+    const isClickDisabled = isDisabled || isRestrictedArea;
 
-    const { ClickBox } = useBoardComponent();
+    // Memoize whether this location shows the glow effect
+    const showGlow = useMemo(() =>
+        !isRestrictedArea && !isSelected && !isDisabled &&
+        isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card),
+        [isRestrictedArea, isSelected, isDisabled, player, cost, reward, selectedCard]
+    );
 
-    const { playerState } = useAppStore();
+    // Memoize cost icons
+    const costIcons = useMemo(() =>
+        cost.districtIconIds.map(did =>
+            <DistrictIconComponent key={did} districtId={did} />
+        ),
+        [cost.districtIconIds]
+    );
 
-    return ( 
-        <ClickBox 
-            _onClick={onClick}
-            disabled={isDisabled || isRestrictedArea}
-            x={x} y={y} 
-            show={true}>
+    // Memoize cost resources
+    const costResources = useMemo(() => (
+        <>
+            {cost.resources?.map((resource, index) =>
+                <ResourceComponent key={`res-${index}`} resourceId={resource.resourceId ?? ""} amount={resource.amount} />
+            )}
+            {cost.actions?.map((action, actionIndex) => {
+                if (action.actionId === LocationActionsEnum.DISCARD || action.actionId === LocationActionsEnum.TRASH) {
+                    return Array.from({ length: action.params?.selectionNumber }).map((_, i) =>
+                        <ResourceComponent key={`action-${actionIndex}-${i}`} resourceId={action.actionId ?? ""} />
+                    );
+                }
+                return null;
+            })}
+        </>
+    ), [cost.resources, cost.actions]);
+
+    // Memoize reward display
+    const rewardDisplay = useMemo(() => (
+        <>
+            {reward.resources?.map((resource, index) =>
+                <ResourceComponent key={`reward-${index}`} resourceId={resource.resourceId} amount={resource.amount}/>
+            )}
+            {reward?.actions?.map((action, index) => {
+                if (action.actionId === LocationActionsEnum.DISCARD || action.actionId === LocationActionsEnum.TRASH || action.actionId === LocationActionsEnum.DRAW) {
+                    return Array.from({ length: action.params?.selectionNumber }).map((_, i) =>
+                        <ResourceComponent key={`reward-action-${index}-${i}`} resourceId={action.actionId ?? ""} />
+                    );
+                }
+                return <span key={`action-${index}`}><hr /><div className="reward-action-item">{action.name}</div></span>;
+            })}
+        </>
+    ), [reward.resources, reward.actions]);
+
+    return (
+        <div
+            className={`absolute border-2 border-solid ${isClickDisabled ? 'opacity-50 pointer-events-none bg-indigo-900/30' : 'hover:bg-white/50 cursor-pointer'}`}
+            style={{ top: y, left: x }}
+            onClick={isClickDisabled ? undefined : onClick}
+        >
             <div className="location-component-container">                
-                {/* <div className="location-container" style={{outline: !isSelected && !isDisabled && isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card) ? "3px solid aqua" : "none"}}> */}
-                <div className={!isRestrictedArea && !isSelected && !isDisabled && isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card) ? "location-container proto-glow" : "location-container"}>
+                <div className={showGlow ? "location-container proto-glow" : "location-container"}>
                     
                     {/* Name */}
                     <div className="location-name-container">{name}</div>
@@ -60,24 +103,11 @@ export const LocationComponent = ({
                             <div>
                                 {/* Location Icons Cost */}
                                 <div className="location-icons-container">
-                                    {cost.districtIconIds.map(did => 
-                                        <DistrictIconComponent key={did} districtId={did} />
-                                    )}
+                                    {costIcons}
                                 </div>
                                 {/* Location Resources Cost */}
                                 <div className="location-resource-cost-container">
-                                    <div>
-                                    {cost.resources?.map((resource, index) => 
-                                        <ResourceComponent key={index} resourceId={resource.resourceId ?? ""} amount={resource.amount} />
-                                    )}
-                                    {cost.moves?.map((move, index) => {
-                                       if (move.moveId == LocationMovesEnum.DISCARD || move.moveId == LocationMovesEnum.TRASH) {
-                                            return Array.from({ length: move.params?.selectionNumber }).map((_, index: number) => <ResourceComponent key={index} resourceId={move.moveId ?? ""} />)
-                                        } else {
-                                            return <></>
-                                        } 
-                                    })}
-                                    </div>
+                                    <div>{costResources}</div>
                                 </div>
                             </div>
                         </div>
@@ -86,19 +116,7 @@ export const LocationComponent = ({
                         <div className="location-reward-container col-span-3">
                             <div style={{overflowWrap: "break-word"}}>
                                 {/* Resources and Moves Reward */}
-                                <div className="">
-                                    {reward.resources?.map((resource, index) => 
-                                        <ResourceComponent key={index} resourceId={resource.resourceId} amount={resource.amount}/>
-                                    )}
-                                    {reward != undefined && reward.moves && reward.moves?.length > 0 ? 
-                                        reward.moves.map((move, index) => {
-                                            if (move.moveId == LocationMovesEnum.DISCARD || move.moveId == LocationMovesEnum.TRASH || move.moveId == LocationMovesEnum.DRAW) {
-                                                return Array.from({ length: move.params?.selectionNumber }).map((_, index: number) => <ResourceComponent key={index} resourceId={move.moveId ?? ""} />)
-                                            } else {
-                                                return <span key={index}><hr></hr><div className="reward-move-item" key={index}>{move.name}</div></ span>
-}                                        })
-                                        : <></>}
-                                </div>
+                                <div>{rewardDisplay}</div>
                             </div>
                         </div>
                     </div>
@@ -111,6 +129,8 @@ export const LocationComponent = ({
                     )}
                 </div>
             </div>
-        </ClickBox>
+        </div>
     );
-}
+});
+
+LocationComponent.displayName = "LocationComponent";

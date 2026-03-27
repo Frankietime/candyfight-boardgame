@@ -5,7 +5,7 @@ import { useAppStore } from "./store";
 import { useEffect, useMemo } from "react";
 import { SocketIO } from "boardgame.io/multiplayer";
 import { Client as ClientComponent} from "boardgame.io/react";
-import { Game } from "../../shared/Game";
+import { Game } from "@candyfight/shared/Game";
 import { _ClientImpl } from "boardgame.io/dist/types/src/client/client";
 import { BACKEND_URL } from "./config";
 import { SocketIOTransport } from "boardgame.io/dist/types/src/client/transport/socketio";

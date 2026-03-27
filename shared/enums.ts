@@ -10,12 +10,13 @@ export enum ResourceEnum {
     Loot = "loot",
 }
 
-export enum LocationMovesEnum {
+export enum LocationActionsEnum {
     DRAW = "draw",
-    ADD_PRESENCE_TOKEN ="addPresenceToken",
+    ADD_PRESENCE_TOKEN = "addPresenceToken",
     GET_LOOT = "getLoot",
+    GET_CANDY = "getCandy",
     STRANGE_CANDY_PUZZLE = "strangeCandyPuzzle",
-    COOLDOWN = "coolDown",
+    COOLDOWN = "cooldown",
     SIGNET_TRIGGER = "signetTrigger",
     ADD_REPAIR_TOKEN = "addRepairToken",
     ADVANCE_TRACKER = "advanceTracker",
@@ -25,6 +26,11 @@ export enum LocationMovesEnum {
     DISCARD = "discard",
     SELECT_AND_DISCARD = "selectAndDiscard",
     DEAL = "deal",
+}
+
+export enum RequirementType {
+    CARDS_IN_HAND = "cardsInHand",
+    RESOURCE = "resource",
 }
 
 export enum PlayerColorsEnum {

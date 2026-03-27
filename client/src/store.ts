@@ -1,32 +1,49 @@
 import { create } from "zustand";
-import { PlayerState } from "../../shared/types";
-import { LobbyAPI } from "boardgame.io";
-import { getRandomPlayerName } from "../../shared/services/moves/playerServices";
+import { ComponentType } from "react";
+import { PlayerState } from "@candyfight/shared/types";
+import { getRandomPlayerName } from "@candyfight/shared/services/moves/playerServices";
+
+/**
+ * boardgame.io Client component type.
+ * Result of calling Client({ game, board, multiplayer }).
+ */
+type GameClientComponent = ComponentType<{
+  matchID?: string;
+  playerID?: string;
+  credentials?: string;
+}>;
+
+/**
+ * boardgame.io SocketIO transport factory.
+ * Result of calling SocketIO({ server }).
+ * Using `any` for compatibility with boardgame.io internal types.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SocketIOTransportFactory = (transportOpts: any) => any;
 
 type AppState = {
+  // Player state
   playerState: PlayerState;
   setPlayerState: (p: PlayerState) => void;
 
-  matchData: any;
-  setMatchData: (m: any) => void;
+  // boardgame.io client component instance
+  client: GameClientComponent | null;
+  setClient: (client: GameClientComponent | null) => void;
 
-  client: any;
-  setClient: (client: any) => void;
-
-  server: any;
-  setServer: (client: any) => void;
+  // boardgame.io transport factory
+  server: SocketIOTransportFactory | null;
+  setServer: (server: SocketIOTransportFactory | null) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  playerState: { name: getRandomPlayerName()} as PlayerState,
+  // Player state
+  playerState: { name: getRandomPlayerName() } as PlayerState,
   setPlayerState: (p) => set({ playerState: p }),
-  
-  matchData: {} as LobbyAPI.Match,
-  setMatchData: (m) => set({ matchData: m }),
 
-  client: {},
-  setClient: (client: any) => set({ client }),
+  // Client instances - null until initialized
+  client: null,
+  setClient: (client) => set({ client }),
 
-  server: {},
-  setServer: (server: any) => set({ server })
+  server: null,
+  setServer: (server) => set({ server }),
 }));

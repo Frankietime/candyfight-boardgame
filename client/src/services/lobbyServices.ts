@@ -1,6 +1,6 @@
 import { LobbyAPI } from "boardgame.io";
-import { GAME_NAME } from "../../../shared/constants";
-import { PlayerState } from "../../../shared/types";
+import { GAME_NAME } from "@candyfight/shared/constants";
+import { PlayerState } from "@candyfight/shared/types";
 import { useLobby } from "../lib/LobbyProvider";
 
 export const useLobbyServices = () => {

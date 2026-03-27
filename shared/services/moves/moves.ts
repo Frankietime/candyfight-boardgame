@@ -33,9 +33,7 @@ export const draw = (player: PlayerGameState, random: any, numberOfCards?: numbe
     
 }
 
-export const getLoot = (player: PlayerGameState) => {
-    player.loot = player.loot + 1;
-}
+// NOTE: getLoot removed - use resources[] array instead (see types.ts)
 
 export const discard = (player: PlayerGameState, cards: Card[]): Card[] | string => {
     

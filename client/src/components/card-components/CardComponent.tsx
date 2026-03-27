@@ -1,7 +1,6 @@
-import { Card } from "../../../../shared/types";
-import { useBoardComponent } from "../board-component/UseBoardComponent";
+import { memo, useMemo } from "react";
+import { Card } from "@candyfight/shared/types";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
-import "./CardComponent.scss"
 
 export type CardComponentProps = {
     w?: number,
@@ -16,61 +15,91 @@ export type CardComponentProps = {
     selectionColor?: string;
     isDisabled?: boolean;
 }
-export const CardComponent = ({
+
+export const CardComponent = memo(({
     card,
     x,
     y,
-    children,
-    h, 
+    h,
     isSelected,
     onClick,
-    show,
     w,
     selectionColor,
     isDisabled,
 }: CardComponentProps) => {
+    // Memoize district icons
+    const districtIcons = useMemo(() =>
+        card?.districtIds?.map(did => <DistrictIconComponent key={did} districtId={did} />),
+        [card?.districtIds]
+    );
 
-    const { EventBox } = useBoardComponent();
+    // Memoize primary effects text
+    const primaryEffectsText = useMemo(() =>
+        card?.primaryEffects?.map(e => e.name).join(", "),
+        [card?.primaryEffects]
+    );
+
+    // Memoize secondary effects text
+    const secondaryEffectsText = useMemo(() =>
+        card?.secondaryEffects?.map(e => e.name).join(", "),
+        [card?.secondaryEffects]
+    );
+
+    // Memoize class name computation
+    const cardClassName = useMemo(() => {
+        let className = "card";
+        if (isSelected) {
+            className += " selected";
+            if (selectionColor) className += ` ${selectionColor}`;
+        }
+        if (isDisabled) className += " disabled";
+        return className;
+    }, [isSelected, selectionColor, isDisabled]);
+
+    if (!card) return null;
+
     return (
-        <EventBox 
-            x={x ?? 0}
-            y={y ?? 0}
-            key={x + "-" + y}
-            w={w ?? 105} 
-            h={h ?? 157} 
-            isSelected={isSelected}
+        <div
+            className={`absolute hover:bg-white/50 ${isSelected ? 'bg-indigo-900/30' : ''}`}
+            style={{
+                top: y ?? 0,
+                left: x ?? 0,
+                width: w ?? 105,
+                height: h ?? 157
+            }}
             onClick={onClick}
-        > 
-        {card != null && (
-            <div className={"card" + (isSelected ? " selected" + (selectionColor ? " " + selectionColor : "") : "" + (isDisabled ? " disabled" : ""))}>
+        >
+            <div className={cardClassName}>
                 <div className="card-name">
-                    <div>{card.districtIds.length > 0 ? card.districtIds
-                        .map(did => (<DistrictIconComponent key={did} districtId={did} />)) : <div className="non-location-title">{card.name}</div>}</div>
+                    <div>
+                        {card.districtIds?.length > 0
+                            ? districtIcons
+                            : <div className="non-location-title">{card.name}</div>
+                        }
+                    </div>
                 </div>
-            <hr></hr>
-            <div className="card-body">
-                {card?.districtIds.length > 0 && 
-                <div>
-                </div>
-                }
-                {card.primaryEffects != null &&
-                <div>
-                    <hr></hr>
-                    <div  className="play">Play</div>
-                    <hr></hr> 
-                    <div className="play-effect">{card?.primaryEffects?.name}</div>
-                </div>
-                }
-                {card?.secondaryEffects != null &&
-                <div>
-                    <hr></hr>
-                    <div className="reveal">Reveal</div>
-                    <hr></hr>
-                    <div className="reveal-effect">{card?.secondaryEffects.name}</div>
-                </div>
-                }
+                <hr />
+                <div className="card-body">
+                    {(card.primaryEffects?.length ?? 0) > 0 && (
+                        <div>
+                            <hr />
+                            <div className="play">Play</div>
+                            <hr />
+                            <div className="play-effect">{primaryEffectsText}</div>
+                        </div>
+                    )}
+                    {(card.secondaryEffects?.length ?? 0) > 0 && (
+                        <div>
+                            <hr />
+                            <div className="reveal">Reveal</div>
+                            <hr />
+                            <div className="reveal-effect">{secondaryEffectsText}</div>
+                        </div>
+                    )}
                 </div>
             </div>
-        )}
-        </EventBox>);
-    }
+        </div>
+    );
+});
+
+CardComponent.displayName = "CardComponent";

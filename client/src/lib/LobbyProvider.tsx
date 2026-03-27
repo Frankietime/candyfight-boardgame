@@ -9,17 +9,16 @@ const LobbyContext = createContext<LobbyCtx | null>(null);
 
 type Props = {
   serverUrl: string;
-  gameComponents: any[];
   children: React.ReactNode;
 };
 
-export function LobbyProvider({ serverUrl, gameComponents, children }: Props) {
+export function LobbyProvider({ serverUrl, children }: Props) {
 
   // useMemo evita recrear el cliente en cada render
   const value = useMemo(() => {
-    const lobby = new LobbyClient({ server: serverUrl, gameComponents: gameComponents });
+    const lobby = new LobbyClient({ server: serverUrl });
     return { lobby };
-  }, [serverUrl, gameComponents]);
+  }, [serverUrl]);
 
   return (
     <LobbyContext.Provider value={value}>

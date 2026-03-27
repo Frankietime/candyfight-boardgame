@@ -2,7 +2,4 @@
 @import "nes.css/css/nes.min.css";
 @import "@fontsource/press-start-2p";
 @import "@radix-ui/themes/styles.css";
-
-.event-box:hover {
-  background-color: rgba(255, 255, 255, 0.5);
-}
+@import "./styles/theme.css";

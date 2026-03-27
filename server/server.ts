@@ -1,7 +1,10 @@
 import { Server, Origins } from 'boardgame.io/server';
-import { Game } from '../shared/Game';
+import { Game } from '@candyfight/shared/Game';
 import KoaCors from '@koa/cors';
 import type { StorageAPI } from 'boardgame.io';
+import serve from 'koa-static';
+import mount from 'koa-mount';
+import path from 'path';
 
 const allowed = new Set([
   '*',
@@ -60,5 +63,8 @@ server.router.delete('/admin/matches/:matchID', async (ctx) => {
 
   ctx.status = 204;
 });
+
+const docsPath = path.join(__dirname, '..', 'docs');
+server.app.use(mount('/docs', serve(docsPath)));
 
 server.run({ port: 4000 });
