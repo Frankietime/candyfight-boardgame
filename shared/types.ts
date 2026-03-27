@@ -7,6 +7,7 @@ export type MetaGameState = {
     playerID?: PlayerID;
     random?: any;
     plugins?: DefaultPluginAPIs;
+    events?: { endTurn?: () => void };
 }
 
 export interface GameState {

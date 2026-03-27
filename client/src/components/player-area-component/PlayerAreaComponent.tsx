@@ -7,7 +7,6 @@ import { CardComponent } from "../card-components/CardComponent";
 export type PlayerAreaComponentProps = {
     G: GameState;
     player: PlayerGameState;
-    events: any;
     moves: any;
     selectedCard?: Card;
     playerView: PlayerViewModel[];
@@ -16,7 +15,6 @@ export type PlayerAreaComponentProps = {
 export const PlayerAreaComponent = memo(({
     G,
     player,
-    events,
     moves,
     selectedCard,
     playerView,
@@ -26,10 +24,7 @@ export const PlayerAreaComponent = memo(({
         moves.selectCard(card);
     }, [moves]);
 
-    const onPass = useCallback(() => {
-        if (playerView.filter(p => !p.hasRevealed).length === 1) return null;
-        return events.endTurn();
-    }, [playerView, events]);
+    const onPass = useCallback(() => moves.pass(), [moves]);
 
     const onReveal = useCallback(() => moves.reveal(), [moves]);
 
@@ -98,7 +93,10 @@ export const PlayerAreaComponent = memo(({
         </div>
 
         {/* Action Buttons */}
-        <div className="pass-btn" onClick={onPass} />
+        <div
+            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}`}
+            onClick={player.hasPlayedCard ? onPass : undefined}
+        />
         <div className="reveal-btn" onClick={onReveal} />
     </>);
 });

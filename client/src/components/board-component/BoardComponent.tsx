@@ -186,7 +186,6 @@ export const BoardComponent = ({
               <PlayerAreaComponent
                 G={G}
                 playerView={G.playersViewModel}
-                events={events}
                 moves={moves}
                 player={player}
                 selectedCard={selectedCard}

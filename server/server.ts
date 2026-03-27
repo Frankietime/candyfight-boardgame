@@ -64,9 +64,6 @@ server.router.delete('/admin/matches/:matchID', async (ctx) => {
   ctx.status = 204;
 });
 
-// Serve Docusaurus static site at /docs
-// Build the docs first: cd documentation && npm run build
-// __dirname is dist/server when compiled, so go up 2 levels to reach server/
 const docsPath = path.join(__dirname, '..', 'docs');
 server.app.use(mount('/docs', serve(docsPath)));
 

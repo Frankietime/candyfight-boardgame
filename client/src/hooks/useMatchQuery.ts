@@ -12,5 +12,10 @@ export function useMatchQuery(matchID: string | undefined) {
     queryKey: ["match", matchID],
     queryFn: () => getMatch(matchID!),
     enabled: !!matchID,
+    refetchInterval: (query) => {
+      const players = query.state.data?.players;
+      const allJoined = players?.every((p) => !!p.name);
+      return allJoined ? false : 3000;
+    },
   });
 }

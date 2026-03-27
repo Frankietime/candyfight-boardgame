@@ -1,5 +1,5 @@
 import { Game as GameInterface } from "boardgame.io";
-import { INVALID_MOVE, Stage } from "boardgame.io/core";
+import { INVALID_MOVE, Stage, TurnOrder } from "boardgame.io/core";
 import { GAME_NAME } from "./constants";
 import { Card, GameState, MetaGameState } from "./types";
 import {
@@ -62,7 +62,20 @@ export const Game: GameInterface<GameState> = {
             turn: {
                 minMoves: 1,
                 onBegin: (mgState: MetaGameState) => resetTurnState(getCurrentPlayer(mgState)),
-                endIf: (mgState: MetaGameState) => getCurrentPlayer(mgState).hasRevealed
+                endIf: (mgState: MetaGameState) => getCurrentPlayer(mgState).hasRevealed,
+                order: {
+                    first: TurnOrder.DEFAULT.first,
+                    next: ({ G, ctx }: { G: GameState, ctx: any }) => {
+                        for (let i = 1; i <= ctx.numPlayers; i++) {
+                            const pos = (ctx.playOrderPos + i) % ctx.numPlayers;
+                            const playerID = ctx.playOrder[pos];
+                            if (!G.players[playerID]?.hasRevealed) {
+                                return pos;
+                            }
+                        }
+                        return undefined; // all revealed; phase.endIf will transition
+                    }
+                }
             },
             moves: {
                 draw: {
@@ -94,7 +107,17 @@ export const Game: GameInterface<GameState> = {
                     undoable: true
                 },
                 reveal: {
-                    move: (mgState: MetaGameState) => revealPlayer(getCurrentPlayer(mgState))
+                    move: (mgState: MetaGameState) => {
+                        revealPlayer(getCurrentPlayer(mgState));
+                        mgState.events?.endTurn?.();
+                    }
+                },
+                pass: {
+                    move: (mgState: MetaGameState) => {
+                        if (!getCurrentPlayer(mgState).hasPlayedCard) return INVALID_MOVE;
+                        mgState.events?.endTurn?.();
+                    },
+                    undoable: false
                 }
             }
         },

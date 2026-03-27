@@ -3,12 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "main": "./index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "boardgame.io": "^0.50.2",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.20",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.9"
   }
 }
