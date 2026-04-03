@@ -39,3 +39,10 @@ export enum PlayerColorsEnum {
     "violet" = 2,
     "yellow" = 3,
 }
+
+export enum CharacterEnum {
+    ChillDudes = "chilldudes",
+    Kawaiisis = "kawaiisis",
+    StreetWizards = "streetwizards",
+    TechBros = "techbros",
+}

@@ -5,6 +5,7 @@ import { District, Location, Card, PlayerGameState, PlayerViewModel } from "@can
 import { PlayerColorsEnum } from "@candyfight/shared/enums";
 import { LocationComponent } from "../location-component/LocationComponent";
 import { locsXPos, locsYPos } from "./constants";
+import { DistrictIcon } from "../ui/GameIcon";
 
 export interface BoardDistrictsLayerProps {
   /** Array of districts to render */
@@ -78,6 +79,12 @@ interface DistrictContainerProps {
   isLocationDisabled: (location: Location) => boolean;
 }
 
+const TILE_W = Math.round(1280 / 12); // 107px
+const TILE_H = Math.round(720 / 12);  //  60px
+const HEADER_H = 24;                  // approximate header height (px)
+const HEADER_GAP = 8;                 // gap between header and tile edge
+const HEADER_MARGIN = 6;              // horizontal overhang on each side
+
 const DistrictContainer = memo(({
   district,
   districtIndex,
@@ -89,14 +96,29 @@ const DistrictContainer = memo(({
   onLocationSelect,
   isLocationDisabled,
 }: DistrictContainerProps) => {
+  // Bottom districts (2,3): header below; top districts (0,1): header above
+  const isTop = districtIndex >= 2;
+
+  const xs = locsXPos[districtIndex];
+  const ys = locsYPos[districtIndex];
+
+  // Horizontal: header spans the exact tile footprint ± margin
+  const headerLeft  = Math.min(...xs) - HEADER_MARGIN;
+  const headerWidth = Math.max(...xs) + TILE_W - Math.min(...xs) + HEADER_MARGIN * 2;
+
+  // Vertical: sit just outside the tile group with a clear gap
+  const headerTop = isTop
+    ? Math.max(...ys) + TILE_H + HEADER_GAP          // below bottom tile row
+    : Math.min(...ys) - HEADER_H - HEADER_GAP;       // above top tile row
+
   return (
     <div
       className="district-container absolute"
       style={{
         top: district.y,
         left: district.x,
-        width: "fit-content",
-        height: "fit-content",
+        width: "340px",
+        height: "130px",
       }}
     >
       {/* District Header */}
@@ -105,6 +127,9 @@ const DistrictContainer = memo(({
         playersViewModel={playersViewModel}
         phase={phase}
         matchData={matchData}
+        headerTop={headerTop}
+        headerLeft={headerLeft}
+        headerWidth={headerWidth}
       />
 
       {/* District Locations */}
@@ -140,6 +165,9 @@ interface DistrictHeaderProps {
   playersViewModel: PlayerViewModel[];
   phase: string;
   matchData: LobbyAPI.Match;
+  headerTop: number;
+  headerLeft: number;
+  headerWidth: number;
 }
 
 const DistrictHeader = memo(({
@@ -147,35 +175,31 @@ const DistrictHeader = memo(({
   playersViewModel,
   phase,
   matchData,
+  headerTop,
+  headerLeft,
+  headerWidth,
 }: DistrictHeaderProps) => {
   const isCombatPhase = phase === "combatPhase";
 
   return (
     <div
-      className="district-name-container"
-      style={{
-        top: "-50px",
-        position: "relative",
-        color: "black",
-        fontWeight: 600,
-        backgroundColor: "white",
-        padding: "10px",
-      }}
+      className={`district-header district-header--${district.id.toLowerCase()}`}
+      style={{ top: headerTop, left: headerLeft, width: headerWidth }}
     >
-      <div className="district-name">
-        {district.id} - {district.name} |{" "}
-        {!isCombatPhase && district.presence ? (
-          <PresenceDisplay
-            presence={district.presence}
-            playersViewModel={playersViewModel}
-          />
-        ) : (
-          <WinnerDisplay
-            winnerId={district.combatWinnerId}
-            matchData={matchData}
-          />
-        )}
-      </div>
+      <DistrictIcon districtId={district.id} size="sm" />
+      <span>{district.name}</span>
+      <span className="district-header-separator">|</span>
+      {!isCombatPhase && district.presence ? (
+        <PresenceDisplay
+          presence={district.presence}
+          playersViewModel={playersViewModel}
+        />
+      ) : (
+        <WinnerDisplay
+          winnerId={district.combatWinnerId}
+          matchData={matchData}
+        />
+      )}
     </div>
   );
 });
@@ -191,21 +215,20 @@ interface PresenceDisplayProps {
 }
 
 const PresenceDisplay = memo(({ presence, playersViewModel }: PresenceDisplayProps) => (
-  <>
-    {playersViewModel.map(player => (
-      <span
-        key={`presence-${player.id}`}
-        style={{
-          fontWeight: 600,
-          color: PlayerColorsEnum[parseInt(player.id)] as string,
-          display: "inline",
-        }}
-      >
-        {" "}
-        {presence[player.id]?.amount ?? " - "}
-      </span>
-    ))}
-  </>
+  <span className="inline-flex items-center gap-2">
+    {playersViewModel.map(player => {
+      const amount = presence[player.id]?.amount ?? 0;
+      if (amount <= 0) return null;
+      return (
+        <span
+          key={`presence-${player.id}`}
+          style={{ color: PlayerColorsEnum[parseInt(player.id)] as string, fontWeight: 700 }}
+        >
+          {amount}
+        </span>
+      );
+    })}
+  </span>
 ));
 
 PresenceDisplay.displayName = "PresenceDisplay";

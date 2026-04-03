@@ -1,5 +1,5 @@
 import { Ctx, DefaultPluginAPIs, PlayerID } from "boardgame.io";
-import { DistrictIconsEnum, LocationActionsEnum, RequirementType, ResourceEnum } from "./enums";
+import { CharacterEnum, DistrictIconsEnum, LocationActionsEnum, RequirementType, ResourceEnum } from "./enums";
 
 export type MetaGameState = {
     G: GameState;
@@ -52,6 +52,7 @@ export const isFullPlayerState = (player: PlayerPublicOrPrivate): player is Play
 
 export type PlayerGameState = {
   id: string;
+  characterId?: CharacterEnum;
   cardsInPlay?: Card[];
   hasPlayedCard: boolean;
   currentNumberOfWorkers: number;
@@ -65,11 +66,11 @@ export type PlayerGameState = {
   trashPile: Card[];
   hand: Card[];
   hasRevealed: boolean;
-  
  }
 
 export type PlayerViewModel = {
   id: string;
+  characterId?: CharacterEnum;
   hasRevealed: boolean,
   currentNumberOfWorkers: number;
   victoryPoints: number;

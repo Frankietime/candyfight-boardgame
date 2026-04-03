@@ -1,13 +1,27 @@
 import { MetaGameState, PlayerGameState, Location, Card } from "../../types";
 import { actionRegistry } from "../../actions";
+import { ActionParams } from "../../actions/action-params";
 import { discard } from "./moves";
+
+/**
+ * Structured move params carrying user-provided inputs for cost and reward actions.
+ * Use when a location requires user input for both a cost action (e.g. trash) and
+ * a reward action (e.g. buy card). Backward-compatible: raw ActionParams still accepted.
+ */
+export interface WorkerMoveParams {
+    costParams?: ActionParams;
+    rewardParams?: ActionParams;
+}
+
+const isWorkerMoveParams = (p: any): p is WorkerMoveParams =>
+    p != null && typeof p === 'object' && ('costParams' in p || 'rewardParams' in p);
 
 export interface PlaceWorkerParams {
     mgState: MetaGameState;
     player: PlayerGameState;
     location: Location;
     card: Card;
-    moveParams?: any;
+    moveParams?: WorkerMoveParams | ActionParams;
 }
 
 /**
@@ -20,7 +34,7 @@ export const placeWorker = (params: PlaceWorkerParams): void => {
 
     playCard(player, card, mgState, location);
     payCosts(player, location, mgState, moveParams);
-    collectRewards(player, location, mgState);
+    collectRewards(player, location, mgState, moveParams);
     claimLocation(mgState, player, location);
 };
 
@@ -63,7 +77,7 @@ const payCosts = (
     player: PlayerGameState,
     location: Location,
     mgState: MetaGameState,
-    moveParams?: any
+    moveParams?: WorkerMoveParams | ActionParams
 ): void => {
     // Deduct resource costs
     location.cost.resources?.forEach(res => {
@@ -72,14 +86,10 @@ const payCosts = (
 
     // Execute cost actions (may use moveParams for user input)
     location.cost.actions?.forEach(action => {
-        const params = moveParams ?? action.params ?? {};
-        actionRegistry.execute(
-            action.actionId,
-            params,
-            mgState,
-            player,
-            { location }
-        );
+        const userParams = isWorkerMoveParams(moveParams)
+            ? (moveParams.costParams ?? action.params ?? {})
+            : (moveParams ?? action.params ?? {});
+        actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
     });
 };
 
@@ -89,7 +99,8 @@ const payCosts = (
 const collectRewards = (
     player: PlayerGameState,
     location: Location,
-    mgState: MetaGameState
+    mgState: MetaGameState,
+    moveParams?: WorkerMoveParams | ActionParams
 ): void => {
     // Add resource rewards
     location.reward.resources?.forEach(res => {
@@ -98,13 +109,10 @@ const collectRewards = (
 
     // Execute reward actions
     location.reward.actions?.forEach(action => {
-        actionRegistry.execute(
-            action.actionId,
-            action.params ?? {},
-            mgState,
-            player,
-            { location }
-        );
+        const userParams = isWorkerMoveParams(moveParams)
+            ? (moveParams.rewardParams ?? action.params ?? {})
+            : (action.params ?? {});
+        actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
     });
 };
 

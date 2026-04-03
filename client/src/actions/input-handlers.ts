@@ -34,6 +34,9 @@ export interface InputHandlerProps<TResult = unknown> {
 
   /** Optional: Card to exclude from selection (the played card) */
   excludeCardId?: string;
+
+  /** Market cards available for purchase (used when source === 'market') */
+  marketCards?: Card[];
 }
 
 /**

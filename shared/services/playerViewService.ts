@@ -6,6 +6,7 @@ import { GameState, PlayerGameState, PlayerViewModel, PlayerPublicOrPrivate, Dic
  */
 export const toPublicPlayer = (player: PlayerGameState): PlayerViewModel => ({
     id: player.id,
+    characterId: player.characterId,
     hasRevealed: player.hasRevealed,
     currentNumberOfWorkers: player.currentNumberOfWorkers,
     victoryPoints: player.victoryPoints,

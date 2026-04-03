@@ -39,11 +39,12 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
 
         initialPlayersState[Id.toString()] = {
             id: Id.toString(),
+            characterId: undefined,
             currentNumberOfWorkers: 0,
             maxNumberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
             selectedCard: NO_CARD_SELECTED,
             hasPlayedCard: false,
-            [ResourceEnum.Candy]: 8,
+            [ResourceEnum.Candy]: 2,
             [ResourceEnum.Loot]: 2,
             victoryPoints: 0,
             deck: deck,

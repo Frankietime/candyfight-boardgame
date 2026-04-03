@@ -2,6 +2,7 @@ import { Game as GameInterface } from "boardgame.io";
 import { INVALID_MOVE, Stage, TurnOrder } from "boardgame.io/core";
 import { GAME_NAME } from "./constants";
 import { Card, GameState, MetaGameState } from "./types";
+import { CharacterEnum } from "./enums";
 import {
     districtsSetup,
     getInitialPlayersState,
@@ -45,8 +46,33 @@ export const Game: GameInterface<GameState> = {
     playerView,
 
     phases: {
-        maintenancePhase: {
+        characterSelectionPhase: {
             start: true,
+            next: "maintenancePhase",
+            endIf: ({ G }) => {
+                const players = getPlayersList(G);
+                return players.length > 0 && players.every(p => p.characterId !== undefined);
+            },
+            turn: { activePlayers: { all: Stage.NULL } },
+            moves: {
+                selectCharacter: {
+                    move: (mgState: MetaGameState, characterId: CharacterEnum) => {
+                        // With activePlayers, mgState.playerID is the acting player.
+                        // ctx.currentPlayer is the turn player (always "0") — wrong here.
+                        const actingPlayerID = mgState.playerID ?? mgState.ctx.currentPlayer;
+                        const player = mgState.G.players[actingPlayerID];
+                        if (!player || player.characterId) return INVALID_MOVE;
+                        const taken = getPlayersList(mgState.G)
+                            .map(p => p.characterId)
+                            .filter(Boolean);
+                        if (taken.includes(characterId)) return INVALID_MOVE;
+                        player.characterId = characterId;
+                    },
+                    undoable: false
+                }
+            }
+        },
+        maintenancePhase: {
             next: "mainPhase",
             endIf: ({ G }) => getPlayersList(G).every(player => player.hand.length === 5),
             onBegin: ({ G, random }) => {

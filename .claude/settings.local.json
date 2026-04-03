@@ -34,7 +34,27 @@
       "mcp__plugin_playwright_playwright__browser_console_messages",
       "mcp__plugin_playwright_playwright__browser_snapshot",
       "Bash(npm run:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(ls -la M1-C8* M1-C9* M1-C10*)",
+      "mcp__plugin_playwright_playwright__browser_install",
+      "Bash(taskkill /f /im chrome.exe)",
+      "Bash(rm -f \"C:/Users/donad/AppData/Local/ms-playwright/mcp-chrome-6507ebc/Default/lockfile\" \"C:/Users/donad/AppData/Local/ms-playwright/mcp-chrome-6507ebc/lockfile\")",
+      "Bash(powershell -Command \"Stop-Process -Name chrome -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; Write-Host 'done'\")",
+      "Bash(powershell -Command \"Remove-Item -Recurse -Force 'C:\\\\Users\\\\donad\\\\AppData\\\\Local\\\\ms-playwright\\\\mcp-chrome-6507ebc' -ErrorAction SilentlyContinue; Write-Host 'removed'\")",
+      "Bash(npx playwright:*)",
+      "Bash(node -e \":*)",
+      "Bash(xargs grep:*)",
+      "Read(//tmp/**)",
+      "Bash(node_modules/.bin/playwright install:*)",
+      "Bash(node screenshot.mjs)",
+      "Bash(node screenshot2.mjs)",
+      "Bash(node screenshot3.mjs)",
+      "Bash(node inspect.mjs)",
+      "Bash(node inspect2.mjs)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(ls:*)",
+      "Bash(grep -r \"player-taken\\\\|location-taken\" /c/Users/donad/repos/candyfight-boardgame/client/dist/assets/index*.css -o)",
+      "Bash(node:*)"
     ]
   }
 }

@@ -25,6 +25,7 @@ export function CardSelectionHandler({
   minCount,
   maxCount,
   excludeCardId,
+  marketCards,
   title,
 }: CardSelectionHandlerProps) {
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
@@ -47,6 +48,9 @@ export function CardSelectionHandler({
       case 'deck':
         cards = [...player.deck];
         break;
+      case 'market':
+        cards = [...(marketCards ?? [])];
+        break;
       default:
         cards = [...player.hand];
     }
@@ -67,7 +71,7 @@ export function CardSelectionHandler({
     }
 
     return cards;
-  }, [cardSpec, player, excludeCardId]);
+  }, [cardSpec, player, excludeCardId, marketCards]);
 
   // Selection limits
   const effectiveMinCount = minCount ?? cardSpec?.minCount ?? 1;
@@ -102,25 +106,38 @@ export function CardSelectionHandler({
   // Get display title
   const displayTitle = title ?? cardSpec?.label ?? getDefaultTitle(inputSpec);
 
+  const isMarketSource = cardSpec?.source === 'market';
+  const marketDeckRemaining = isMarketSource && marketCards
+    ? Math.max(0, marketCards.length - sourceCards.length)
+    : 0;
+
   return (
     <Dialog.Root open={true}>
-      <Dialog.Content style={{ height: "300px", maxWidth: "1000px" }}>
+      <Dialog.Content style={{ maxWidth: "900px" }}>
         <Dialog.Title>
           <Flex justify="center">{displayTitle}</Flex>
         </Dialog.Title>
+        {isMarketSource && (
+          <Flex justify="center" style={{ fontSize: "12px", color: "gray", marginBottom: "8px" }}>
+            {sourceCards.length} available · {marketDeckRemaining} more in deck
+          </Flex>
+        )}
 
-        <Flex>
+        <Flex gap="2" justify="center" wrap="wrap">
           {sourceCards.map((card, index) => (
-            <CardComponent
-              key={`select-card-${card.id}-${index}`}
-              card={card}
-              isSelected={selectedCards.some(c => c.id === card.id)}
-              y={120}
-              x={20 + index * 105}
-              show={true}
-              onClick={() => handleCardClick(card)}
-              selectionColor="red"
-            />
+            <div key={`select-card-${card.id}-${index}`} style={{ position: "relative", width: 90, height: 134 }}>
+              <CardComponent
+                card={card}
+                isSelected={selectedCards.some(c => c.id === card.id)}
+                w={90}
+                h={134}
+                y={0}
+                x={0}
+                show={true}
+                onClick={() => handleCardClick(card)}
+                selectionColor="red"
+              />
+            </div>
           ))}
         </Flex>
 
@@ -147,6 +164,7 @@ export function CardSelectionHandler({
  */
 function getDefaultTitle(inputSpec: any): string {
   if (inputSpec.inputType === 'cardSelection') {
+    if (inputSpec.source === 'market') return 'Choose a card to buy';
     return 'Select Cards';
   }
   return 'Make Selection';

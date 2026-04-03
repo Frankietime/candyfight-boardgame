@@ -7,3 +7,6 @@ export const INITIAL_NUMBER_OF_WORKERS = 2;
  * Use `hasSelectedCard(player)` helper for semantic clarity.
  */
 export const NO_CARD_SELECTED: undefined = undefined;
+
+/** Number of face-up cards visible in the market row at any time. */
+export const MARKET_ROW_SIZE = 4;

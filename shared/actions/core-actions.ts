@@ -15,8 +15,11 @@ import {
   TrashActionParams,
   AddPresenceTokenParams,
   GetSwordMasterParams,
+  BuyCardActionParams,
 } from "./action-params";
+import { MARKET_ROW_SIZE } from "../constants";
 import { Card, MetaGameState, PlayerGameState } from "../types";
+import { characterDefinitions } from "../characters/character-definitions";
 
 // ============================================================================
 // Helper functions (adapted from existing moves.ts)
@@ -222,6 +225,39 @@ const getSwordMasterHandler: ActionHandler<GetSwordMasterParams> = {
 };
 
 // ============================================================================
+// BUY_CARD Action
+// ============================================================================
+
+const buyCardDefinition: ActionDefinition<BuyCardActionParams> = {
+  id: LocationActionsEnum.BUY_CARD,
+  displayName: "Buy Card",
+  inputSpec: {
+    inputType: 'cardSelection',
+    source: 'market',
+    minCount: 1,
+    maxCount: 1,
+  },
+  tags: ['core', 'cards', 'market'],
+};
+
+const buyCardHandler: ActionHandler<BuyCardActionParams> = {
+  validate: (params, state) => {
+    const visibleCards = state.G.cardMarket.slice(0, MARKET_ROW_SIZE);
+    if (visibleCards.length === 0) return "The market is empty";
+    const isAvailable = visibleCards.some(c => c.id === params.targetCardId);
+    if (!isAvailable) return `Card ${params.targetCardId} is not available in the market`;
+    return null;
+  },
+  execute: (params, state, player) => {
+    const index = state.G.cardMarket.findIndex(c => c.id === params.targetCardId);
+    if (index !== -1) {
+      const [card] = state.G.cardMarket.splice(index, 1);
+      player.discardPile = [...player.discardPile, card];
+    }
+  },
+};
+
+// ============================================================================
 // Stub Actions (not yet implemented)
 // ============================================================================
 
@@ -253,13 +289,11 @@ export function registerCoreActions(): void {
   // NOTE: GET_LOOT and GET_CANDY are NOT registered here.
   // Use resources[] array instead - it's the correct pattern for simple +/- operations.
 
+  actionRegistry.register(buyCardDefinition, buyCardHandler);
+
   // Stub actions (placeholders for future implementation)
   actionRegistry.register(
     stubDefinition(LocationActionsEnum.ADVANCE_TRACKER, "Advance Tracker"),
-    stubHandler
-  );
-  actionRegistry.register(
-    stubDefinition(LocationActionsEnum.BUY_CARD, "Buy Card"),
     stubHandler
   );
   actionRegistry.register(
@@ -271,8 +305,19 @@ export function registerCoreActions(): void {
     stubHandler
   );
   actionRegistry.register(
-    stubDefinition(LocationActionsEnum.SIGNET_TRIGGER, "Signet Trigger"),
-    stubHandler
+    {
+      id: LocationActionsEnum.SIGNET_TRIGGER,
+      displayName: "Signet Trigger",
+      inputSpec: { inputType: 'none' },
+      tags: ['core', 'character'],
+    },
+    {
+      execute: (params, state, player, context) => {
+        if (!player.characterId) return;
+        const character = characterDefinitions[player.characterId];
+        character?.executeSignetAbility(state, player, context);
+      }
+    }
   );
   actionRegistry.register(
     stubDefinition(LocationActionsEnum.STRANGE_CANDY_PUZZLE, "Strange Candy Puzzle"),
