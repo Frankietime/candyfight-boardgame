@@ -1,7 +1,8 @@
 import { ReactNode, memo } from "react";
+import React from "react";
 import { Button, Dialog, Flex } from "@radix-ui/themes";
 
-export type DialogSize = "sm" | "md" | "lg" | "xl" | "full";
+export type DialogSize = "sm" | "md" | "lg" | "xl" | "full" | "half";
 
 const sizeStyles: Record<DialogSize, { maxWidth: string; height?: string }> = {
   sm: { maxWidth: "min(400px, 90vw)" },
@@ -9,6 +10,7 @@ const sizeStyles: Record<DialogSize, { maxWidth: string; height?: string }> = {
   lg: { maxWidth: "min(800px, 95vw)" },
   xl: { maxWidth: "min(1000px, 95vw)" },
   full: { maxWidth: "100%", height: "auto" },
+  half: { maxWidth: "50%", height: "auto" },
 };
 
 export interface DialogAction {
@@ -26,7 +28,7 @@ export interface GameDialogProps {
   /** Optional callback when dialog open state changes */
   onOpenChange?: (open: boolean) => void;
   /** Dialog title */
-  title?: string;
+  title?: React.ReactNode;
   /** Title alignment (uses Radix Flex values) */
   titleAlign?: "start" | "center" | "end";
   /** Dialog content */
@@ -170,13 +172,14 @@ ConfirmDialog.displayName = "ConfirmDialog";
  */
 export interface PhaseDialogProps {
   open: boolean;
-  title?: string;
+  title?: ReactNode;
   children: ReactNode;
   actionLabel: string;
   onAction: () => void;
   actionColor?: DialogAction["color"];
   isActionDisabled?: boolean;
   waitingMessage?: string;
+  top?: string;
 }
 
 export const PhaseDialog = memo(({
@@ -188,12 +191,13 @@ export const PhaseDialog = memo(({
   actionColor = "red",
   isActionDisabled = false,
   waitingMessage,
+  top = "max(10vh, 100px)",
 }: PhaseDialogProps) => (
   <GameDialog
     open={open}
     title={title}
-    size="full"
-    top="max(10vh, 100px)"
+    size="half"
+    top={top}
     primaryAction={{
       label: isActionDisabled && waitingMessage ? waitingMessage : actionLabel,
       onClick: onAction,

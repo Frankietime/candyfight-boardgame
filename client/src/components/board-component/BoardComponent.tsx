@@ -1,4 +1,4 @@
-import mapBg from "../../assets/board/prodis-tablero-estilo-y-char-v1.png";
+import mapBg from "../../assets/board/board-background.png";
 import { BoardProps } from "boardgame.io/react";
 import { GameState, PlayerGameState, Location, Card, isFullPlayerState } from "@candyfight/shared/types";
 import { GameInfoComponent } from "../game-info-component/GameInfoComponent";
@@ -10,14 +10,17 @@ import { PlayerAreaComponent } from "../player-area-component/PlayerAreaComponen
 import { useLobbyServices } from "../../services/lobbyServices";
 import { useActionOrchestrator, ActionOrchestratorRenderer } from "../../actions/action-orchestrator";
 import { ActionParams } from "@candyfight/shared/actions";
+import { WorkerMoveParams } from "@candyfight/shared/services/moves/workerPlacementService";
+import { MARKET_ROW_SIZE } from "@candyfight/shared/constants";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
-import { QueryErrorFallback } from "../ui";
+import { QueryErrorFallback, DistrictLoader } from "../ui";
 // Extracted hooks and components
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from "./hooks/useBoardScale";
 import { BoardDistrictsLayer } from "./BoardDistrictsLayer";
 import { EndGameDialog, CombatPhaseDialog } from "./dialogs";
 // Import to trigger handler registration
 import "../input-handlers/CardSelectionHandler";
+import { CharacterSelectionScreen } from "../character-selection/CharacterSelectionScreen";
 
 interface BoardGameProps extends BoardProps<GameState> {}
 
@@ -86,30 +89,57 @@ export const BoardComponent = ({
 
     const selectedLocation = G.districts[districtIndex].locations[locationIndex];
 
-    // Find cost action that requires card selection (DISCARD or TRASH)
-    const cardSelectionAction = selectedLocation.cost.actions?.find(
+    const trashCostAction = selectedLocation.cost.actions?.find(
       a => a.actionId === LocationActionsEnum.DISCARD || a.actionId === LocationActionsEnum.TRASH
     );
+    const buyCardRewardAction = selectedLocation.reward.actions?.find(
+      a => a.actionId === LocationActionsEnum.BUY_CARD
+    );
 
-    // Use the action orchestrator for DISCARD/TRASH actions
-    if (player.hand.length >= 2 && cardSelectionAction) {
-      actionOrchestrator.requestActionInput(cardSelectionAction.actionId, {
+    const marketRow = G.cardMarket.slice(0, MARKET_ROW_SIZE);
+
+    const doPlaceWorker = (costParams?: ActionParams, rewardParams?: ActionParams) => {
+      const moveParams: WorkerMoveParams | undefined =
+        (costParams || rewardParams) ? { costParams, rewardParams } : undefined;
+      moves.placeWorker(districtIndex, locationIndex, selectedCard, moveParams);
+    };
+
+    const needsTrashInput = !!(trashCostAction && player.hand.length >= 2);
+    const needsBuyInput = !!buyCardRewardAction;
+
+    if (needsTrashInput && needsBuyInput) {
+      // Step 1: collect trash cost, then step 2: collect market card
+      actionOrchestrator.requestActionInput(trashCostAction!.actionId, {
         location: selectedLocation,
-        costAction: cardSelectionAction,
-        onComplete: (params: ActionParams) => {
-          moves.placeWorker(districtIndex, locationIndex, selectedCard, params);
+        costAction: trashCostAction,
+        onComplete: (trashParams) => {
+          actionOrchestrator.requestActionInput(LocationActionsEnum.BUY_CARD, {
+            marketCards: marketRow,
+            onComplete: (buyParams) => doPlaceWorker(trashParams, buyParams),
+            onCancel: () => {},
+          });
         },
-        onCancel: () => {
-          // User cancelled - do nothing
-        }
+        onCancel: () => {},
+      });
+    } else if (needsTrashInput) {
+      actionOrchestrator.requestActionInput(trashCostAction!.actionId, {
+        location: selectedLocation,
+        costAction: trashCostAction,
+        onComplete: (costParams) => doPlaceWorker(costParams),
+        onCancel: () => {},
+      });
+    } else if (needsBuyInput) {
+      actionOrchestrator.requestActionInput(LocationActionsEnum.BUY_CARD, {
+        marketCards: marketRow,
+        onComplete: (buyParams) => doPlaceWorker(undefined, buyParams),
+        onCancel: () => {},
       });
     } else {
-      // No card selection needed, place worker directly
-      if (!player.hasPlayedCard && selectedLocation.takenByPlayerID === undefined) {
-        moves.placeWorker(districtIndex, locationIndex, selectedCard);
+      if (selectedLocation.takenByPlayerID === undefined) {
+        doPlaceWorker();
       }
     }
-  }, [player, G.districts, selectedCard, actionOrchestrator, moves]);
+  }, [player, G.districts, G.cardMarket, selectedCard, actionOrchestrator, moves]);
 
   // Handle leaving match - memoized
   const onLeaveMatch = useCallback(async () => {
@@ -148,7 +178,21 @@ export const BoardComponent = ({
         ref={outerRef}
         style={getScaleStyle(scale)}
       >
-        {isReady && (
+        {!isReady && <DistrictLoader />}
+        {isReady && ctx.phase === 'characterSelectionPhase' && (
+          <div className="board-viewport">
+            <div className="board-container relative mx-auto">
+              <CharacterSelectionScreen
+                playersViewModel={G.playersViewModel}
+                matchData={matchData}
+                playerID={playerID ?? null}
+                moves={moves}
+              />
+            </div>
+          </div>
+        )}
+
+        {isReady && ctx.phase !== 'characterSelectionPhase' && (
           <div className="board-viewport">
             {/* Game Info Header */}
             <GameInfoComponent
@@ -189,6 +233,8 @@ export const BoardComponent = ({
                 moves={moves}
                 player={player}
                 selectedCard={selectedCard}
+                playerNames={matchData.players.map((p, i) => p?.name ?? `Player ${i + 1}`)}
+                currentPlayerId={ctx.phase === 'combatPhase' ? 'all' : ctx.currentPlayer}
               />
 
               {/* Combat Phase Dialog */}

@@ -64,3 +64,6 @@ export type {
 // Error handling components
 export { ErrorBoundary, QueryErrorFallback } from "./ErrorBoundary";
 export type { ErrorBoundaryProps, QueryErrorFallbackProps } from "./ErrorBoundary";
+
+// Loader
+export { DistrictLoader } from "./DistrictLoader";

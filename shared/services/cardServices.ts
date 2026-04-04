@@ -36,7 +36,7 @@ export const getTierTwoCards = (): Card[] => {
 }
 
 export const getMarketTierOneCards = () => {
-    const districtIds = getEnumStringKeys(DistrictIconsEnum);
+    const districtIds = Object.values(DistrictIconsEnum);
     
     const tierOneMarketCards = _.flatMap(districtIds, id1 =>
         districtIds.map(id2 => [id1, id2])
@@ -47,7 +47,10 @@ export const getMarketTierOneCards = () => {
 
         const marketTierOne: Card[] = [];
         [...new Set(tierOneMarketCards)].forEach(tuple => {
-            marketTierOne.push(getDistrictCard(tuple));
+            marketTierOne.push({
+                ...getDistrictCard(tuple),
+                primaryEffects: [actions.addPresence()],
+            });
         })
     return marketTierOne;
 }

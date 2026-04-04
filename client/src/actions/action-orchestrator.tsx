@@ -31,6 +31,9 @@ export interface PendingActionRequest {
   /** Cost action details (has params like selectionNumber) */
   costAction?: CostAction;
 
+  /** Market cards available for purchase (passed through to CardSelectionHandler) */
+  marketCards?: Card[];
+
   /** Callback when input is collected */
   onComplete: (params: ActionParams) => void;
 
@@ -51,6 +54,7 @@ export interface ActionOrchestratorState {
     options: {
       location?: Location;
       costAction?: CostAction;
+      marketCards?: Card[];
       onComplete: (params: ActionParams) => void;
       onCancel?: () => void;
     }
@@ -74,6 +78,7 @@ export function useActionOrchestrator(): ActionOrchestratorState {
     options: {
       location?: Location;
       costAction?: CostAction;
+      marketCards?: Card[];
       onComplete: (params: ActionParams) => void;
       onCancel?: () => void;
     }
@@ -108,6 +113,7 @@ export function useActionOrchestrator(): ActionOrchestratorState {
       inputSpec,
       location: options.location,
       costAction: options.costAction,
+      marketCards: options.marketCards,
       onComplete: (params) => {
         setPendingRequest(null);
         options.onComplete(params);
@@ -196,7 +202,7 @@ export function ActionOrchestratorRenderer({
     return null;
   }
 
-  const { inputSpec, costAction, onComplete, onCancel, displayName } = pendingRequest;
+  const { inputSpec, costAction, marketCards, onComplete, onCancel, displayName } = pendingRequest;
 
   // Get the handler component for this input type
   const HandlerComponent = inputHandlerRegistry.getHandler(inputSpec.inputType);
@@ -219,6 +225,7 @@ export function ActionOrchestratorRenderer({
 
   return (
     <HandlerComponent
+      key={pendingRequest.actionId}
       inputSpec={inputSpec}
       player={player}
       onComplete={handleComplete}
@@ -226,6 +233,7 @@ export function ActionOrchestratorRenderer({
       minCount={minCount}
       maxCount={maxCount}
       excludeCardId={excludeCardId}
+      marketCards={marketCards}
     />
   );
 }

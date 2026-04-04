@@ -15,6 +15,7 @@ import { NO_CARD_SELECTED } from "../../constants";
 import { calculateCombatWinner } from "../../game-helper";
 import { getPlayersList } from "./playerServices";
 import { draw } from "./moves";
+import { appendLog } from "../logService";
 
 // ============================================================================
 // MAINTENANCE PHASE
@@ -56,11 +57,24 @@ export const revealPlayer = (player: PlayerGameState): void => {
 /**
  * Resolves combat for all districts, awarding victory points to winners.
  */
-export const resolveCombat = (G: GameState): void => {
+export const resolveCombat = (G: GameState, phase = 'combatPhase'): void => {
     G.districts.forEach(district => {
         district.combatWinnerId = calculateCombatWinner(district);
         if (district.combatWinnerId) {
             G.players[district.combatWinnerId].victoryPoints += 1;
+            appendLog(G, {
+                playerID: district.combatWinnerId,
+                phase,
+                type: 'combat',
+                message: `wins ${district.name} (+1 VP)`,
+            });
+        } else {
+            appendLog(G, {
+                playerID: '',
+                phase,
+                type: 'combat',
+                message: `${district.name}: draw`,
+            });
         }
     });
 };
@@ -83,10 +97,20 @@ export const discardAllHands = (G: GameState): void => {
  * Calculates and sets the final player ranking.
  * Sorts by: victory points > candy > loot (descending).
  */
-export const calculateRanking = (G: GameState): void => {
+export const calculateRanking = (G: GameState, phase = 'endGamePhase'): void => {
     G.ranking = getPlayersList(G).sort((a, b) => {
         if (b.victoryPoints !== a.victoryPoints) return b.victoryPoints - a.victoryPoints;
         if (b.candy !== a.candy) return b.candy - a.candy;
         return b.loot - a.loot;
     });
+
+    const winner = G.ranking[0];
+    if (winner) {
+        appendLog(G, {
+            playerID: winner.id,
+            phase,
+            type: 'phase',
+            message: `wins the game with ${winner.victoryPoints} VP!`,
+        });
+    }
 };

@@ -1,227 +1,491 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAppStore } from "../../store";
 import { Ctx } from "boardgame.io";
-import { GameState, PlayerViewModel } from "@candyfight/shared/types";
+import { Card, GameState, LogEntry, PlayerViewModel } from "@candyfight/shared/types";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
+import { CardMini } from "../card-components/CardMini";
 
-/**
- * Format phase name for display (replaces lodash kebabCase)
- * Example: "mainPhase" -> "MAIN PHASE"
- */
+// Neobrutalist design tokens
+const nb = {
+    bg: '#e0d4fc',
+    cardBg: '#ffffff',
+    border: '2px solid #000',
+    borderRight: '2px solid #000',
+    font: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
+    accent: '#fef08a',
+    red: '#ef4444',
+};
+
 function formatPhase(phase: string | null): string {
     if (!phase) return "UNKNOWN";
-    // Convert camelCase to space-separated uppercase
-    return phase
-        .replace(/([A-Z])/g, " $1")
-        .trim()
-        .toUpperCase();
+    return phase.replace(/([A-Z])/g, " $1").trim().toUpperCase();
 }
 
 interface GameInfoComponentProps {
     ctx: Ctx;
     playersPublicInfo: PlayerViewModel[];
     G: GameState;
-    chatMessages?: any[];
-    sendChatMessage?: (message: string) => void;
-    errorNotification?: string;
-    children?: React.ReactNode;
     onLeaveMatch: () => void;
 }
 
 export const GameInfoComponent = ({
     ctx,
-    G,
-    chatMessages,
-    sendChatMessage,
-    children,
     playersPublicInfo,
-    onLeaveMatch
+    G,
+    onLeaveMatch,
 }: GameInfoComponentProps) => {
-
     const { playerState } = useAppStore();
+    const { data: matchData } = useMatchQuery(playerState?.matchID);
+    const [open, setOpen] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
 
-    // Fetch match data with React Query
-    const { data: matchData, error: matchError } = useMatchQuery(playerState?.matchID);
-
-    const [errorNotification, setErrorNotification] = useState("");
-    const [chatMessage, setChatMessage] = useState("");
-
-    const chatRef = useRef<HTMLDivElement | null>(null);
-
-    // Show error notification if match fetch fails
     useEffect(() => {
-        if (matchError) {
-            const errorMessage = matchError instanceof Error ? matchError.message : String(matchError);
-            setErrorNotification(errorMessage);
-        }
-    }, [matchError]);
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === "i") {
+                e.preventDefault();
+                setOpen(prev => !prev);
+            }
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, []);
 
-    // Chat auto-scroll
-    useEffect(() => {
-        const el = chatRef.current;
-        if (!el) return;
-    
-        const handleScroll = () => {
-          const atBottom =
-            el.scrollHeight - el.scrollTop - el.clientHeight < 10;
-          el.dataset.stick = atBottom ? "true" : "false";
-        };
-    
-        el.addEventListener("scroll", handleScroll);
-    
-        const observer = new ResizeObserver(() => {
-          if (el.dataset.stick === "true") {
-            el.scrollTop = el.scrollHeight;
-          }
-        });
-    
-        observer.observe(el);
-    
-        el.scrollTop = el.scrollHeight;
-        el.dataset.stick = "true";
-    
-        return () => {
-          el.removeEventListener("scroll", handleScroll);
-          observer.disconnect();
-        };
-    }, [chatMessages]);
-      
-    return (
-        <div
-            className="nes-container with-title is-dark font-nes"
-            style={{
-                position: "absolute",
-                top: "15px",
-                left: "25px",
-                width: "310px",
-                zIndex: 10,
-                fontFamily: "'Press Start 2P', cursive",
-                fontSize: "9px",
-                paddingLeft: "0px",
-                opacity: "0.7"
-            }}
+
+    const label: React.CSSProperties = {
+        fontSize: "11px",
+        fontWeight: 900,
+        textTransform: "uppercase" as const,
+        letterSpacing: "0.08em",
+        color: "#555",
+        marginBottom: 4,
+    };
+
+    const divider: React.CSSProperties = {
+        borderTop: "2px solid #000",
+        margin: "12px 0",
+    };
+
+    const sidebarBase: React.CSSProperties = {
+        position: "fixed",
+        top: 0,
+        left: 0,
+        height: "100vh",
+        zIndex: 10,
+        fontFamily: nb.font,
+        display: "flex",
+        flexDirection: "column",
+    };
+
+    // Collapsed: full-height narrow strip flush to left edge
+    if (!open) {
+        return (
+            <div
+                ref={sidebarRef}
+                style={{
+                    ...sidebarBase,
+                    width: 56,
+                    backgroundColor: nb.bg,
+                    borderRight: nb.borderRight,
+                    cursor: "pointer",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    paddingTop: 16,
+                    gap: 10,
+                }}
+                onClick={() => setOpen(true)}
+                title="Open game info"
             >
-            <h2 style={{ textDecoration: "underline", fontSize: 10}}>Game | {matchData?.setupData?.name ?? "Loading..."}</h2>
-
-            <div className="message-list">
-                <div className="nes-text is-primary">
-                    <p className="content-text">{playerState.name} | ID: {playerState.playerID}</p>
-                </div>
-                <div className="nes-text is-primary">
-                    <p><strong>PHASE: </strong><span className="content-text">{formatPhase(ctx.phase)}</span></p>
-                </div>
-
-                <div className="nes-text is-primary">
-                    <strong>TURN</strong>
-                </div>
-                <ul className="nes-list is-circle" style={{ marginLeft: "1rem" }}>
-
-                {playersPublicInfo.map((p: PlayerViewModel, index: number) => (
-                    <li
-                        key={index}
-                        className={ctx.currentPlayer == p.id ? "nes-text is-success" : "nes-text"}
-                    >
-                        {matchData?.players?.[index]?.name ?? `Player ${index + 1}`} { p.hasRevealed ? "- REVEALED" : ""}
-                    </li>
-                ))}
-                </ul>
-                {/* <div className="nes-text is-primary">
-                    <strong>Match ID:</strong> <p>{playerState.matchID}</p>
-                </div>
-                <div className="nes-text is-primary">
-                    <strong>Creds:</strong> <p>{playerState.playerCredentials}</p>
-                </div> */}
-
-                {errorNotification && (
-                    <div className="nes-text is-error">{errorNotification}</div>
-                )}
-            </div>
-
-            {/* CHAT */}
-            { sendChatMessage && (
-                <div  
-                    className=" with-title is-rounded is-dark"
+                <span style={{ fontSize: "22px", fontWeight: 900 }}>▶</span>
+                <span
                     style={{
-                        marginTop: "1rem",
-                        margin: "10px",
-                        fontFamily: "'Press Start 2P', cursive",
-                        scrollBehavior: "smooth",
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                        color: "#333",
                     }}
                 >
-                    <p className="title">Chat</p>
+                    INFO
+                </span>
+                <span
+                    style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                        color: "#888",
+                        letterSpacing: "0.05em",
+                        marginTop: 4,
+                    }}
+                >
+                    ^I
+                </span>
+            </div>
+        );
+    }
 
-                    {/* Chat con alto fijo y scroll */}
+    return (
+        <div
+            ref={sidebarRef}
+            style={{
+                ...sidebarBase,
+                width: 264,
+                backgroundColor: nb.cardBg,
+                borderRight: nb.borderRight,
+                borderLeft: "4px solid #000",
+            }}
+        >
+            {/* Header */}
+            <div
+                style={{
+                    backgroundColor: nb.bg,
+                    borderBottom: nb.border,
+                    padding: "12px 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexShrink: 0,
+                }}
+            >
+                <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "0.05em" }}>
+                    🍬 CANDY FIGHT
+                </span>
+                <button
+                    onClick={() => setOpen(false)}
+                    style={{
+                        border: nb.border,
+                        backgroundColor: "#fff",
+                        boxShadow: "2px 2px 0 #000",
+                        width: 28,
+                        height: 28,
+                        cursor: "pointer",
+                        fontWeight: 900,
+                        fontSize: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: 0,
+                        fontFamily: nb.font,
+                        flexShrink: 0,
+                    }}
+                    title="Collapse"
+                >
+                    ◀
+                </button>
+            </div>
+
+            {/* Body — flex column so log can fill remaining space */}
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+
+                {/* Static content — fixed height */}
+                <div style={{ padding: "12px 14px", flexShrink: 0 }}>
+
+                    {/* Match name */}
+                    <div style={label}>Match</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10, wordBreak: "break-word" }}>
+                        {matchData?.setupData?.name ?? "Loading…"}
+                    </div>
+
+                    {/* Player */}
+                    <div style={label}>You</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10 }}>
+                        {playerState.name}
+                        <span style={{ fontSize: "11px", color: "#888", marginLeft: 5 }}>
+                            #{playerState.playerID}
+                        </span>
+                    </div>
+
+                    <div style={divider} />
+
+                    {/* Phase */}
+                    <div style={label}>Phase</div>
                     <div
-                        ref={chatRef}
-                        className="chat-log"
                         style={{
-                            marginTop: "1rem",
-                            height: "300px",
-                            overflowY: "auto",
-                            paddingRight: "4px",
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            marginBottom: 10,
+                            padding: "4px 8px",
+                            backgroundColor: nb.accent,
+                            border: nb.border,
+                            display: "inline-block",
                         }}
                     >
+                        {formatPhase(ctx.phase)}
+                    </div>
 
-                    {chatMessages != null &&
-                        chatMessages.map((msj, index) => (
-                        <p
-                            key={index}
-                            className={"nes-balloon " + (msj.sender == playerState.playerID ? "from-left" : "from-right")}
+                    <div style={divider} />
+
+                    {/* Turn order */}
+                    <div style={{ ...label, marginBottom: 8 }}>Turn Order</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {playersPublicInfo.map((p, index) => {
+                            const isCurrent = ctx.currentPlayer === p.id;
+                            const name = matchData?.players?.[index]?.name ?? `Player ${index + 1}`;
+
+                            return (
+                                <div
+                                    key={p.id}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "4px 8px",
+                                        border: isCurrent ? nb.border : "2px solid transparent",
+                                        backgroundColor: isCurrent ? nb.accent : "transparent",
+                                        fontSize: "13px",
+                                        fontWeight: isCurrent ? 900 : 600,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            width: 10,
+                                            height: 10,
+                                            borderRadius: "50%",
+                                            backgroundColor: playerDotColor(p.id),
+                                            border: "1px solid #000",
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {name}
+                                    </span>
+                                    {p.hasRevealed && (
+                                        <span style={{ fontSize: "10px", fontWeight: 700, color: "#555" }}>REVEALED</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Game log — takes all remaining height */}
+                <GameLog entries={G.log} playerColors={playerColors} matchPlayers={matchData?.players} />
+            </div>
+
+            {/* Leave button — pinned to bottom */}
+            <div style={{ padding: "12px 14px", borderTop: nb.border, flexShrink: 0 }}>
+                <LeaveButton onClick={onLeaveMatch} />
+            </div>
+        </div>
+    );
+};
+
+const playerColors = ["#ef4444", "#22c55e", "#a855f7", "#eab308"];
+function playerDotColor(id: string): string {
+    return playerColors[parseInt(id)] ?? "#888";
+}
+
+interface GameLogProps {
+    entries: LogEntry[];
+    playerColors: string[];
+    matchPlayers?: { id: number; name?: string }[];
+}
+
+const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
+    const logRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (logRef.current) {
+            logRef.current.scrollTop = logRef.current.scrollHeight;
+        }
+    }, [entries.length]);
+
+    const playerName = (id: string) =>
+        matchPlayers?.[parseInt(id)]?.name ?? `P${parseInt(id) + 1}`;
+
+    return (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 14px 12px", borderTop: nb.border }}>
+            <div
+                style={{
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#555",
+                    margin: "10px 0 6px",
+                    flexShrink: 0,
+                }}
+            >
+                Game Log
+            </div>
+            <div
+                ref={logRef}
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    border: nb.border,
+                    padding: "6px 8px",
+                    backgroundColor: "#fafafa",
+                }}
+            >
+                {entries.length === 0 && (
+                    <span style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>
+                        No actions yet
+                    </span>
+                )}
+                {entries.map(entry => {
+                    const isSystem = !entry.playerID || entry.type === 'phase';
+                    const isCombat = entry.type === 'combat';
+                    const isEffect = entry.type === 'effect';
+                    const dotColor = playerColors[parseInt(entry.playerID)] ?? "#888";
+
+                    if (isSystem && !isCombat) {
+                        return (
+                            <div
+                                key={entry.id}
+                                style={{
+                                    fontSize: "10px",
+                                    color: "#888",
+                                    fontStyle: "italic",
+                                    textAlign: "center",
+                                    padding: "2px 0",
+                                }}
+                            >
+                                {entry.message}
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div
+                            key={entry.id}
                             style={{
-                            marginBottom: "1.5rem",
-                            fontFamily: "'Press Start 2P', cursive",
-                            fontSize: "10px",
-                            lineHeight: "1.4",
-                            color: "black",
-                            marginLeft: msj.sender == playerState.playerID ? "0px" : "40px"
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 5,
+                                fontSize: isEffect ? "10px" : "11px",
+                                color: isEffect ? "#666" : "#111",
+                                fontWeight: isEffect ? 400 : 600,
+                                paddingLeft: isEffect ? 14 : 0,
                             }}
                         >
-                            <span className="nes-text is-info">
-                            {matchData?.players?.[msj.sender]?.name ?? `Player ${msj.sender}`}:
-                            </span>{" "}
-                            {msj.payload}
-                        </p>
-                        ))}
-                    </div>
-                    <div className="nes-field" style={{ marginBottom: ".75rem" }}>
-                        <input
-                            type="text"
-                            className="nes-input"
-                            placeholder="..."
-                            value={chatMessage}
-                            onChange={(evt) => setChatMessage(evt.target.value)}
-                            style={{ fontFamily: "'Press Start 2P', cursive" }}
-                            onKeyDown={(event) => { 
-                            if(event.code == "Enter") {
-                                sendChatMessage(chatMessage);
-                                setChatMessage(""); 
-                            }}}
-                        />
-                    </div>
-            
-                    <button
-                        type="button"
-                        className="nes-btn is-primary"
-                        style={{ fontFamily: "'Press Start 2P', cursive" }}
-                        onClick={() => {
-                            sendChatMessage(chatMessage);
-                            setChatMessage("");
-                        }}
-                    >
-                        Enviar
-                    </button>
-                </div>
-            )}
-
-            <button
-                onClick={onLeaveMatch}
-                type="button"
-                className="nes-btn is-error"
-                style={{ marginTop: "1rem", fontFamily: "'Press Start 2P', cursive" }}
-            >
-                Leave
-            </button>
-            {children}
+                            {!isEffect && (
+                                <span
+                                    style={{
+                                        width: 7,
+                                        height: 7,
+                                        borderRadius: "50%",
+                                        backgroundColor: dotColor,
+                                        border: "1px solid #000",
+                                        flexShrink: 0,
+                                        marginTop: 3,
+                                    }}
+                                />
+                            )}
+                            <span>
+                                {!isEffect && entry.playerID && (
+                                    <strong style={{ marginRight: 3 }}>
+                                        {playerName(entry.playerID)}
+                                    </strong>
+                                )}
+                                <LogMessage entry={entry} />
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-    )
-}
+    );
+};
+
+/** Renders a log message, replacing the card name with a hoverable CardLink when a card is attached. */
+const LogMessage = ({ entry }: { entry: LogEntry }) => {
+    if (!entry.card) return <>{entry.message}</>;
+
+    const cardName = entry.card.name;
+    const idx = entry.message.indexOf(cardName);
+    if (idx === -1) return <>{entry.message}</>;
+
+    const before = entry.message.slice(0, idx);
+    const after = entry.message.slice(idx + cardName.length);
+
+    return (
+        <>
+            {before}
+            <CardLink card={entry.card} />
+            {after}
+        </>
+    );
+};
+
+const CardLink = ({ card }: { card: Card }) => {
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+    return (
+        <>
+            <span
+                onMouseEnter={(e) => setPos({ x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setPos(null)}
+                style={{
+                    fontWeight: 700,
+                    textDecoration: "underline dotted #5b21b6",
+                    color: "#5b21b6",
+                    cursor: "help",
+                }}
+            >
+                {card.name}
+            </span>
+            {pos && createPortal(
+                <CardPopover card={card} anchorY={pos.y} />,
+                document.body
+            )}
+        </>
+    );
+};
+
+const CardPopover = ({ card, anchorY }: { card: Card; anchorY: number }) => {
+    const SIDEBAR_WIDTH = 264 + 4; // panel width + left border
+    const CARD_W = 105;
+    const CARD_H = 157;
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                left: SIDEBAR_WIDTH + 8,
+                top: Math.max(8, Math.min(anchorY - CARD_H / 2, window.innerHeight - CARD_H - 8)),
+                boxShadow: "5px 5px 0 #000",
+                zIndex: 100,
+                pointerEvents: "none",
+            }}
+        >
+            <CardMini card={card} width={CARD_W} height={CARD_H} />
+        </div>
+    );
+};
+
+const LeaveButton = ({ onClick }: { onClick: () => void }) => {
+    const [pressed, setPressed] = useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseDown={() => setPressed(true)}
+            onMouseUp={() => setPressed(false)}
+            onMouseLeave={() => setPressed(false)}
+            style={{
+                width: "100%",
+                border: nb.border,
+                boxShadow: pressed ? "none" : "4px 4px 0 #000",
+                transform: pressed ? "translate(4px, 4px)" : undefined,
+                padding: "9px 0",
+                fontSize: "13px",
+                fontFamily: nb.font,
+                fontWeight: 900,
+                cursor: "pointer",
+                backgroundColor: nb.red,
+                color: "#fff",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+            }}
+        >
+            Leave Match
+        </button>
+    );
+};

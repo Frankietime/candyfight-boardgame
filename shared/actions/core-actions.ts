@@ -15,8 +15,12 @@ import {
   TrashActionParams,
   AddPresenceTokenParams,
   GetSwordMasterParams,
+  BuyCardActionParams,
 } from "./action-params";
+import { MARKET_ROW_SIZE } from "../constants";
 import { Card, MetaGameState, PlayerGameState } from "../types";
+import { characterDefinitions } from "../characters/character-definitions";
+import { appendLog } from "../services/logService";
 
 // ============================================================================
 // Helper functions (adapted from existing moves.ts)
@@ -70,6 +74,13 @@ const drawHandler: ActionHandler<DrawActionParams> = {
         doDraw(player);
       }
     }
+
+    appendLog(state.G, {
+      playerID: state.ctx.currentPlayer,
+      phase: state.ctx.phase ?? '',
+      type: 'effect',
+      message: `drew ${count} card${count !== 1 ? 's' : ''}`,
+    });
   },
 };
 
@@ -111,6 +122,12 @@ const discardHandler: ActionHandler<DiscardActionParams> = {
     const cards = takeFromHand(player, params.cardIds);
     if (cards) {
       player.discardPile = [...player.discardPile, ...cards];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `discarded ${cards.length} card${cards.length !== 1 ? 's' : ''}`,
+      });
     }
   },
 };
@@ -159,6 +176,12 @@ const trashHandler: ActionHandler<TrashActionParams> = {
     const cards = takeFromHand(player, params.cardIds);
     if (cards) {
       player.trashPile = [...player.trashPile, ...cards];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `trashed ${cards.length} card${cards.length !== 1 ? 's' : ''}`,
+      });
     }
   },
 };
@@ -222,6 +245,46 @@ const getSwordMasterHandler: ActionHandler<GetSwordMasterParams> = {
 };
 
 // ============================================================================
+// BUY_CARD Action
+// ============================================================================
+
+const buyCardDefinition: ActionDefinition<BuyCardActionParams> = {
+  id: LocationActionsEnum.BUY_CARD,
+  displayName: "Buy Card",
+  inputSpec: {
+    inputType: 'cardSelection',
+    source: 'market',
+    minCount: 1,
+    maxCount: 1,
+  },
+  tags: ['core', 'cards', 'market'],
+};
+
+const buyCardHandler: ActionHandler<BuyCardActionParams> = {
+  validate: (params, state) => {
+    const visibleCards = state.G.cardMarket.slice(0, MARKET_ROW_SIZE);
+    if (visibleCards.length === 0) return "The market is empty";
+    const isAvailable = visibleCards.some(c => c.id === params.targetCardId);
+    if (!isAvailable) return `Card ${params.targetCardId} is not available in the market`;
+    return null;
+  },
+  execute: (params, state, player) => {
+    const index = state.G.cardMarket.findIndex(c => c.id === params.targetCardId);
+    if (index !== -1) {
+      const [card] = state.G.cardMarket.splice(index, 1);
+      player.discardPile = [...player.discardPile, card];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `bought ${card.name} → discard pile`,
+        card,
+      });
+    }
+  },
+};
+
+// ============================================================================
 // Stub Actions (not yet implemented)
 // ============================================================================
 
@@ -253,13 +316,11 @@ export function registerCoreActions(): void {
   // NOTE: GET_LOOT and GET_CANDY are NOT registered here.
   // Use resources[] array instead - it's the correct pattern for simple +/- operations.
 
+  actionRegistry.register(buyCardDefinition, buyCardHandler);
+
   // Stub actions (placeholders for future implementation)
   actionRegistry.register(
     stubDefinition(LocationActionsEnum.ADVANCE_TRACKER, "Advance Tracker"),
-    stubHandler
-  );
-  actionRegistry.register(
-    stubDefinition(LocationActionsEnum.BUY_CARD, "Buy Card"),
     stubHandler
   );
   actionRegistry.register(
@@ -271,8 +332,19 @@ export function registerCoreActions(): void {
     stubHandler
   );
   actionRegistry.register(
-    stubDefinition(LocationActionsEnum.SIGNET_TRIGGER, "Signet Trigger"),
-    stubHandler
+    {
+      id: LocationActionsEnum.SIGNET_TRIGGER,
+      displayName: "Signet Trigger",
+      inputSpec: { inputType: 'none' },
+      tags: ['core', 'character'],
+    },
+    {
+      execute: (params, state, player, context) => {
+        if (!player.characterId) return;
+        const character = characterDefinitions[player.characterId];
+        character?.executeSignetAbility(state, player, context);
+      }
+    }
   );
   actionRegistry.register(
     stubDefinition(LocationActionsEnum.STRANGE_CANDY_PUZZLE, "Strange Candy Puzzle"),

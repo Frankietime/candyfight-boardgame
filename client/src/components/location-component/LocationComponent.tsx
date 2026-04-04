@@ -3,7 +3,7 @@ import { isNullOrEmpty } from "@candyfight/shared/common-methods";
 import { Card, District, Location, PlayerGameState } from "@candyfight/shared/types";
 import { ResourceComponent } from "../icon-components/ResourceComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
-import { workerIconsByPlayerId } from "../icon-components/constants";
+import { WorkerIcon } from "../ui/GameIcon";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
 
@@ -35,6 +35,7 @@ export const LocationComponent = memo(({
     isRestrictedArea
 }: LocationComponentProps) => {
     const isClickDisabled = isDisabled || isRestrictedArea;
+    const isTaken = !isNullOrEmpty(takenByPlayerID);
 
     // Memoize whether this location shows the glow effect
     const showGlow = useMemo(() =>
@@ -85,18 +86,26 @@ export const LocationComponent = memo(({
         </>
     ), [reward.resources, reward.actions]);
 
+    const takenPlayerClass = isTaken ? `location-taken player-taken-${takenByPlayerID}` : "";
+
     return (
         <div
-            className={`absolute border-2 border-solid ${isClickDisabled ? 'opacity-50 pointer-events-none bg-indigo-900/30' : 'hover:bg-white/50 cursor-pointer'}`}
+            className={`absolute border-2 border-solid ${
+          isTaken
+            ? `${takenPlayerClass} pointer-events-none`
+            : isClickDisabled
+              ? 'opacity-50 pointer-events-none bg-indigo-900/30'
+              : 'hover:brightness-110 cursor-pointer'
+        }`}
             style={{ top: y, left: x }}
             onClick={isClickDisabled ? undefined : onClick}
         >
-            <div className="location-component-container">                
+            <div className={`location-component-container district-${district.id}`}>
                 <div className={showGlow ? "location-container proto-glow" : "location-container"}>
-                    
+
                     {/* Name */}
-                    <div className="location-name-container">{name}</div>
-                    
+                    <div className={`location-name-container district-name-${district.id}`}>{name}</div>
+
                     <div className="grid grid-flow-col grid-rows-1 grid-cols-2">
                         {/* Cost */}
                         <div className="location-cost-container col-span-1">
@@ -122,9 +131,9 @@ export const LocationComponent = memo(({
                     </div>
 
                     {/* Worker Area */}
-                    {!isNullOrEmpty(takenByPlayerID) && (
+                    {isTaken && (
                         <div className="worker-image-container">
-                            <img src={workerIconsByPlayerId[parseInt(takenByPlayerID!)]}/>
+                            <WorkerIcon playerId={parseInt(takenByPlayerID!)} size="sm" />
                         </div>
                     )}
                 </div>

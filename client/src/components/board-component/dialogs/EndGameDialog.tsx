@@ -26,12 +26,21 @@ export const EndGameDialog = memo(({
   matchData,
   onLeaveMatch,
 }: EndGameDialogProps) => {
+  const winner = ranking[0];
+  const winnerName = winner
+    ? (matchData.players[parseInt(winner.id)]?.name ?? `Player ${parseInt(winner.id) + 1}`)
+    : undefined;
+
   return (
     <PhaseDialog
       open={open}
+      title={winnerName ? (
+        <span className="victory-title">{`VICTORY - ${winnerName}`}</span>
+      ) : undefined}
       actionLabel="Go to Lobby"
       onAction={onLeaveMatch}
       actionColor="red"
+      top="2%"
     >
       <EndGameRankingTable
         ranking={ranking}
