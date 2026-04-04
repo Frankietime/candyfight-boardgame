@@ -3,6 +3,12 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN npm install
+
+# Compile shared package first so its JS is available at runtime
+WORKDIR /app/shared
+RUN npx tsc -p tsconfig.build.json
+
+# Compile server
 WORKDIR /app/server
 RUN npx tsc -b
 
