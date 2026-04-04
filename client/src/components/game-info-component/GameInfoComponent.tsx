@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAppStore } from "../../store";
 import { Ctx } from "boardgame.io";
-import { GameState, PlayerViewModel } from "@candyfight/shared/types";
+import { Card, GameState, LogEntry, PlayerViewModel } from "@candyfight/shared/types";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
+import { CardMini } from "../card-components/CardMini";
 
 // Neobrutalist design tokens
 const nb = {
@@ -30,31 +32,45 @@ interface GameInfoComponentProps {
 export const GameInfoComponent = ({
     ctx,
     playersPublicInfo,
+    G,
     onLeaveMatch,
 }: GameInfoComponentProps) => {
     const { playerState } = useAppStore();
     const { data: matchData } = useMatchQuery(playerState?.matchID);
     const [open, setOpen] = useState(false);
+    const sidebarRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.ctrlKey && e.key === "i") {
+                e.preventDefault();
+                setOpen(prev => !prev);
+            }
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, []);
+
 
     const label: React.CSSProperties = {
-        fontSize: "9px",
+        fontSize: "11px",
         fontWeight: 900,
         textTransform: "uppercase" as const,
         letterSpacing: "0.08em",
         color: "#555",
-        marginBottom: 3,
+        marginBottom: 4,
     };
 
     const divider: React.CSSProperties = {
         borderTop: "2px solid #000",
-        margin: "10px 0",
+        margin: "12px 0",
     };
 
     const sidebarBase: React.CSSProperties = {
-        position: "absolute",
+        position: "fixed",
         top: 0,
         left: 0,
-        height: "100%",
+        height: "100vh",
         zIndex: 10,
         fontFamily: nb.font,
         display: "flex",
@@ -65,32 +81,61 @@ export const GameInfoComponent = ({
     if (!open) {
         return (
             <div
+                ref={sidebarRef}
                 style={{
                     ...sidebarBase,
-                    width: 36,
+                    width: 56,
                     backgroundColor: nb.bg,
                     borderRight: nb.borderRight,
                     cursor: "pointer",
                     alignItems: "center",
                     justifyContent: "flex-start",
-                    paddingTop: 12,
-                    gap: 8,
+                    paddingTop: 16,
+                    gap: 10,
                 }}
                 onClick={() => setOpen(true)}
                 title="Open game info"
             >
-                <span style={{ fontSize: "14px", fontWeight: 900 }}>▶</span>
+                <span style={{ fontSize: "22px", fontWeight: 900 }}>▶</span>
+                <span
+                    style={{
+                        fontSize: "10px",
+                        fontWeight: 900,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                        color: "#333",
+                    }}
+                >
+                    INFO
+                </span>
+                <span
+                    style={{
+                        fontSize: "9px",
+                        fontWeight: 700,
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                        color: "#888",
+                        letterSpacing: "0.05em",
+                        marginTop: 4,
+                    }}
+                >
+                    ^I
+                </span>
             </div>
         );
     }
 
     return (
         <div
+            ref={sidebarRef}
             style={{
                 ...sidebarBase,
-                width: 220,
+                width: 264,
                 backgroundColor: nb.cardBg,
                 borderRight: nb.borderRight,
+                borderLeft: "4px solid #000",
             }}
         >
             {/* Header */}
@@ -98,14 +143,14 @@ export const GameInfoComponent = ({
                 style={{
                     backgroundColor: nb.bg,
                     borderBottom: nb.border,
-                    padding: "10px 10px",
+                    padding: "12px 12px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     flexShrink: 0,
                 }}
             >
-                <span style={{ fontSize: "10px", fontWeight: 900, letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "0.05em" }}>
                     🍬 CANDY FIGHT
                 </span>
                 <button
@@ -114,11 +159,11 @@ export const GameInfoComponent = ({
                         border: nb.border,
                         backgroundColor: "#fff",
                         boxShadow: "2px 2px 0 #000",
-                        width: 22,
-                        height: 22,
+                        width: 28,
+                        height: 28,
                         cursor: "pointer",
                         fontWeight: 900,
-                        fontSize: "11px",
+                        fontSize: "14px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -132,89 +177,96 @@ export const GameInfoComponent = ({
                 </button>
             </div>
 
-            {/* Scrollable body */}
-            <div style={{ padding: "10px 12px", flex: 1, overflowY: "auto" }}>
+            {/* Body — flex column so log can fill remaining space */}
+            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
-                {/* Match name */}
-                <div style={label}>Match</div>
-                <div style={{ fontSize: "10px", fontWeight: 700, marginBottom: 8, wordBreak: "break-word" }}>
-                    {matchData?.setupData?.name ?? "Loading…"}
-                </div>
+                {/* Static content — fixed height */}
+                <div style={{ padding: "12px 14px", flexShrink: 0 }}>
 
-                {/* Player */}
-                <div style={label}>You</div>
-                <div style={{ fontSize: "10px", fontWeight: 700, marginBottom: 8 }}>
-                    {playerState.name}
-                    <span style={{ fontSize: "9px", color: "#888", marginLeft: 4 }}>
-                        #{playerState.playerID}
-                    </span>
-                </div>
+                    {/* Match name */}
+                    <div style={label}>Match</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10, wordBreak: "break-word" }}>
+                        {matchData?.setupData?.name ?? "Loading…"}
+                    </div>
 
-                <div style={divider} />
+                    {/* Player */}
+                    <div style={label}>You</div>
+                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10 }}>
+                        {playerState.name}
+                        <span style={{ fontSize: "11px", color: "#888", marginLeft: 5 }}>
+                            #{playerState.playerID}
+                        </span>
+                    </div>
 
-                {/* Phase */}
-                <div style={label}>Phase</div>
-                <div
-                    style={{
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        marginBottom: 8,
-                        padding: "3px 7px",
-                        backgroundColor: nb.accent,
-                        border: nb.border,
-                        display: "inline-block",
-                    }}
-                >
-                    {formatPhase(ctx.phase)}
-                </div>
+                    <div style={divider} />
 
-                <div style={divider} />
+                    {/* Phase */}
+                    <div style={label}>Phase</div>
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            marginBottom: 10,
+                            padding: "4px 8px",
+                            backgroundColor: nb.accent,
+                            border: nb.border,
+                            display: "inline-block",
+                        }}
+                    >
+                        {formatPhase(ctx.phase)}
+                    </div>
 
-                {/* Turn order */}
-                <div style={{ ...label, marginBottom: 6 }}>Turn Order</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {playersPublicInfo.map((p, index) => {
-                        const isCurrent = ctx.currentPlayer === p.id;
-                        const name = matchData?.players?.[index]?.name ?? `Player ${index + 1}`;
+                    <div style={divider} />
 
-                        return (
-                            <div
-                                key={p.id}
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 6,
-                                    padding: "3px 6px",
-                                    border: isCurrent ? nb.border : "2px solid transparent",
-                                    backgroundColor: isCurrent ? nb.accent : "transparent",
-                                    fontSize: "10px",
-                                    fontWeight: isCurrent ? 900 : 600,
-                                }}
-                            >
-                                <span
+                    {/* Turn order */}
+                    <div style={{ ...label, marginBottom: 8 }}>Turn Order</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {playersPublicInfo.map((p, index) => {
+                            const isCurrent = ctx.currentPlayer === p.id;
+                            const name = matchData?.players?.[index]?.name ?? `Player ${index + 1}`;
+
+                            return (
+                                <div
+                                    key={p.id}
                                     style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: "50%",
-                                        backgroundColor: playerDotColor(p.id),
-                                        border: "1px solid #000",
-                                        flexShrink: 0,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                        padding: "4px 8px",
+                                        border: isCurrent ? nb.border : "2px solid transparent",
+                                        backgroundColor: isCurrent ? nb.accent : "transparent",
+                                        fontSize: "13px",
+                                        fontWeight: isCurrent ? 900 : 600,
                                     }}
-                                />
-                                <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {name}
-                                </span>
-                                {p.hasRevealed && (
-                                    <span style={{ fontSize: "8px", fontWeight: 700, color: "#555" }}>REVEALED</span>
-                                )}
-                            </div>
-                        );
-                    })}
+                                >
+                                    <span
+                                        style={{
+                                            width: 10,
+                                            height: 10,
+                                            borderRadius: "50%",
+                                            backgroundColor: playerDotColor(p.id),
+                                            border: "1px solid #000",
+                                            flexShrink: 0,
+                                        }}
+                                    />
+                                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                        {name}
+                                    </span>
+                                    {p.hasRevealed && (
+                                        <span style={{ fontSize: "10px", fontWeight: 700, color: "#555" }}>REVEALED</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
+
+                {/* Game log — takes all remaining height */}
+                <GameLog entries={G.log} playerColors={playerColors} matchPlayers={matchData?.players} />
             </div>
 
             {/* Leave button — pinned to bottom */}
-            <div style={{ padding: "10px 12px", borderTop: nb.border, flexShrink: 0 }}>
+            <div style={{ padding: "12px 14px", borderTop: nb.border, flexShrink: 0 }}>
                 <LeaveButton onClick={onLeaveMatch} />
             </div>
         </div>
@@ -225,6 +277,189 @@ const playerColors = ["#ef4444", "#22c55e", "#a855f7", "#eab308"];
 function playerDotColor(id: string): string {
     return playerColors[parseInt(id)] ?? "#888";
 }
+
+interface GameLogProps {
+    entries: LogEntry[];
+    playerColors: string[];
+    matchPlayers?: { id: number; name?: string }[];
+}
+
+const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
+    const logRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (logRef.current) {
+            logRef.current.scrollTop = logRef.current.scrollHeight;
+        }
+    }, [entries.length]);
+
+    const playerName = (id: string) =>
+        matchPlayers?.[parseInt(id)]?.name ?? `P${parseInt(id) + 1}`;
+
+    return (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 14px 12px", borderTop: nb.border }}>
+            <div
+                style={{
+                    fontSize: "11px",
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    color: "#555",
+                    margin: "10px 0 6px",
+                    flexShrink: 0,
+                }}
+            >
+                Game Log
+            </div>
+            <div
+                ref={logRef}
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    border: nb.border,
+                    padding: "6px 8px",
+                    backgroundColor: "#fafafa",
+                }}
+            >
+                {entries.length === 0 && (
+                    <span style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>
+                        No actions yet
+                    </span>
+                )}
+                {entries.map(entry => {
+                    const isSystem = !entry.playerID || entry.type === 'phase';
+                    const isCombat = entry.type === 'combat';
+                    const isEffect = entry.type === 'effect';
+                    const dotColor = playerColors[parseInt(entry.playerID)] ?? "#888";
+
+                    if (isSystem && !isCombat) {
+                        return (
+                            <div
+                                key={entry.id}
+                                style={{
+                                    fontSize: "10px",
+                                    color: "#888",
+                                    fontStyle: "italic",
+                                    textAlign: "center",
+                                    padding: "2px 0",
+                                }}
+                            >
+                                {entry.message}
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div
+                            key={entry.id}
+                            style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: 5,
+                                fontSize: isEffect ? "10px" : "11px",
+                                color: isEffect ? "#666" : "#111",
+                                fontWeight: isEffect ? 400 : 600,
+                                paddingLeft: isEffect ? 14 : 0,
+                            }}
+                        >
+                            {!isEffect && (
+                                <span
+                                    style={{
+                                        width: 7,
+                                        height: 7,
+                                        borderRadius: "50%",
+                                        backgroundColor: dotColor,
+                                        border: "1px solid #000",
+                                        flexShrink: 0,
+                                        marginTop: 3,
+                                    }}
+                                />
+                            )}
+                            <span>
+                                {!isEffect && entry.playerID && (
+                                    <strong style={{ marginRight: 3 }}>
+                                        {playerName(entry.playerID)}
+                                    </strong>
+                                )}
+                                <LogMessage entry={entry} />
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
+/** Renders a log message, replacing the card name with a hoverable CardLink when a card is attached. */
+const LogMessage = ({ entry }: { entry: LogEntry }) => {
+    if (!entry.card) return <>{entry.message}</>;
+
+    const cardName = entry.card.name;
+    const idx = entry.message.indexOf(cardName);
+    if (idx === -1) return <>{entry.message}</>;
+
+    const before = entry.message.slice(0, idx);
+    const after = entry.message.slice(idx + cardName.length);
+
+    return (
+        <>
+            {before}
+            <CardLink card={entry.card} />
+            {after}
+        </>
+    );
+};
+
+const CardLink = ({ card }: { card: Card }) => {
+    const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+    return (
+        <>
+            <span
+                onMouseEnter={(e) => setPos({ x: e.clientX, y: e.clientY })}
+                onMouseLeave={() => setPos(null)}
+                style={{
+                    fontWeight: 700,
+                    textDecoration: "underline dotted #5b21b6",
+                    color: "#5b21b6",
+                    cursor: "help",
+                }}
+            >
+                {card.name}
+            </span>
+            {pos && createPortal(
+                <CardPopover card={card} anchorY={pos.y} />,
+                document.body
+            )}
+        </>
+    );
+};
+
+const CardPopover = ({ card, anchorY }: { card: Card; anchorY: number }) => {
+    const SIDEBAR_WIDTH = 264 + 4; // panel width + left border
+    const CARD_W = 105;
+    const CARD_H = 157;
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                left: SIDEBAR_WIDTH + 8,
+                top: Math.max(8, Math.min(anchorY - CARD_H / 2, window.innerHeight - CARD_H - 8)),
+                boxShadow: "5px 5px 0 #000",
+                zIndex: 100,
+                pointerEvents: "none",
+            }}
+        >
+            <CardMini card={card} width={CARD_W} height={CARD_H} />
+        </div>
+    );
+};
 
 const LeaveButton = ({ onClick }: { onClick: () => void }) => {
     const [pressed, setPressed] = useState(false);
@@ -239,8 +474,8 @@ const LeaveButton = ({ onClick }: { onClick: () => void }) => {
                 border: nb.border,
                 boxShadow: pressed ? "none" : "4px 4px 0 #000",
                 transform: pressed ? "translate(4px, 4px)" : undefined,
-                padding: "7px 0",
-                fontSize: "10px",
+                padding: "9px 0",
+                fontSize: "13px",
                 fontFamily: nb.font,
                 fontWeight: 900,
                 cursor: "pointer",

@@ -1,7 +1,7 @@
 import { Game as GameInterface } from "boardgame.io";
 import { INVALID_MOVE, Stage, TurnOrder } from "boardgame.io/core";
 import { GAME_NAME } from "./constants";
-import { Card, GameState, MetaGameState } from "./types";
+import { Card, GameConfig, GameState, MetaGameState, DEFAULT_GAME_CONFIG } from "./types";
 import { CharacterEnum } from "./enums";
 import {
     districtsSetup,
@@ -25,6 +25,7 @@ import {
 import { playerView } from "./services/playerViewService";
 import { getCurrentLocation, getCurrentPlayer } from "./services/moves/helper";
 import { getPlayersList } from "./services/moves/playerServices";
+import { appendLog } from "./services/logService";
 
 export const Game: GameInterface<GameState> = {
     
@@ -33,15 +34,24 @@ export const Game: GameInterface<GameState> = {
     minPlayers: 2,
     maxPlayers: 4,
     
-    setup: ({ ctx, ...plugins }) => ({
-        players: getInitialPlayersState(ctx.numPlayers, plugins),
-        districts: getInitialDistrictsState(),
-        cardMarket: plugins.random.Shuffle([...getMarketTierOneCards()]),
-        roundEndingCounter: 0,
-        gameEndingCounter: 0,
-        ranking: [],
-        playersViewModel: [], // Will be populated by playerView
-    }),
+    setup: ({ ctx, setupData, ...plugins }) => {
+        const config: GameConfig = {
+            ...DEFAULT_GAME_CONFIG,
+            ...(setupData ?? {}),
+            numPlayers: ctx.numPlayers,
+        };
+        return {
+            players: getInitialPlayersState(ctx.numPlayers, plugins, config),
+            districts: getInitialDistrictsState(),
+            cardMarket: plugins.random.Shuffle([...getMarketTierOneCards()]),
+            roundEndingCounter: 0,
+            gameEndingCounter: 0,
+            ranking: [],
+            playersViewModel: [],
+            config,
+            log: [],
+        };
+    },
 
     playerView,
 
@@ -67,6 +77,12 @@ export const Game: GameInterface<GameState> = {
                             .filter(Boolean);
                         if (taken.includes(characterId)) return INVALID_MOVE;
                         player.characterId = characterId;
+                        appendLog(mgState.G, {
+                            playerID: actingPlayerID,
+                            phase: mgState.ctx.phase ?? '',
+                            type: 'move',
+                            message: `chose ${characterId}`,
+                        });
                     },
                     undoable: false
                 }
@@ -80,6 +96,7 @@ export const Game: GameInterface<GameState> = {
                 playersSetup(G);
                 districtsSetup(G);
                 dealHands(G, random);
+                appendLog(G, { playerID: '', phase: 'maintenancePhase', type: 'phase', message: '— New round begins —' });
             }
         },
         mainPhase: {
@@ -105,12 +122,22 @@ export const Game: GameInterface<GameState> = {
             },
             moves: {
                 draw: {
-                    move: (mgState: MetaGameState) => draw(getCurrentPlayer(mgState), mgState.random),
+                    move: (mgState: MetaGameState) => {
+                        draw(getCurrentPlayer(mgState), mgState.random);
+                        appendLog(mgState.G, {
+                            playerID: mgState.ctx.currentPlayer,
+                            phase: mgState.ctx.phase ?? '',
+                            type: 'move',
+                            message: 'drew a card',
+                        });
+                    },
                     undoable: false
                 },
                 selectCard: {
-                    move: (mgState: MetaGameState, selectedCard: Card) =>
-                        selectCard(getCurrentPlayer(mgState), selectedCard),
+                    move: (mgState: MetaGameState, selectedCard: Card) => {
+                        const result = selectCard(getCurrentPlayer(mgState), selectedCard);
+                        return result;
+                    },
                     undoable: true
                 },    
                 placeWorker: {
@@ -135,12 +162,24 @@ export const Game: GameInterface<GameState> = {
                 reveal: {
                     move: (mgState: MetaGameState) => {
                         revealPlayer(getCurrentPlayer(mgState));
+                        appendLog(mgState.G, {
+                            playerID: mgState.ctx.currentPlayer,
+                            phase: mgState.ctx.phase ?? '',
+                            type: 'move',
+                            message: 'revealed',
+                        });
                         mgState.events?.endTurn?.();
                     }
                 },
                 pass: {
                     move: (mgState: MetaGameState) => {
                         if (!getCurrentPlayer(mgState).hasPlayedCard) return INVALID_MOVE;
+                        appendLog(mgState.G, {
+                            playerID: mgState.ctx.currentPlayer,
+                            phase: mgState.ctx.phase ?? '',
+                            type: 'move',
+                            message: 'passed',
+                        });
                         mgState.events?.endTurn?.();
                     },
                     undoable: false
@@ -148,18 +187,18 @@ export const Game: GameInterface<GameState> = {
             }
         },
         combatPhase: {
-            next: ({ G }) => getPlayersList(G).some(p => p.victoryPoints >= 6) ? "endGamePhase" : "maintenancePhase",
+            next: ({ G }) => getPlayersList(G).some(p => p.victoryPoints >= G.config.victoryPoints) ? "endGamePhase" : "maintenancePhase",
             // TODO: add brief documentation from boardgame.io
             turn: { activePlayers: { all: Stage.NULL } },
             moves: {
                 endRound: { move: ({ G }) => { G.roundEndingCounter += 1; } }
             },
-            onBegin: ({ G }) => resolveCombat(G),
+            onBegin: ({ G, ctx }) => resolveCombat(G, ctx.phase ?? 'combatPhase'),
             onEnd: ({ G }) => discardAllHands(G),
             endIf: ({ G, ctx }) => G.roundEndingCounter >= ctx.numPlayers
         },
         endGamePhase: {
-            onBegin: ({ G }) => calculateRanking(G),
+            onBegin: ({ G, ctx }) => calculateRanking(G, ctx.phase ?? 'endGamePhase'),
             // TODO: add brief documentation from boardgame.io
             turn: { activePlayers: { all: Stage.NULL } },
             moves: {

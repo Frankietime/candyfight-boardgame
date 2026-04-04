@@ -13,7 +13,7 @@ import { ActionParams } from "@candyfight/shared/actions";
 import { WorkerMoveParams } from "@candyfight/shared/services/moves/workerPlacementService";
 import { MARKET_ROW_SIZE } from "@candyfight/shared/constants";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
-import { QueryErrorFallback } from "../ui";
+import { QueryErrorFallback, DistrictLoader } from "../ui";
 // Extracted hooks and components
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from "./hooks/useBoardScale";
 import { BoardDistrictsLayer } from "./BoardDistrictsLayer";
@@ -178,6 +178,7 @@ export const BoardComponent = ({
         ref={outerRef}
         style={getScaleStyle(scale)}
       >
+        {!isReady && <DistrictLoader />}
         {isReady && ctx.phase === 'characterSelectionPhase' && (
           <div className="board-viewport">
             <div className="board-container relative mx-auto">

@@ -10,6 +10,33 @@ export type MetaGameState = {
     events?: { endTurn?: () => void };
 }
 
+export interface GameConfig {
+  numPlayers: number;
+  initialCandy: number;
+  initialLoot: number;
+  victoryPoints: number;
+}
+
+export const DEFAULT_GAME_CONFIG: GameConfig = {
+  numPlayers: 2,
+  initialCandy: 2,
+  initialLoot: 2,
+  victoryPoints: 6,
+};
+
+export type LogEntryType = 'move' | 'effect' | 'phase' | 'combat';
+
+export type LogEntry = {
+  id: string;
+  /** playerID of the acting player; empty string for system events */
+  playerID: string;
+  phase: string;
+  type: LogEntryType;
+  message: string;
+  /** Card involved in this action, if any — used to render hover previews */
+  card?: Card;
+};
+
 export interface GameState {
   players: Dictionary<PlayerGameState>;
   districts: District[];
@@ -19,6 +46,8 @@ export interface GameState {
   ranking: PlayerGameState[];
   /** Public view of all players for UI display */
   playersViewModel: PlayerViewModel[];
+  config: GameConfig;
+  log: LogEntry[];
 }
 
 /**

@@ -1,7 +1,9 @@
-import { memo, useCallback, useMemo, useState } from "react";
-import { Card, GameState, PlayerGameState, PlayerViewModel } from "@candyfight/shared/types"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Card, GameState, PlayerGameState, PlayerViewModel, isFullPlayerState } from "@candyfight/shared/types"
 import { WorkerComponent } from "../icon-components/WorkerComponent"
 import { CardComponent } from "../card-components/CardComponent";
+import { CardMini } from "../card-components/CardMini";
 import { CharacterEnum } from "@candyfight/shared/enums";
 import chilldudes from "../../assets/characters/character-chilldudes.png";
 import kawaiisis from "../../assets/characters/character-kawaiisis.png";
@@ -51,19 +53,62 @@ interface PilePopoverProps {
     count: number;
     onHover: (cards: Card[], title: string) => void;
     onLeave: () => void;
+    /** Show cards in random order instead of alphabetically (use for deck) */
+    shuffle?: boolean;
 }
 
-const PilePopover = memo(({ cards, label, count, onHover, onLeave }: PilePopoverProps) => (
-    <div
-        style={{ position: 'relative' }}
-        onMouseEnter={() => cards.length > 0 && onHover(cards, label)}
-        onMouseLeave={onLeave}
-    >
-        <div>{label}<hr /><div>{count}</div></div>
-    </div>
-));
+const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = false }: PilePopoverProps) => {
+    const [flashing, setFlashing] = useState(false);
+    const prevCount = useRef(count);
+
+    useEffect(() => {
+        if (prevCount.current !== count) {
+            prevCount.current = count;
+            setFlashing(true);
+        }
+    }, [count]);
+
+    const handleEnter = () => {
+        if (cards.length === 0) return;
+        const display = shuffle
+            ? [...cards].sort(() => Math.random() - 0.5)
+            : [...cards].sort((a, b) => a.name.localeCompare(b.name));
+        onHover(display, label);
+    };
+
+    return (
+        <div
+            style={{ position: 'relative' }}
+            className={flashing ? 'stat-glow' : undefined}
+            onAnimationEnd={() => setFlashing(false)}
+            onMouseEnter={handleEnter}
+            onMouseLeave={onLeave}
+        >
+            <div>{label}<hr /><div>{count}</div></div>
+        </div>
+    );
+});
 
 PilePopover.displayName = "PilePopover";
+
+const FlashOnChange = ({ value, className, children }: { value: number; className?: string; children: React.ReactNode }) => {
+    const [flashing, setFlashing] = useState(false);
+    const prevRef = useRef(value);
+    useEffect(() => {
+        if (prevRef.current !== value) {
+            prevRef.current = value;
+            setFlashing(true);
+        }
+    }, [value]);
+    return (
+        <div
+            className={`${className ?? ''}${flashing ? ' stat-glow' : ''}`}
+            onAnimationEnd={() => setFlashing(false)}
+        >
+            {children}
+        </div>
+    );
+};
 
 /**
  * Hand card that calls parent callbacks on hover — renders no overlay itself.
@@ -127,10 +172,12 @@ export const PlayerAreaComponent = memo(({
     // Board-level overlay state — one at a time, rendered at board center
     const [pileOverlay, setPileOverlay] = useState<{ cards: Card[], title: string } | null>(null);
     const [hoveredCard, setHoveredCard] = useState<Card | null>(null);
+    const [playerModal, setPlayerModal] = useState<{ data: PlayerGameState | PlayerViewModel; name: string; isOwn: boolean } | null>(null);
+    const [hoveredPortraitId, setHoveredPortraitId] = useState<string | null>(null);
+    const closeModal = useCallback(() => setPlayerModal(null), []);
 
     const onPileHover = useCallback((cards: Card[], title: string) => {
-        const sorted = [...cards].sort((a, b) => a.name.localeCompare(b.name));
-        setPileOverlay({ cards: sorted, title });
+        setPileOverlay({ cards, title });
     }, []);
     const onPileLeave = useCallback(() => setPileOverlay(null), []);
 
@@ -149,14 +196,16 @@ export const PlayerAreaComponent = memo(({
                     width: PORTRAIT_CURRENT.width,
                     height: PORTRAIT_CURRENT.height,
                     zIndex: 1,
+                    cursor: "pointer",
                 }}
+                onClick={() => setPlayerModal({ data: player, name: playerNames[parseInt(player.id)] ?? `Player ${parseInt(player.id) + 1}`, isOwn: true })}
+                onMouseEnter={() => setHoveredPortraitId(player.id)}
+                onMouseLeave={() => setHoveredPortraitId(null)}
             >
                 <div className="portrait-clip">
-                    <img
-                        src={characterImageMap[player.characterId]}
-                        alt="your character"
-                    />
+                    <img src={characterImageMap[player.characterId]} alt="your character" />
                 </div>
+                {hoveredPortraitId === player.id && <PortraitInfoIcon />}
             </div>
         )}
         {enemies.map((enemy, seatIndex) => {
@@ -173,14 +222,16 @@ export const PlayerAreaComponent = memo(({
                         width: slot.width,
                         height: slot.height,
                         zIndex: 1,
+                        cursor: "pointer",
                     }}
+                    onClick={() => setPlayerModal({ data: enemy, name: playerNames[parseInt(enemy.id)] ?? `Player ${parseInt(enemy.id) + 1}`, isOwn: false })}
+                    onMouseEnter={() => setHoveredPortraitId(enemy.id)}
+                    onMouseLeave={() => setHoveredPortraitId(null)}
                 >
                     <div className="portrait-clip">
-                        <img
-                            src={characterImageMap[enemy.characterId]}
-                            alt="enemy character"
-                        />
+                        <img src={characterImageMap[enemy.characterId]} alt="enemy character" />
                     </div>
+                    {hoveredPortraitId === enemy.id && <PortraitInfoIcon />}
                 </div>
             );
         })}
@@ -194,10 +245,10 @@ export const PlayerAreaComponent = memo(({
 
         {/* Current Player Resources */}
         <div className="player-resource-container absolute">
-            <div className="victory-points">{player.victoryPoints}</div>
-            <div>Candy<hr /><div>{player.candy}</div></div>
-            <div>Loot<hr /><div>{player.loot}</div></div>
-            <PilePopover cards={player.deck} label="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} />
+            <FlashOnChange value={player.victoryPoints} className="victory-points">{player.victoryPoints}</FlashOnChange>
+            <FlashOnChange value={player.candy}>Candy<hr /><div>{player.candy}</div></FlashOnChange>
+            <FlashOnChange value={player.loot}>Loot<hr /><div>{player.loot}</div></FlashOnChange>
+            <PilePopover cards={player.deck} label="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle />
             <PilePopover cards={player.discardPile} label="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} />
             <PilePopover cards={player.trashPile} label="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} />
         </div>
@@ -238,10 +289,13 @@ export const PlayerAreaComponent = memo(({
 
         {/* Action Buttons */}
         <div
-            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}`}
+            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}${player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
             onClick={player.hasPlayedCard ? onPass : undefined}
         />
-        <div className="reveal-btn" onClick={onReveal} />
+        <div
+            className={`reveal-btn${player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
+            onClick={onReveal}
+        />
 
         {/* Board-level: pile overlay (centered, styled like market modal) */}
         {pileOverlay && (
@@ -265,6 +319,18 @@ export const PlayerAreaComponent = memo(({
             <div className="hand-preview-centered">
                 <CardComponent card={hoveredCard} x={0} y={0} w={210} h={314} show={true} />
             </div>
+        )}
+
+        {/* Player detail modal — rendered in document.body to escape board transform */}
+        {playerModal && createPortal(
+            <PlayerDetailModal
+                data={playerModal.data}
+                name={playerModal.name}
+                isOwn={playerModal.isOwn}
+                characterImageMap={characterImageMap}
+                onClose={closeModal}
+            />,
+            document.body
         )}
     </>);
 });
@@ -299,3 +365,215 @@ const EnemyResourceDisplay = memo(({ enemy, pos, name, onPileHover, onPileLeave 
 ));
 
 EnemyResourceDisplay.displayName = "EnemyResourceDisplay";
+
+// ─── Portrait Info Icon ───────────────────────────────────────────────────────
+
+const PortraitInfoIcon = () => (
+    <div
+        className="portrait-info-icon"
+        style={{
+            position: "absolute",
+            top: -8,
+            right: -8,
+            width: 22,
+            height: 22,
+            borderRadius: "50%",
+            backgroundColor: "#fef08a",
+            border: "2px solid #000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 900,
+            color: "#000",
+            zIndex: 3,
+            pointerEvents: "none",
+            fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
+            userSelect: "none",
+        }}
+    >
+        ℹ
+    </div>
+);
+
+// ─── Player Detail Modal ──────────────────────────────────────────────────────
+
+const nb = {
+    bg: '#e0d4fc',
+    border: '2px solid #000',
+    accent: '#fef08a',
+    font: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
+};
+
+interface PlayerDetailModalProps {
+    data: PlayerGameState | PlayerViewModel;
+    name: string;
+    isOwn: boolean;
+    characterImageMap: Record<CharacterEnum, string>;
+    onClose: () => void;
+}
+
+const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+        <span style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: "#777" }}>{label}</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: "#111" }}>{value}</span>
+    </div>
+);
+
+const PileSection = ({ title, cards }: { title: string; cards: Card[] }) => (
+    <div style={{ marginTop: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", marginBottom: 10 }}>
+            {title} <span style={{ color: "#aaa", fontWeight: 400 }}>({cards.length})</span>
+        </div>
+        {cards.length === 0 ? (
+            <div style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>Empty</div>
+        ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {cards.map((card, i) => (
+                    <CardMini key={`${card.id}-${i}`} card={card} />
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: PlayerDetailModalProps) => {
+    const isFull = isFullPlayerState(data);
+    const characterImg = data.characterId ? characterImageMap[data.characterId] : null;
+
+    const deckCards: Card[] = isFull ? [...data.deck].sort((a, b) => a.name.localeCompare(b.name)) : [];
+    const discardCards: Card[] = [...data.discardPile].sort((a, b) => a.name.localeCompare(b.name));
+    const trashCards: Card[] = [...data.trashPile].sort((a, b) => a.name.localeCompare(b.name));
+
+    return (
+        <>
+            {/* Backdrop */}
+            <div
+                onClick={onClose}
+                style={{
+                    position: "fixed", inset: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    zIndex: 200,
+                }}
+            />
+
+            {/* Panel */}
+            <div
+                style={{
+                    position: "fixed",
+                    top: "50%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    width: "min(680px, 92vw)",
+                    maxHeight: "88vh",
+                    overflowY: "auto",
+                    backgroundColor: "#fff",
+                    border: nb.border,
+                    boxShadow: "8px 8px 0 #000",
+                    fontFamily: nb.font,
+                    zIndex: 201,
+                    display: "flex",
+                    flexDirection: "column",
+                }}
+            >
+                {/* Header */}
+                <div
+                    style={{
+                        backgroundColor: nb.bg,
+                        borderBottom: nb.border,
+                        padding: "14px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 16,
+                        flexShrink: 0,
+                    }}
+                >
+                    {characterImg && (
+                        <img
+                            src={characterImg}
+                            alt={name}
+                            style={{ width: 52, height: 52, objectFit: "cover", objectPosition: "top", border: nb.border }}
+                        />
+                    )}
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>{name}</div>
+                        {data.characterId && (
+                            <div style={{ fontSize: 11, color: "#555", marginTop: 3, fontWeight: 600 }}>
+                                {data.characterId}
+                            </div>
+                        )}
+                        {isOwn && (
+                            <div style={{ fontSize: 10, marginTop: 4, backgroundColor: nb.accent, border: "1px solid #000", display: "inline-block", padding: "1px 6px", fontWeight: 700 }}>
+                                YOU
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            border: nb.border, backgroundColor: "#fff",
+                            boxShadow: "3px 3px 0 #000", width: 32, height: 32,
+                            cursor: "pointer", fontWeight: 900, fontSize: 16,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            flexShrink: 0,
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Stats row */}
+                <div
+                    style={{
+                        display: "flex",
+                        gap: 0,
+                        borderBottom: nb.border,
+                        flexShrink: 0,
+                    }}
+                >
+                    {[
+                        { label: "VP", value: data.victoryPoints },
+                        { label: "Candy", value: data.candy },
+                        { label: "Loot", value: data.loot },
+                        { label: "Workers", value: `${data.currentNumberOfWorkers}` },
+                        { label: "Hand", value: isFull ? data.hand.length : (data as PlayerViewModel).handLength },
+                        { label: "Deck", value: isFull ? data.deck.length : (data as PlayerViewModel).deckLength },
+                    ].map(({ label, value }, i, arr) => (
+                        <div
+                            key={label}
+                            style={{
+                                flex: 1,
+                                padding: "12px 8px",
+                                borderRight: i < arr.length - 1 ? "1px solid #ddd" : "none",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 4,
+                            }}
+                        >
+                            <Stat label={label} value={value} />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Piles */}
+                <div style={{ padding: "16px 18px" }}>
+                    {data.hasRevealed && (
+                        <div style={{ marginBottom: 14, fontSize: 11, fontWeight: 700, color: "#555" }}>
+                            Status: <span style={{ backgroundColor: nb.accent, border: "1px solid #000", padding: "1px 6px" }}>REVEALED</span>
+                        </div>
+                    )}
+
+                    <PileSection title="Discard Pile" cards={discardCards} />
+                    <PileSection title="Trash" cards={trashCards} />
+
+                    {isOwn && (
+                        <>
+                            <div style={{ borderTop: nb.border, margin: "20px 0 0" }} />
+                            <PileSection title="Deck (not in draw order)" cards={deckCards} />
+                        </>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+};

@@ -5,6 +5,8 @@ import { useLobbyServices } from '../../services/lobbyServices';
 import { BACKEND_URL } from '../../config';
 import { getRandomPlayerName } from '@candyfight/shared/services/moves/playerServices';
 import { generateBattleEvent } from './helper';
+import { GameConfigModal } from './GameConfigModal';
+import { GameConfig } from '@candyfight/shared/types';
 
 // Neobrutalist design tokens (from ficcionarios)
 const nb = {
@@ -93,7 +95,7 @@ export const LobbyComponent = () => {
   const { createMatch, joinMatch, listMatches } = useLobbyServices();
   const { playerState, setPlayerState } = useAppStore();
   const { matchLore, setMatchLore, matchList, setMatchList } = useLobbyStore();
-  const [numberOfPlayers, setNumberOfPlayers] = useState(2);
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   useEffect(() => {
     listMatches().then((data) => setMatchList(data));
@@ -101,11 +103,16 @@ export const LobbyComponent = () => {
     return () => clearInterval(id);
   }, []);
 
-  const onCreateMatch = async () =>
-    createMatch(numberOfPlayers, {
+  const onCreateMatch = async (config: GameConfig) => {
+    setShowConfigModal(false);
+    await createMatch(config.numPlayers, {
       name: useLobbyStore.getState().matchLore.title,
       playerName: useAppStore.getState().playerState.name,
+      initialCandy: config.initialCandy,
+      initialLoot: config.initialLoot,
+      victoryPoints: config.victoryPoints,
     });
+  };
 
   const onJoinMatch = async (matchID: string) => {
     const { playerCredentials, playerID } = await joinMatch(matchID, {
@@ -124,6 +131,7 @@ export const LobbyComponent = () => {
   };
 
   return (
+    <>
     <div style={{ minHeight: '100vh', backgroundColor: nb.bg, padding: '40px 24px', fontFamily: nb.font }}>
       <div style={{ maxWidth: '880px', margin: '0 auto' }}>
 
@@ -189,34 +197,11 @@ export const LobbyComponent = () => {
                 </BrutalButton>
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>
-                  Players
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {[2, 3, 4].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setNumberOfPlayers(n)}
-                      style={{
-                        ...btnBase,
-                        padding: '6px 18px',
-                        backgroundColor: numberOfPlayers === n ? nb.accent : '#fff',
-                        boxShadow: numberOfPlayers === n ? nb.shadowSm : '2px 2px 0px 0px #000',
-                        transform: numberOfPlayers === n ? 'translate(2px, 2px)' : undefined,
-                      }}
-                    >
-                      {n}P
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <BrutalButton
-                onClick={onCreateMatch}
+                onClick={() => setShowConfigModal(true)}
                 style={{ width: '100%', justifyContent: 'center', backgroundColor: '#000', color: '#fff', boxShadow: nb.shadowMd }}
               >
-                ▶ Create Match ({numberOfPlayers}P)
+                ▶ Configure &amp; Create Match
               </BrutalButton>
             </div>
           </div>
@@ -330,5 +315,13 @@ export const LobbyComponent = () => {
         </div>
       </div>
     </div>
+
+    {showConfigModal && (
+      <GameConfigModal
+        onConfirm={onCreateMatch}
+        onCancel={() => setShowConfigModal(false)}
+      />
+    )}
+    </>
   );
 };

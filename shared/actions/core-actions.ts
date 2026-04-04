@@ -20,6 +20,7 @@ import {
 import { MARKET_ROW_SIZE } from "../constants";
 import { Card, MetaGameState, PlayerGameState } from "../types";
 import { characterDefinitions } from "../characters/character-definitions";
+import { appendLog } from "../services/logService";
 
 // ============================================================================
 // Helper functions (adapted from existing moves.ts)
@@ -73,6 +74,13 @@ const drawHandler: ActionHandler<DrawActionParams> = {
         doDraw(player);
       }
     }
+
+    appendLog(state.G, {
+      playerID: state.ctx.currentPlayer,
+      phase: state.ctx.phase ?? '',
+      type: 'effect',
+      message: `drew ${count} card${count !== 1 ? 's' : ''}`,
+    });
   },
 };
 
@@ -114,6 +122,12 @@ const discardHandler: ActionHandler<DiscardActionParams> = {
     const cards = takeFromHand(player, params.cardIds);
     if (cards) {
       player.discardPile = [...player.discardPile, ...cards];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `discarded ${cards.length} card${cards.length !== 1 ? 's' : ''}`,
+      });
     }
   },
 };
@@ -162,6 +176,12 @@ const trashHandler: ActionHandler<TrashActionParams> = {
     const cards = takeFromHand(player, params.cardIds);
     if (cards) {
       player.trashPile = [...player.trashPile, ...cards];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `trashed ${cards.length} card${cards.length !== 1 ? 's' : ''}`,
+      });
     }
   },
 };
@@ -253,6 +273,13 @@ const buyCardHandler: ActionHandler<BuyCardActionParams> = {
     if (index !== -1) {
       const [card] = state.G.cardMarket.splice(index, 1);
       player.discardPile = [...player.discardPile, card];
+      appendLog(state.G, {
+        playerID: state.ctx.currentPlayer,
+        phase: state.ctx.phase ?? '',
+        type: 'effect',
+        message: `bought ${card.name} → discard pile`,
+        card,
+      });
     }
   },
 };

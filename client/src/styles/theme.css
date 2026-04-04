@@ -343,10 +343,9 @@
   height: 7%;
 }
 
-.pass-btn:hover,
+.pass-btn:not(.disabled):hover,
 .reveal-btn:hover {
-  background-color: var(--color-selection);
-  opacity: 0.5;
+  border-color: var(--color-selection);
 }
 
 .pass-btn.disabled {
@@ -541,6 +540,47 @@
   margin: 0 2px;
   font-weight: 400;
   color: #555;
+}
+
+/* ===== Stat Flash (resource/pile value changed) ===== */
+
+@keyframes stat-glow {
+  0%,  40%, 100% { filter: brightness(1); }
+  20%            { filter: brightness(2.2) drop-shadow(0 0 5px #fef08a); }
+  60%            { filter: brightness(2.2) drop-shadow(0 0 5px #fef08a); }
+}
+
+.stat-glow {
+  animation: stat-glow 0.75s ease-in-out forwards;
+}
+
+/* ===== Action Button Glow ===== */
+
+@keyframes btn-glow {
+  0%, 100% { box-shadow: none; }
+  50%      { box-shadow: 0 0 0 4px rgba(254, 240, 138, 0.85), 0 0 22px rgba(254, 240, 138, 0.55); }
+}
+
+.pass-btn.should-glow,
+.reveal-btn.should-glow {
+  animation: btn-glow 1.4s ease-in-out infinite;
+  border-color: #fef08a !important;
+}
+
+.pass-btn:not(.disabled):hover,
+.reveal-btn:hover {
+  box-shadow: 0 0 0 4px rgba(254, 240, 138, 0.9), 0 0 22px rgba(254, 240, 138, 0.65);
+}
+
+/* ===== Portrait Info Icon (hover) ===== */
+
+@keyframes info-glow {
+  0%, 100% { box-shadow: 0 0 4px 3px rgba(254, 240, 138, 0.9), 0 0 0 2px #000; }
+  50%       { box-shadow: 0 0 14px 8px rgba(254, 240, 138, 1),   0 0 0 2px #000; }
+}
+
+.portrait-info-icon {
+  animation: info-glow 1.2s ease-in-out infinite;
 }
 
 /* ===== Portrait Glow (current player) ===== */

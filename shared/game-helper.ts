@@ -1,4 +1,4 @@
-import { LocationCost, PlayerGameState, Location, Dictionary, GameState, District } from "./types";
+import { LocationCost, PlayerGameState, Location, Dictionary, GameState, District, GameConfig, DEFAULT_GAME_CONFIG } from "./types";
 import { isNullOrEmpty } from "./common-methods";
 import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "./constants";
 import { ResourceEnum } from "./enums";
@@ -28,14 +28,12 @@ export const getInitialLocationCost = (districtId: string): LocationCost => ({
     ]
 });
 
-export const getInitialPlayersState = (numberOfPlayers: number, plugins: DefaultPluginAPIs): Dictionary<PlayerGameState> => {
+export const getInitialPlayersState = (numberOfPlayers: number, plugins: DefaultPluginAPIs, config: GameConfig = DEFAULT_GAME_CONFIG): Dictionary<PlayerGameState> => {
     let initialPlayersState: {[key: string]: PlayerGameState} = {};
-
 
     Array.from({ length: numberOfPlayers }).forEach((value: any, Id: number) => {
 
         let deck = plugins.random.Shuffle(getInitialDeck());
-        // let hand = deck.splice(0,4);
 
         initialPlayersState[Id.toString()] = {
             id: Id.toString(),
@@ -44,8 +42,8 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
             maxNumberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
             selectedCard: NO_CARD_SELECTED,
             hasPlayedCard: false,
-            [ResourceEnum.Candy]: 2,
-            [ResourceEnum.Loot]: 2,
+            [ResourceEnum.Candy]: config.initialCandy,
+            [ResourceEnum.Loot]: config.initialLoot,
             victoryPoints: 0,
             deck: deck,
             hand: [],

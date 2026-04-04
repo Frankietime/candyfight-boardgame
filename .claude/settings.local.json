@@ -54,7 +54,10 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(ls:*)",
       "Bash(grep -r \"player-taken\\\\|location-taken\" /c/Users/donad/repos/candyfight-boardgame/client/dist/assets/index*.css -o)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "mcp__plugin_repomix-mcp_repomix__file_system_read_directory",
+      "WebFetch(domain:render.com)",
+      "WebFetch(domain:www.freetiers.com)"
     ]
   }
 }

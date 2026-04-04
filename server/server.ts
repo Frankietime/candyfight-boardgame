@@ -49,6 +49,11 @@ server.app.use(
 //   await next();
 // });
 
+server.router.get('/health', (ctx) => {
+  ctx.status = 200;
+  ctx.body = { status: 'ok' };
+});
+
 server.router.delete('/admin/matches/:matchID', async (ctx) => {
   const { matchID } = ctx.params;
 
@@ -67,4 +72,5 @@ server.router.delete('/admin/matches/:matchID', async (ctx) => {
 const docsPath = path.join(__dirname, '..', 'docs');
 server.app.use(mount('/docs', serve(docsPath)));
 
-server.run({ port: 4000 });
+const port = Number(process.env.PORT ?? 4000);
+server.run({ port });

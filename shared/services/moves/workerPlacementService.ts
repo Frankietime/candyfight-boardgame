@@ -2,6 +2,7 @@ import { MetaGameState, PlayerGameState, Location, Card } from "../../types";
 import { actionRegistry } from "../../actions";
 import { ActionParams } from "../../actions/action-params";
 import { discard } from "./moves";
+import { appendLog, formatResources } from "../logService";
 
 /**
  * Structured move params carrying user-provided inputs for cost and reward actions.
@@ -68,6 +69,17 @@ const playCard = (
     player.currentNumberOfWorkers -= 1;
     player.hasPlayedCard = true;
     player.cardsInPlay?.push(card);
+
+    const resourceStr = card.primaryResources?.length
+        ? ` (${formatResources(card.primaryResources)})`
+        : '';
+    appendLog(mgState.G, {
+        playerID: mgState.ctx.currentPlayer,
+        phase: mgState.ctx.phase ?? '',
+        type: 'effect',
+        message: `played ${card.name}${resourceStr}`,
+        card,
+    });
 };
 
 /**
@@ -91,6 +103,15 @@ const payCosts = (
             : (moveParams ?? action.params ?? {});
         actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
     });
+
+    if (location.cost.resources?.length) {
+        appendLog(mgState.G, {
+            playerID: mgState.ctx.currentPlayer,
+            phase: mgState.ctx.phase ?? '',
+            type: 'effect',
+            message: `paid ${formatResources(location.cost.resources, true)}`,
+        });
+    }
 };
 
 /**
@@ -114,6 +135,15 @@ const collectRewards = (
             : (action.params ?? {});
         actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
     });
+
+    if (location.reward.resources?.length) {
+        appendLog(mgState.G, {
+            playerID: mgState.ctx.currentPlayer,
+            phase: mgState.ctx.phase ?? '',
+            type: 'effect',
+            message: `gained ${formatResources(location.reward.resources)}`,
+        });
+    }
 };
 
 /**
@@ -136,4 +166,12 @@ const claimLocation = (
             amount: currentPresence + 1
         };
     }
+
+    const districtName = district?.name ?? location.districtId;
+    appendLog(mgState.G, {
+        playerID: mgState.ctx.currentPlayer,
+        phase: mgState.ctx.phase ?? '',
+        type: 'move',
+        message: `claimed ${location.name} (${districtName})`,
+    });
 };

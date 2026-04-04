@@ -50,7 +50,6 @@ export const getMarketTierOneCards = () => {
             marketTierOne.push({
                 ...getDistrictCard(tuple),
                 primaryEffects: [actions.addPresence()],
-                secondaryEffects: [actions.draw(1)],
             });
         })
     return marketTierOne;
