@@ -44,3 +44,6 @@ shared/**/*.js
 shared/**/*.d.ts
 shared/**/*.js.map
 shared/**/*.d.ts.map
+
+# Claude
+.claude/
