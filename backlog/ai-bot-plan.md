@@ -7,7 +7,7 @@ This is **imitation learning / behavioral cloning**: the model learns to imitate
 
 ---
 
-## Architecture Overview
+## Architecture Overview 
 
 ```
 [Game sessions] → [Recorder] → [Game logs in DB]
