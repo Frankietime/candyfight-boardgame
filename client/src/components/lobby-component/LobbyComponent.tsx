@@ -253,6 +253,29 @@ export const LobbyComponent = () => {
                         </span>
                       </div>
 
+                      {/* Game config */}
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                        {[
+                          { label: '🍬', value: match.setupData?.initialCandy },
+                          { label: '💰', value: match.setupData?.initialLoot },
+                          { label: '⭐', value: `${match.setupData?.victoryPoints ?? '?'} VP` },
+                        ].map(({ label, value }) => (
+                          <span
+                            key={label}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 7px',
+                              border: '1.5px solid #ccc',
+                              backgroundColor: '#f5f5f5',
+                              color: '#444',
+                            }}
+                          >
+                            {label} {value ?? '?'}
+                          </span>
+                        ))}
+                      </div>
+
                       {/* Player seats */}
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                         {match.players.map((p, i) => (

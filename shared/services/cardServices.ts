@@ -4,6 +4,8 @@ import { getEnumStringKeys } from "../common-methods";
 import _ from "lodash";
 import { resources, actions } from "../actions/effect-factories";
 
+let _cardInstanceCounter = 0;
+
 export const getInitialDeck = (): Card[] => {
     return [
         getSignetCard(),
@@ -60,20 +62,20 @@ const getMiscelanousDeck = (): Card[] => {
 
     return [
         {
-            id: "MISC-1",
+            id: `MISC-STRANGE-${++_cardInstanceCounter}`,
             name: "Strange Candy",
             districtIds: allDistricts,
             primaryResources: [resources.loot(1)],
             secondaryEffects: [actions.strangeCandyPuzzle()]
         },
         {
-            id: "MISC-2",
+            id: `MISC-COOLDOWN-${++_cardInstanceCounter}`,
             name: "Cooldown",
             districtIds: [],
             secondaryEffects: [actions.cooldown()]
         },
         {
-            id: "MISC-3",
+            id: `MISC-STRANGE-${++_cardInstanceCounter}`,
             name: "Strange Candy",
             districtIds: allDistricts,
             primaryResources: [resources.loot(1)],
@@ -86,14 +88,14 @@ export const getDistrictCard = (districtIds: string[]): Card => {
     const districtId = districtIds.join("-");
 
     return {
-        id: districtId,
+        id: `${districtId}-${++_cardInstanceCounter}`,
         districtIds,
         name: districtId,
     }
 }
 
 export const getSignetCard = (): Card => ({
-    id: "signet",
+    id: `SIGNET-${++_cardInstanceCounter}`,
     name: "Signet",
     districtIds: [
         DistrictIconsEnum.D1,

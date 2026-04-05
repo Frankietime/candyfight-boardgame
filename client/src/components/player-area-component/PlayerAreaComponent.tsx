@@ -186,31 +186,31 @@ export const PlayerAreaComponent = memo(({
 
     return (<>
         {/* Character portraits — rendered first so they sit behind all other board elements */}
-        {player.characterId && characterImageMap[player.characterId] && (
-            <div
-                className={`current-player-portrait-frame${currentPlayerId === 'all' || player.id === currentPlayerId ? " proto-glow" : ""}`}
-                style={{
-                    position: "absolute",
-                    left: PORTRAIT_CURRENT.left,
-                    top: PORTRAIT_CURRENT.top,
-                    width: PORTRAIT_CURRENT.width,
-                    height: PORTRAIT_CURRENT.height,
-                    zIndex: 1,
-                    cursor: "pointer",
-                }}
-                onClick={() => setPlayerModal({ data: player, name: playerNames[parseInt(player.id)] ?? `Player ${parseInt(player.id) + 1}`, isOwn: true })}
-                onMouseEnter={() => setHoveredPortraitId(player.id)}
-                onMouseLeave={() => setHoveredPortraitId(null)}
-            >
-                <div className="portrait-clip">
+        <div
+            className={`current-player-portrait-frame${currentPlayerId === 'all' || player.id === currentPlayerId ? " proto-glow" : ""}`}
+            style={{
+                position: "absolute",
+                left: PORTRAIT_CURRENT.left,
+                top: PORTRAIT_CURRENT.top,
+                width: PORTRAIT_CURRENT.width,
+                height: PORTRAIT_CURRENT.height,
+                zIndex: 1,
+                cursor: "pointer",
+            }}
+            onClick={() => setPlayerModal({ data: player, name: playerNames[parseInt(player.id)] ?? `Player ${parseInt(player.id) + 1}`, isOwn: true })}
+            onMouseEnter={() => setHoveredPortraitId(player.id)}
+            onMouseLeave={() => setHoveredPortraitId(null)}
+        >
+            <div className="portrait-clip">
+                {player.characterId && characterImageMap[player.characterId] && (
                     <img src={characterImageMap[player.characterId]} alt="your character" />
-                </div>
-                {hoveredPortraitId === player.id && <PortraitInfoIcon />}
+                )}
             </div>
-        )}
+            {hoveredPortraitId === player.id && <PortraitInfoIcon />}
+        </div>
         {enemies.map((enemy, seatIndex) => {
             const slot = PORTRAIT_ENEMIES[seatIndex];
-            if (!slot || !enemy.characterId || !characterImageMap[enemy.characterId]) return null;
+            if (!slot) return null;
             return (
                 <div
                     key={`portrait-enemy-${enemy.id}`}
@@ -229,7 +229,9 @@ export const PlayerAreaComponent = memo(({
                     onMouseLeave={() => setHoveredPortraitId(null)}
                 >
                     <div className="portrait-clip">
-                        <img src={characterImageMap[enemy.characterId]} alt="enemy character" />
+                        {enemy.characterId && characterImageMap[enemy.characterId] && (
+                            <img src={characterImageMap[enemy.characterId]} alt="enemy character" />
+                        )}
                     </div>
                     {hoveredPortraitId === enemy.id && <PortraitInfoIcon />}
                 </div>

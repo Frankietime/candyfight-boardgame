@@ -17,6 +17,11 @@ const nb = {
     red: '#ef4444',
 };
 
+// Panel dimensions — single source of truth used by CardPopover offset
+const PANEL_W = 330;       // expanded width (264 * 1.25)
+const COLLAPSED_W = 70;    // collapsed width (56 * 1.25)
+const LEFT_BORDER = 4;     // expanded left border px
+
 function formatPhase(phase: string | null): string {
     if (!phase) return "UNKNOWN";
     return phase.replace(/([A-Z])/g, " $1").trim().toUpperCase();
@@ -53,17 +58,17 @@ export const GameInfoComponent = ({
 
 
     const label: React.CSSProperties = {
-        fontSize: "11px",
+        fontSize: "14px",
         fontWeight: 900,
         textTransform: "uppercase" as const,
         letterSpacing: "0.08em",
         color: "#555",
-        marginBottom: 4,
+        marginBottom: 5,
     };
 
     const divider: React.CSSProperties = {
         borderTop: "2px solid #000",
-        margin: "12px 0",
+        margin: "15px 0",
     };
 
     const sidebarBase: React.CSSProperties = {
@@ -84,22 +89,22 @@ export const GameInfoComponent = ({
                 ref={sidebarRef}
                 style={{
                     ...sidebarBase,
-                    width: 56,
+                    width: COLLAPSED_W,
                     backgroundColor: nb.bg,
                     borderRight: nb.borderRight,
                     cursor: "pointer",
                     alignItems: "center",
                     justifyContent: "flex-start",
-                    paddingTop: 16,
-                    gap: 10,
+                    paddingTop: 20,
+                    gap: 12,
                 }}
                 onClick={() => setOpen(true)}
                 title="Open game info"
             >
-                <span style={{ fontSize: "22px", fontWeight: 900 }}>▶</span>
+                <span style={{ fontSize: "28px", fontWeight: 900 }}>▶</span>
                 <span
                     style={{
-                        fontSize: "10px",
+                        fontSize: "13px",
                         fontWeight: 900,
                         letterSpacing: "0.1em",
                         textTransform: "uppercase",
@@ -112,13 +117,13 @@ export const GameInfoComponent = ({
                 </span>
                 <span
                     style={{
-                        fontSize: "9px",
+                        fontSize: "11px",
                         fontWeight: 700,
                         writingMode: "vertical-rl",
                         transform: "rotate(180deg)",
                         color: "#888",
                         letterSpacing: "0.05em",
-                        marginTop: 4,
+                        marginTop: 5,
                     }}
                 >
                     ^I
@@ -132,10 +137,10 @@ export const GameInfoComponent = ({
             ref={sidebarRef}
             style={{
                 ...sidebarBase,
-                width: 264,
+                width: PANEL_W,
                 backgroundColor: nb.cardBg,
                 borderRight: nb.borderRight,
-                borderLeft: "4px solid #000",
+                borderLeft: `${LEFT_BORDER}px solid #000`,
             }}
         >
             {/* Header */}
@@ -143,14 +148,14 @@ export const GameInfoComponent = ({
                 style={{
                     backgroundColor: nb.bg,
                     borderBottom: nb.border,
-                    padding: "12px 12px",
+                    padding: "15px 15px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                     flexShrink: 0,
                 }}
             >
-                <span style={{ fontSize: "14px", fontWeight: 900, letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: "18px", fontWeight: 900, letterSpacing: "0.05em" }}>
                     🍬 CANDY FIGHT
                 </span>
                 <button
@@ -159,11 +164,11 @@ export const GameInfoComponent = ({
                         border: nb.border,
                         backgroundColor: "#fff",
                         boxShadow: "2px 2px 0 #000",
-                        width: 28,
-                        height: 28,
+                        width: 35,
+                        height: 35,
                         cursor: "pointer",
                         fontWeight: 900,
-                        fontSize: "14px",
+                        fontSize: "18px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -181,19 +186,19 @@ export const GameInfoComponent = ({
             <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
 
                 {/* Static content — fixed height */}
-                <div style={{ padding: "12px 14px", flexShrink: 0 }}>
+                <div style={{ padding: "15px 18px", flexShrink: 0 }}>
 
                     {/* Match name */}
                     <div style={label}>Match</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10, wordBreak: "break-word" }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: 12, wordBreak: "break-word" }}>
                         {matchData?.setupData?.name ?? "Loading…"}
                     </div>
 
                     {/* Player */}
                     <div style={label}>You</div>
-                    <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: 10 }}>
+                    <div style={{ fontSize: "16px", fontWeight: 700, marginBottom: 12 }}>
                         {playerState.name}
-                        <span style={{ fontSize: "11px", color: "#888", marginLeft: 5 }}>
+                        <span style={{ fontSize: "14px", color: "#888", marginLeft: 5 }}>
                             #{playerState.playerID}
                         </span>
                     </div>
@@ -204,10 +209,10 @@ export const GameInfoComponent = ({
                     <div style={label}>Phase</div>
                     <div
                         style={{
-                            fontSize: "12px",
+                            fontSize: "15px",
                             fontWeight: 700,
-                            marginBottom: 10,
-                            padding: "4px 8px",
+                            marginBottom: 12,
+                            padding: "5px 10px",
                             backgroundColor: nb.accent,
                             border: nb.border,
                             display: "inline-block",
@@ -220,7 +225,7 @@ export const GameInfoComponent = ({
 
                     {/* Turn order */}
                     <div style={{ ...label, marginBottom: 8 }}>Turn Order</div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {playersPublicInfo.map((p, index) => {
                             const isCurrent = ctx.currentPlayer === p.id;
                             const name = matchData?.players?.[index]?.name ?? `Player ${index + 1}`;
@@ -232,17 +237,17 @@ export const GameInfoComponent = ({
                                         display: "flex",
                                         alignItems: "center",
                                         gap: 8,
-                                        padding: "4px 8px",
+                                        padding: "5px 10px",
                                         border: isCurrent ? nb.border : "2px solid transparent",
                                         backgroundColor: isCurrent ? nb.accent : "transparent",
-                                        fontSize: "13px",
+                                        fontSize: "16px",
                                         fontWeight: isCurrent ? 900 : 600,
                                     }}
                                 >
                                     <span
                                         style={{
-                                            width: 10,
-                                            height: 10,
+                                            width: 12,
+                                            height: 12,
                                             borderRadius: "50%",
                                             backgroundColor: playerDotColor(p.id),
                                             border: "1px solid #000",
@@ -253,7 +258,7 @@ export const GameInfoComponent = ({
                                         {name}
                                     </span>
                                     {p.hasRevealed && (
-                                        <span style={{ fontSize: "10px", fontWeight: 700, color: "#555" }}>REVEALED</span>
+                                        <span style={{ fontSize: "13px", fontWeight: 700, color: "#555" }}>REVEALED</span>
                                     )}
                                 </div>
                             );
@@ -266,7 +271,7 @@ export const GameInfoComponent = ({
             </div>
 
             {/* Leave button — pinned to bottom */}
-            <div style={{ padding: "12px 14px", borderTop: nb.border, flexShrink: 0 }}>
+            <div style={{ padding: "15px 18px", borderTop: nb.border, flexShrink: 0 }}>
                 <LeaveButton onClick={onLeaveMatch} />
             </div>
         </div>
@@ -297,15 +302,15 @@ const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
         matchPlayers?.[parseInt(id)]?.name ?? `P${parseInt(id) + 1}`;
 
     return (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 14px 12px", borderTop: nb.border }}>
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", padding: "0 18px 15px", borderTop: nb.border }}>
             <div
                 style={{
-                    fontSize: "11px",
+                    fontSize: "14px",
                     fontWeight: 900,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
                     color: "#555",
-                    margin: "10px 0 6px",
+                    margin: "12px 0 8px",
                     flexShrink: 0,
                 }}
             >
@@ -321,12 +326,12 @@ const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
                     flexDirection: "column",
                     gap: 2,
                     border: nb.border,
-                    padding: "6px 8px",
+                    padding: "8px 10px",
                     backgroundColor: "#fafafa",
                 }}
             >
                 {entries.length === 0 && (
-                    <span style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>
+                    <span style={{ fontSize: "13px", color: "#aaa", fontStyle: "italic" }}>
                         No actions yet
                     </span>
                 )}
@@ -341,7 +346,7 @@ const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
                             <div
                                 key={entry.id}
                                 style={{
-                                    fontSize: "10px",
+                                    fontSize: "13px",
                                     color: "#888",
                                     fontStyle: "italic",
                                     textAlign: "center",
@@ -360,22 +365,22 @@ const GameLog = ({ entries, playerColors, matchPlayers }: GameLogProps) => {
                                 display: "flex",
                                 alignItems: "flex-start",
                                 gap: 5,
-                                fontSize: isEffect ? "10px" : "11px",
+                                fontSize: isEffect ? "13px" : "14px",
                                 color: isEffect ? "#666" : "#111",
                                 fontWeight: isEffect ? 400 : 600,
-                                paddingLeft: isEffect ? 14 : 0,
+                                paddingLeft: isEffect ? 18 : 0,
                             }}
                         >
                             {!isEffect && (
                                 <span
                                     style={{
-                                        width: 7,
-                                        height: 7,
+                                        width: 9,
+                                        height: 9,
                                         borderRadius: "50%",
                                         backgroundColor: dotColor,
                                         border: "1px solid #000",
                                         flexShrink: 0,
-                                        marginTop: 3,
+                                        marginTop: 4,
                                     }}
                                 />
                             )}
@@ -441,7 +446,7 @@ const CardLink = ({ card }: { card: Card }) => {
 };
 
 const CardPopover = ({ card, anchorY }: { card: Card; anchorY: number }) => {
-    const SIDEBAR_WIDTH = 264 + 4; // panel width + left border
+    const SIDEBAR_OFFSET = PANEL_W + LEFT_BORDER;
     const CARD_W = 105;
     const CARD_H = 157;
 
@@ -449,7 +454,7 @@ const CardPopover = ({ card, anchorY }: { card: Card; anchorY: number }) => {
         <div
             style={{
                 position: "fixed",
-                left: SIDEBAR_WIDTH + 8,
+                left: SIDEBAR_OFFSET + 8,
                 top: Math.max(8, Math.min(anchorY - CARD_H / 2, window.innerHeight - CARD_H - 8)),
                 boxShadow: "5px 5px 0 #000",
                 zIndex: 100,
@@ -474,8 +479,8 @@ const LeaveButton = ({ onClick }: { onClick: () => void }) => {
                 border: nb.border,
                 boxShadow: pressed ? "none" : "4px 4px 0 #000",
                 transform: pressed ? "translate(4px, 4px)" : undefined,
-                padding: "9px 0",
-                fontSize: "13px",
+                padding: "11px 0",
+                fontSize: "16px",
                 fontFamily: nb.font,
                 fontWeight: 900,
                 cursor: "pointer",

@@ -217,6 +217,7 @@ export const BoardComponent = ({
                 selectedCard={selectedCard}
                 onLocationSelect={onLocationSelect}
                 isLocationDisabled={isLocationDisabled}
+                marketCards={G.cardMarket.slice(0, MARKET_ROW_SIZE)}
               />
 
               {/* Action Orchestrator Renderer */}

@@ -38,3 +38,9 @@ coverage/
 
 # Project specific
 code_reviews/
+
+# shared compiled output (emitted in-place for Docker builds)
+shared/**/*.js
+shared/**/*.d.ts
+shared/**/*.js.map
+shared/**/*.d.ts.map

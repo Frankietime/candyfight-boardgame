@@ -34,7 +34,7 @@ export const Game: GameInterface<GameState> = {
     minPlayers: 2,
     maxPlayers: 4,
     
-    setup: ({ ctx, setupData, ...plugins }) => {
+    setup: ({ ctx, ...plugins }, setupData) => {
         const config: GameConfig = {
             ...DEFAULT_GAME_CONFIG,
             ...(setupData ?? {}),

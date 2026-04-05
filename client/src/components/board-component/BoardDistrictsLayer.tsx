@@ -24,6 +24,8 @@ export interface BoardDistrictsLayerProps {
   onLocationSelect: (districtIndex: number, locationIndex: number) => void;
   /** Check if location is disabled */
   isLocationDisabled: (location: Location) => boolean;
+  /** Visible market cards for market location hover preview */
+  marketCards?: Card[];
 }
 
 /**
@@ -41,6 +43,7 @@ export const BoardDistrictsLayer = memo(({
   selectedCard,
   onLocationSelect,
   isLocationDisabled,
+  marketCards,
 }: BoardDistrictsLayerProps) => {
   return (
     <>
@@ -56,6 +59,7 @@ export const BoardDistrictsLayer = memo(({
           selectedCard={selectedCard}
           onLocationSelect={onLocationSelect}
           isLocationDisabled={isLocationDisabled}
+          marketCards={marketCards}
         />
       ))}
     </>
@@ -77,6 +81,7 @@ interface DistrictContainerProps {
   selectedCard?: Card;
   onLocationSelect: (districtIndex: number, locationIndex: number) => void;
   isLocationDisabled: (location: Location) => boolean;
+  marketCards?: Card[];
 }
 
 const TILE_W = Math.round(1280 / 12); // 107px
@@ -95,6 +100,7 @@ const DistrictContainer = memo(({
   selectedCard,
   onLocationSelect,
   isLocationDisabled,
+  marketCards,
 }: DistrictContainerProps) => {
   // Bottom districts (2,3): header below; top districts (0,1): header above
   const isTop = districtIndex >= 2;
@@ -148,6 +154,7 @@ const DistrictContainer = memo(({
             isDisabled={isLocationDisabled(location)}
             selectedCard={selectedCard}
             player={player}
+            marketCards={marketCards}
           />
         </div>
       ))}

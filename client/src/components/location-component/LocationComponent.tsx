@@ -1,4 +1,5 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { isNullOrEmpty } from "@candyfight/shared/common-methods";
 import { Card, District, Location, PlayerGameState } from "@candyfight/shared/types";
 import { ResourceComponent } from "../icon-components/ResourceComponent";
@@ -6,6 +7,7 @@ import { DistrictIconComponent } from "../icon-components/DistrictIconComponent"
 import { WorkerIcon } from "../ui/GameIcon";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
+import { CardMini } from "../card-components/CardMini";
 
 export interface LocationComponentProps extends Location {
     x: number,
@@ -17,6 +19,7 @@ export interface LocationComponentProps extends Location {
     isDisabled: boolean;
     selectedCard?: Card;
     player: PlayerGameState;
+    marketCards?: Card[];
 }
 
 export const LocationComponent = memo(({
@@ -32,10 +35,13 @@ export const LocationComponent = memo(({
     takenByPlayerID,
     selectedCard,
     player,
-    isRestrictedArea
+    isRestrictedArea,
+    marketCards,
 }: LocationComponentProps) => {
     const isClickDisabled = isDisabled || isRestrictedArea;
     const isTaken = !isNullOrEmpty(takenByPlayerID);
+    const isMarket = !!reward.actions?.some(a => a.actionId === LocationActionsEnum.BUY_CARD);
+    const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
 
     // Memoize whether this location shows the glow effect
     const showGlow = useMemo(() =>
@@ -88,17 +94,24 @@ export const LocationComponent = memo(({
 
     const takenPlayerClass = isTaken ? `location-taken player-taken-${takenByPlayerID}` : "";
 
+    const TILE_W = 1280 / 12;
+    const TILE_H = 720 / 12;
+
     return (
+        <>
         <div
             className={`absolute border-2 border-solid ${
           isTaken
-            ? `${takenPlayerClass} pointer-events-none`
+            ? takenPlayerClass
             : isClickDisabled
-              ? 'opacity-50 pointer-events-none bg-indigo-900/30'
+              ? ''
               : 'hover:brightness-110 cursor-pointer'
         }`}
-            style={{ top: y, left: x }}
-            onClick={isClickDisabled ? undefined : onClick}
+            style={{ top: y, left: x, width: TILE_W, height: TILE_H, boxSizing: "content-box" }}
+            onClick={isClickDisabled || isTaken ? undefined : onClick}
+            onMouseEnter={isMarket && marketCards?.length ? (e) => setHoverPos({ x: e.clientX, y: e.clientY }) : undefined}
+            onMouseMove={isMarket && marketCards?.length ? (e) => setHoverPos({ x: e.clientX, y: e.clientY }) : undefined}
+            onMouseLeave={isMarket ? () => setHoverPos(null) : undefined}
         >
             <div className={`location-component-container district-${district.id}`}>
                 <div className={showGlow ? "location-container proto-glow" : "location-container"}>
@@ -139,7 +152,46 @@ export const LocationComponent = memo(({
                 </div>
             </div>
         </div>
+        {hoverPos && isMarket && marketCards?.length ? createPortal(
+            <MarketPopover cards={marketCards} anchorX={hoverPos.x} anchorY={hoverPos.y} />,
+            document.body
+        ) : null}
+        </>
     );
 });
 
 LocationComponent.displayName = "LocationComponent";
+
+const CARD_W = 80;
+const CARD_H = 120;
+const GAP = 6;
+const PADDING = 8;
+
+const MarketPopover = ({ cards, anchorX, anchorY }: { cards: Card[]; anchorX: number; anchorY: number }) => {
+    const totalW = cards.length * CARD_W + (cards.length - 1) * GAP + PADDING * 2;
+    const totalH = CARD_H + PADDING * 2;
+    const left = Math.max(8, Math.min(anchorX - totalW / 2, window.innerWidth - totalW - 8));
+    const top = Math.max(8, anchorY - totalH - 12);
+
+    return (
+        <div
+            style={{
+                position: "fixed",
+                left,
+                top,
+                display: "flex",
+                gap: GAP,
+                padding: PADDING,
+                zIndex: 200,
+                pointerEvents: "none",
+                backgroundColor: "#e0d4fc",
+                border: "2px solid #000",
+                boxShadow: "4px 4px 0 #000",
+            }}
+        >
+            {cards.map(card => (
+                <CardMini key={card.id} card={card} width={CARD_W} height={CARD_H} />
+            ))}
+        </div>
+    );
+};

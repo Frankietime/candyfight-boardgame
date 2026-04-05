@@ -385,9 +385,7 @@
   font-size: 12px;
 }
 
-.location-component-container.disabled {
-  opacity: 0.5;
-}
+.location-component-container.disabled {}
 
 .location-component-container .worker-image-container {
   width: 11px;
@@ -454,11 +452,12 @@
 }
 
 .location-reward-container {
-  padding-top: 10px;
+  padding-top: 4px;
 }
 
 .location-reward-container hr {
   color: var(--color-location-reward-hr);
+  margin: 1px 0;
 }
 
 .resource-container {
@@ -473,8 +472,9 @@
 }
 
 .reward-action-item {
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  font-weight: 700;
 }
 
 /* Resource icons */
@@ -593,6 +593,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  background-color: #ffffff;
 }
 
 .portrait-clip img {
@@ -674,6 +675,7 @@
 .hand-preview-centered .card {
   height: 314px;
   font-size: 24px;
+  box-shadow: 6px 6px 0 #000;
 }
 
 .hand-preview-centered .card-name {

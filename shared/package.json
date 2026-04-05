@@ -2,10 +2,7 @@
   "name": "@candyfight/shared",
   "version": "1.0.0",
   "private": true,
-  "main": "./dist/index.js",
-  "exports": {
-    "./*": "./dist/*.js"
-  },
+  "main": "./index.js",
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"
