@@ -132,23 +132,40 @@ export const LobbyComponent = () => {
 
   return (
     <>
-    <div style={{ minHeight: '100vh', backgroundColor: nb.bg, padding: '40px 24px', fontFamily: nb.font }}>
-      <div style={{ maxWidth: '880px', margin: '0 auto' }}>
+    <div style={{ height: '100vh', overflow: 'auto', backgroundColor: nb.bg, padding: '40px 24px', fontFamily: nb.font, boxSizing: 'border-box' }}>
+      <div>
 
-        {/* Title */}
-        <h1
-          style={{
-            fontSize: '28px',
-            fontWeight: 900,
-            color: '#000',
-            letterSpacing: '-0.5px',
-            marginBottom: '32px',
-            fontFamily: "'Press Start 2P', cursive",
-            lineHeight: 1.4,
-          }}
-        >
-          🍬 CANDY FIGHT
-        </h1>
+        {/* Title row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+          <h1
+            style={{
+              fontSize: '28px',
+              fontWeight: 900,
+              color: '#000',
+              letterSpacing: '-0.5px',
+              margin: 0,
+              fontFamily: "'Press Start 2P', cursive",
+              lineHeight: 1.4,
+            }}
+          >
+            🍬 CANDY FIGHT
+          </h1>
+          <a
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...btnBase,
+              backgroundColor: '#fff',
+              boxShadow: nb.shadowSm,
+              textDecoration: 'none',
+              color: '#000',
+              fontSize: '12px',
+            }}
+          >
+            📖 DOCS
+          </a>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '28px', alignItems: 'start' }}>
 

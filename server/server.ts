@@ -2,9 +2,6 @@ import { Server, Origins } from 'boardgame.io/server';
 import { Game } from '@candyfight/shared/Game';
 import KoaCors from '@koa/cors';
 import type { StorageAPI } from 'boardgame.io';
-import serve from 'koa-static';
-import mount from 'koa-mount';
-import path from 'path';
 
 const allowed = new Set([
   '*',
@@ -49,9 +46,13 @@ server.app.use(
 //   await next();
 // });
 
-server.router.get('/health', (ctx) => {
-  ctx.status = 200;
-  ctx.body = { status: 'ok' };
+server.app.use(async (ctx, next) => {
+  if (ctx.path === '/health') {
+    ctx.status = 200;
+    ctx.body = { status: 'ok' };
+    return;
+  }
+  await next();
 });
 
 server.router.delete('/admin/matches/:matchID', async (ctx) => {
@@ -68,9 +69,6 @@ server.router.delete('/admin/matches/:matchID', async (ctx) => {
 
   ctx.status = 204;
 });
-
-const docsPath = path.join(__dirname, '..', 'docs');
-server.app.use(mount('/docs', serve(docsPath)));
 
 const port = Number(process.env.PORT ?? 4000);
 server.run({ port });
