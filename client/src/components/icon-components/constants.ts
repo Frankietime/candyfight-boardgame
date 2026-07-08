@@ -38,4 +38,5 @@ export const resourceIconsDict: Dictionary<any> = {
     [LocationActionsEnum.DRAW]: DRAW,
 }
 
-export const workerIconsByPlayerId = [redWorker, greenWorker, violetWorker, yellowWorker];
+// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
+export const workerIconsByPlayerId = [redWorker, violetWorker, greenWorker, yellowWorker];

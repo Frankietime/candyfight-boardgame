@@ -39,6 +39,10 @@ type AppState = {
   tutorialOpen: boolean;
   setTutorialOpen: (open: boolean) => void;
 
+  // vs-Bots mode: total seats of the local bot match (human + bots), null when off
+  botSeats: number | null;
+  setBotSeats: (seats: number | null) => void;
+
   // i18n — Spanish by default
   locale: Locale;
   setLocale: (locale: Locale) => void;
@@ -58,6 +62,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   tutorialOpen: false,
   setTutorialOpen: (tutorialOpen) => set({ tutorialOpen }),
+
+  botSeats: null,
+  setBotSeats: (botSeats) => set({ botSeats }),
 
   locale: DEFAULT_LOCALE,
   setLocale: (locale) => set({ locale }),

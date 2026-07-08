@@ -17,6 +17,24 @@ export interface WorkerMoveParams {
 const isWorkerMoveParams = (p: any): p is WorkerMoveParams =>
     p != null && typeof p === 'object' && ('costParams' in p || 'rewardParams' in p);
 
+/** Params a cost action will actually receive (mirrors payCosts resolution). */
+const resolveCostParams = (
+    action: { params?: any },
+    moveParams?: WorkerMoveParams | ActionParams
+): ActionParams =>
+    isWorkerMoveParams(moveParams)
+        ? ((moveParams.costParams ?? action.params ?? {}) as ActionParams)
+        : ((moveParams ?? action.params ?? {}) as ActionParams);
+
+/** Params a reward action will actually receive (mirrors collectRewards resolution). */
+const resolveRewardParams = (
+    action: { params?: any },
+    moveParams?: WorkerMoveParams | ActionParams
+): ActionParams =>
+    isWorkerMoveParams(moveParams)
+        ? ((moveParams.rewardParams ?? action.params ?? {}) as ActionParams)
+        : ((action.params ?? {}) as ActionParams);
+
 export interface PlaceWorkerParams {
     mgState: MetaGameState;
     player: PlayerGameState;
@@ -24,6 +42,58 @@ export interface PlaceWorkerParams {
     card: Card;
     moveParams?: WorkerMoveParams | ActionParams;
 }
+
+/**
+ * Validates every cost and reward action of a placement BEFORE any mutation,
+ * so the move can be rejected as INVALID_MOVE while the state is still intact.
+ * Previously a failing action (e.g. missing `cardIds` for DISCARD/TRASH/
+ * BUY_CARD) was silently skipped by the registry and the location was claimed
+ * anyway — an illegal free claim.
+ *
+ * Returns null when the placement is fully payable/collectable, otherwise the
+ * first validation error.
+ */
+export const validatePlacementActions = (
+    mgState: MetaGameState,
+    player: PlayerGameState,
+    location: Location,
+    card: Card,
+    moveParams?: WorkerMoveParams | ActionParams
+): string | null => {
+    const checks: { actionId: string; params: ActionParams; required?: number }[] = [
+        ...(location.cost.actions ?? []).map(a => ({
+            actionId: a.actionId as string,
+            params: resolveCostParams(a, moveParams),
+            required: a.params?.selectionNumber as number | undefined,
+        })),
+        ...(location.reward.actions ?? []).map(a => ({
+            actionId: a.actionId as string,
+            params: resolveRewardParams(a, moveParams),
+        })),
+    ];
+
+    for (const { actionId, params, required } of checks) {
+        const cardIds: string[] | undefined = (params as any).cardIds;
+
+        // The played card leaves the hand before costs run — it can't also pay them.
+        if (cardIds?.includes(card.id)) {
+            return `Cannot use the played card (${card.id}) to pay a cost`;
+        }
+        // "discard 2" means exactly 2: enforce the location's selection count.
+        if (required !== undefined && cardIds !== undefined && cardIds.length !== required) {
+            return `${actionId} requires exactly ${required} cards, got ${cardIds.length}`;
+        }
+
+        const handler = actionRegistry.getHandler(actionId);
+        if (!handler) return `Unknown action: ${actionId}`;
+        if (handler.validate) {
+            const error = handler.validate(params, mgState, player, { location });
+            if (error) return error;
+        }
+    }
+
+    return null;
+};
 
 /**
  * Executes a complete worker placement action.
@@ -96,12 +166,15 @@ const payCosts = (
         player[res.resourceId] -= res.amount;
     });
 
-    // Execute cost actions (may use moveParams for user input)
+    // Execute cost actions (may use moveParams for user input).
+    // validatePlacementActions ran before any mutation, so a failure here is
+    // an invariant breach — surface it instead of silently skipping the cost.
     location.cost.actions?.forEach(action => {
-        const userParams = isWorkerMoveParams(moveParams)
-            ? (moveParams.costParams ?? action.params ?? {})
-            : (moveParams ?? action.params ?? {});
-        actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
+        const userParams = resolveCostParams(action, moveParams);
+        const result = actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
+        if (!result.success) {
+            console.warn(`[placeWorker] cost action ${action.actionId} failed after validation: ${result.error}`);
+        }
     });
 
     if (location.cost.resources?.length) {
@@ -128,12 +201,13 @@ const collectRewards = (
         player[res.resourceId] += res.amount;
     });
 
-    // Execute reward actions
+    // Execute reward actions (validated up front, same as costs).
     location.reward.actions?.forEach(action => {
-        const userParams = isWorkerMoveParams(moveParams)
-            ? (moveParams.rewardParams ?? action.params ?? {})
-            : (action.params ?? {});
-        actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
+        const userParams = resolveRewardParams(action, moveParams);
+        const result = actionRegistry.execute(action.actionId, userParams, mgState, player, { location });
+        if (!result.success) {
+            console.warn(`[placeWorker] reward action ${action.actionId} failed after validation: ${result.error}`);
+        }
     });
 
     if (location.reward.resources?.length) {

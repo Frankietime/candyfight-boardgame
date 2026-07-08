@@ -12,6 +12,7 @@
  * All player-facing strings are i18n KEYS resolved by the client via `useT`.
  */
 import { CharacterEnum, DistrictIconsEnum as D } from "../enums";
+import { createParams } from "../actions/action-params";
 import { buildTutorState } from "./tutorEngine";
 import { anchors, TutorChapter } from "./types";
 import { districtCard, dualCard, fillerCard, signetCard } from "./cards";
@@ -25,9 +26,9 @@ const EASY_JOB = 0;
 const ECOPLEX = 1;
 const ECO_MARKET = 0;
 const AGI = 3;
+const AGI_HIGH_COUNCIL = 0;
 const TIME_IS_GOLD = 1;
 const SWORD_MASTER = 2;
-const AGI_RESTRICTED = 3;
 
 // ── Chapter 1 — The Basics (goal · districts · cost+reward · first worker) ──────
 const chapterBasics: TutorChapter = {
@@ -354,10 +355,12 @@ const chapterCombat: TutorChapter = {
                 },
                 {
                     // The rival is Tech Bros — a different Signet ability, to show asymmetry.
+                    // The extra hand filler stays after paying High Council's discard(2),
+                    // keeping the signet's card draw visible at the end of the chapter.
                     id: RIVAL,
                     candy: 4,
                     characterId: CharacterEnum.TechBros,
-                    hand: [signetCard("c-rsignet"), districtCard(D.D4, "c-r2")],
+                    hand: [signetCard("c-rsignet"), districtCard(D.D4, "c-r2"), fillerCard(D.D1, "c-rh1")],
                     deck: [fillerCard(D.D1, "c-rk1"), fillerCard(D.D1, "c-rk2")],
                 },
             ],
@@ -413,17 +416,21 @@ const chapterCombat: TutorChapter = {
             gateHint: "gate.location",
         },
         {
-            // Rival's 2nd play — reinforces AGI and reveals.
+            // Rival's 2nd play — reinforces AGI via the High Council (restricted
+            // areas are not placeable), discarding the two cards its signet just
+            // drew to pay the cost, then reveals.
             id: "rivalPush",
             text: "tutorial.combat.rivalPush",
             opponent: { card: districtCard(D.D4, "c-r2"), caption: "tutorial.combat.opponentCaption" },
             onEnter: engine => {
                 engine.selectCard(RIVAL, "c-r2");
-                engine.placeWorker(RIVAL, AGI, AGI_RESTRICTED, "c-r2");
+                engine.placeWorker(RIVAL, AGI, AGI_HIGH_COUNCIL, "c-r2", {
+                    costParams: createParams.discard(["c-rk1", "c-rk2"]),
+                });
                 engine.reveal(RIVAL);
             },
             interaction: { kind: "confirmOpponent" },
-            signals: [{ kind: "glow", anchor: anchors.location(AGI, AGI_RESTRICTED) }],
+            signals: [{ kind: "glow", anchor: anchors.location(AGI, AGI_HIGH_COUNCIL) }],
         },
         {
             // You close your round.

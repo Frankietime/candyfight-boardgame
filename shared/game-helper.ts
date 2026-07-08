@@ -70,6 +70,11 @@ export const isPlayCardValid = (playerState: PlayerGameState, selectedCardId: st
 
 export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLocation: Location, cardInPlay: Card): boolean => {
     return (
+        // Restricted areas are not placeable in the implemented ruleset; the
+        // check must live here (not only in the click UI) so the reducer and
+        // bot enumeration reject them too.
+        !currentLocation.isRestrictedArea &&
+        !currentLocation.isDisabled &&
         !playerState.hasPlayedCard &&
         playerState.currentNumberOfWorkers > 0 &&
         isNullOrEmpty(currentLocation.takenByPlayerID) &&
@@ -80,8 +85,9 @@ export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLoca
 
 export const resetEndPhaseTriggers = (G: GameState) => {
     G.roundEndingCounter = 0;
+    G.firstPlayerID = undefined; // re-stamped by the round's first mainPhase turn
     getPlayersList(G).forEach(p => p.hasRevealed = false);
-} 
+}
 
 export const playersSetup = (G: GameState) => {
     getPlayersList(G).forEach(p => {

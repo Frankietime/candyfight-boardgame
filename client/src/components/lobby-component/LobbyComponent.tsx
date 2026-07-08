@@ -7,6 +7,7 @@ import { getRandomPlayerName } from '@candyfight/shared/services/moves/playerSer
 import { generateBattleEvent } from './helper';
 import { GameConfigModal } from './GameConfigModal';
 import { GameConfig } from '@candyfight/shared/types';
+import { BOT_MATCH_ID } from '../../botMatch';
 
 // Neobrutalist design tokens (from ficcionarios)
 const nb = {
@@ -21,7 +22,8 @@ const nb = {
   font: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
 };
 
-const playerColors = ['#ef4444', '#22c55e', '#a855f7', '#eab308'];
+// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
+const playerColors = ['#ef4444', '#a855f7', '#22c55e', '#eab308'];
 
 // Shared style helpers
 const card: React.CSSProperties = {
@@ -93,9 +95,19 @@ const BrutalButton = ({
 
 export const LobbyComponent = () => {
   const { createMatch, joinMatch, listMatches } = useLobbyServices();
-  const { playerState, setPlayerState } = useAppStore();
+  const { playerState, setPlayerState, setBotSeats } = useAppStore();
   const { matchLore, setMatchLore, matchList, setMatchList } = useLobbyStore();
   const [showConfigModal, setShowConfigModal] = useState(false);
+
+  const onPlayVsBots = (seats: number) => {
+    setBotSeats(seats);
+    setPlayerState({
+      ...playerState,
+      matchID: BOT_MATCH_ID,
+      playerID: '0',
+      playerCredentials: '',
+    });
+  };
 
   useEffect(() => {
     listMatches().then((data) => setMatchList(data));
@@ -220,6 +232,24 @@ export const LobbyComponent = () => {
               >
                 ▶ Configure &amp; Create Match
               </BrutalButton>
+            </div>
+
+            {/* vs Bots card */}
+            <div style={card}>
+              <h2 style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '14px' }}>
+                🤖 Play vs Bots
+              </h2>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {[2, 3, 4].map((seats) => (
+                  <BrutalButton
+                    key={seats}
+                    onClick={() => onPlayVsBots(seats)}
+                    style={{ flex: 1, justifyContent: 'center', backgroundColor: nb.accent }}
+                  >
+                    1 vs {seats - 1}
+                  </BrutalButton>
+                ))}
+              </div>
             </div>
           </div>
 

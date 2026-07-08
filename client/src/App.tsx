@@ -6,12 +6,13 @@ import { useAppStore } from "./store";
 import { useT } from "./i18n/useT";
 import { LanguageToggle } from "./i18n/LanguageToggle";
 import { useEffect, useMemo } from "react";
-import { SocketIO } from "boardgame.io/multiplayer";
+import { Local, SocketIO } from "boardgame.io/multiplayer";
 import { Client as ClientComponent} from "boardgame.io/react";
 import { Game } from "@candyfight/shared/Game";
 import { _ClientImpl } from "boardgame.io/dist/types/src/client/client";
 import { BACKEND_URL } from "./config";
 import { SocketIOTransport } from "boardgame.io/dist/types/src/client/transport/socketio";
+import { BOT_MATCH_ID, isBotMatch, makeBots } from "./botMatch";
 
 export default function App() {
 
@@ -25,6 +26,8 @@ export default function App() {
 
     tutorialOpen,
     setTutorialOpen,
+
+    botSeats,
   } = useAppStore();
 
   const t = useT();
@@ -58,6 +61,20 @@ export default function App() {
     }
   }, []);
 
+  // vs-Bots: a fully client-side match over Local() with greedy bots on every
+  // non-human seat. Rebuilt when the seat count changes (new bots object →
+  // Local() spins up a fresh master).
+  const BotClientComponent = useMemo(() => {
+    if (!isBotMatch(playerState.matchID) || !botSeats) return null;
+    return ClientComponent({
+      game: Game,
+      board: BoardComponent,
+      multiplayer: Local({ bots: makeBots(botSeats) }),
+      numPlayers: botSeats,
+      debug: false,
+    });
+  }, [playerState.matchID, botSeats]);
+
   const isGameInCourse = () => playerState.matchID != null && playerState.matchID != "";
 
   if (tutorialOpen) {
@@ -90,11 +107,15 @@ export default function App() {
             </div>
           </>
             :
-          <GameClientComponent
-            matchID={playerState.matchID}
-            playerID={playerState.playerID ? playerState.playerID : "0"}
-            credentials={playerState.playerCredentials ? playerState.playerCredentials : undefined}
-          />
+          (BotClientComponent ?
+            <BotClientComponent matchID={BOT_MATCH_ID} playerID="0" />
+              :
+            <GameClientComponent
+              matchID={playerState.matchID}
+              playerID={playerState.playerID ? playerState.playerID : "0"}
+              credentials={playerState.playerCredentials ? playerState.playerCredentials : undefined}
+            />
+          )
         }
       </div>
   );

@@ -13,6 +13,7 @@ import { getInitialDistrictsState } from '../../services/locationServices';
 import { getSignetCard, getTierOneCards } from '../../services/cardServices';
 import { DistrictIconsEnum, ResourceEnum } from '../../enums';
 import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from '../../constants';
+import { DEFAULT_GAME_CONFIG } from '../../types';
 
 // ─── Exported card constants used in test assertions ───────────────────────
 
@@ -64,6 +65,8 @@ export const createTestGame = (): GameInterface<GameState> => ({
     // Override setup to skip random card shuffling and give every player
     // the same deterministic 5-card deck.
     setup: ({ ctx }) => ({
+        config: { ...DEFAULT_GAME_CONFIG, numPlayers: ctx.numPlayers },
+        log: [],
         players: Object.fromEntries(
             Array.from({ length: ctx.numPlayers }, (_, i) => [
                 i.toString(),

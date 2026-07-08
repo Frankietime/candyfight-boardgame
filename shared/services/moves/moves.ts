@@ -10,27 +10,30 @@ export const selectCard = (player: PlayerGameState, selectedCard: Card) => {
     player.selectedCard = selectedCard;
 }
 
-const doDraw = (player: PlayerGameState) => player.hand.push(player.deck.pop()!);
+// Guarded: when deck AND discard are both exhausted, pop() is undefined —
+// never push it into the hand (would corrupt the hand with undefined cards).
+const doDraw = (player: PlayerGameState) => {
+    const card = player.deck.pop();
+    if (card !== undefined) player.hand.push(card);
+};
 
 export const draw = (player: PlayerGameState, random: any, numberOfCards?: number) => {
     log("draw " + numberOfCards);
     if (player.deck.length == 0) {
         player.deck = rebuildDeck(player, random);
     }
-    
-    numberOfCards ? 
+
+    numberOfCards ?
         Array.from({ length: numberOfCards })
             .forEach(c => {
-                if (player.deck.length > 0) {
-                    doDraw(player);
-                } else {
+                if (player.deck.length === 0) {
                     rebuildDeck(player, random);
-                    doDraw(player);
-                }                
+                }
+                doDraw(player); // no-op if deck + discard are both empty
             })
             :
-        doDraw(player);                       
-    
+        doDraw(player);
+
 }
 
 // NOTE: getLoot removed - use resources[] array instead (see types.ts)
@@ -44,7 +47,8 @@ export const discard = (player: PlayerGameState, cards: Card[]): Card[] | string
 
 export const trash = (player: PlayerGameState, cards: Card[]): Card[] | string => {
 
-    if ((player.deck.length + player.discardPile.length + player.hand.length) <= 5)
+    // The remaining collection must keep at least 5 cards after trashing.
+    if ((player.deck.length + player.discardPile.length + player.hand.length) - cards.length < 5)
         return INVALID_MOVE;
     
     const trashed = takeFromHand(player, cards);

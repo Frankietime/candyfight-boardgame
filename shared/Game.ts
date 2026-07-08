@@ -13,7 +13,7 @@ import {
 import { getMarketTierOneCards } from "./services/cardServices";
 import { getInitialDistrictsState } from "./services/locationServices";
 import { draw, selectCard } from "./services/moves/moves";
-import { placeWorker } from "./services/moves/workerPlacementService";
+import { placeWorker, validatePlacementActions } from "./services/moves/workerPlacementService";
 import {
     calculateRanking,
     dealHands,
@@ -26,6 +26,7 @@ import { playerView } from "./services/playerViewService";
 import { getCurrentLocation, getCurrentPlayer } from "./services/moves/helper";
 import { getPlayersList } from "./services/moves/playerServices";
 import { appendLog } from "./services/logService";
+import { enumerate } from "./ai/botEnumerate";
 
 export const Game: GameInterface<GameState> = {
     
@@ -63,7 +64,10 @@ export const Game: GameInterface<GameState> = {
                 const players = getPlayersList(G);
                 return players.length > 0 && players.every(p => p.characterId !== undefined);
             },
-            turn: { activePlayers: { all: Stage.NULL } },
+            // maxMoves removes a seat from activePlayers after its one move, so
+            // bot drivers (Local({ bots }) master loop) advance to the next seat
+            // instead of re-asking a seat that already acted.
+            turn: { activePlayers: { all: Stage.NULL, maxMoves: 1 } },
             moves: {
                 selectCharacter: {
                     move: (mgState: MetaGameState, characterId: CharacterEnum) => {
@@ -90,7 +94,14 @@ export const Game: GameInterface<GameState> = {
         },
         maintenancePhase: {
             next: "mainPhase",
-            endIf: ({ G }) => getPlayersList(G).every(player => player.hand.length === 5),
+            // A player whose whole collection is smaller than 5 can never refill
+            // to a full hand — "drew everything they own" (deck and discard
+            // both empty) counts as dealt too, otherwise this phase never ends
+            // and the game freezes.
+            endIf: ({ G }) => getPlayersList(G).every(player =>
+                player.hand.length === 5 ||
+                (player.deck.length === 0 && player.discardPile.length === 0)
+            ),
             onBegin: ({ G, random }) => {
                 resetEndPhaseTriggers(G);
                 playersSetup(G);
@@ -104,7 +115,14 @@ export const Game: GameInterface<GameState> = {
             endIf: ({ G }) => getPlayersList(G).every(p => p.hasRevealed),
             turn: {
                 minMoves: 1,
-                onBegin: (mgState: MetaGameState) => resetTurnState(getCurrentPlayer(mgState)),
+                onBegin: (mgState: MetaGameState) => {
+                    // First turn of this round's mainPhase (cleared each
+                    // maintenance) → this seat is the round's first player.
+                    if (!mgState.G.firstPlayerID) {
+                        mgState.G.firstPlayerID = mgState.ctx.currentPlayer;
+                    }
+                    resetTurnState(getCurrentPlayer(mgState));
+                },
                 endIf: (mgState: MetaGameState) => getCurrentPlayer(mgState).hasRevealed,
                 order: {
                     first: TurnOrder.DEFAULT.first,
@@ -155,6 +173,14 @@ export const Game: GameInterface<GameState> = {
                             return INVALID_MOVE;
                         }
 
+                        // Reject before mutating if any cost/reward action can't
+                        // actually run (e.g. missing/invalid cardIds) — otherwise
+                        // the registry silently no-ops and the location would be
+                        // claimed without paying (illegal free claim).
+                        if (validatePlacementActions(mgState, player, location, selectedCard, moveParams) !== null) {
+                            return INVALID_MOVE;
+                        }
+
                         placeWorker({ mgState, player, location, card: selectedCard, moveParams });
                     },
                     undoable: true
@@ -188,8 +214,9 @@ export const Game: GameInterface<GameState> = {
         },
         combatPhase: {
             next: ({ G }) => getPlayersList(G).some(p => p.victoryPoints >= G.config.victoryPoints) ? "endGamePhase" : "maintenancePhase",
-            // TODO: add brief documentation from boardgame.io
-            turn: { activePlayers: { all: Stage.NULL } },
+            // maxMoves: one endRound per seat — also stops a single seat from
+            // spamming the counter and skipping everyone else's combat review.
+            turn: { activePlayers: { all: Stage.NULL, maxMoves: 1 } },
             moves: {
                 endRound: { move: ({ G }) => { G.roundEndingCounter += 1; } }
             },
@@ -199,8 +226,7 @@ export const Game: GameInterface<GameState> = {
         },
         endGamePhase: {
             onBegin: ({ G, ctx }) => calculateRanking(G, ctx.phase ?? 'endGamePhase'),
-            // TODO: add brief documentation from boardgame.io
-            turn: { activePlayers: { all: Stage.NULL } },
+            turn: { activePlayers: { all: Stage.NULL, maxMoves: 1 } },
             moves: {
                 goToLobby: { move: ({ G }) => { G.gameEndingCounter += 1; } }
             },
@@ -214,9 +240,7 @@ export const Game: GameInterface<GameState> = {
     },
     
     ai: {
-        enumerate: (G, ctx) => {
-            return [];
-        },
+        enumerate: (G, ctx, playerID) => enumerate(G, ctx, playerID),
     },
             
     endIf: (mgState) => mgState.G.gameEndingCounter >= mgState.ctx.numPlayers,

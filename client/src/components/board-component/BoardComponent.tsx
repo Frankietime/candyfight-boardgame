@@ -13,6 +13,7 @@ import { ActionParams } from "@candyfight/shared/actions";
 import { WorkerMoveParams } from "@candyfight/shared/services/moves/workerPlacementService";
 import { MARKET_ROW_SIZE } from "@candyfight/shared/constants";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
+import { isBotMatch } from "../../botMatch";
 import { QueryErrorFallback, DistrictLoader } from "../ui";
 // Extracted hooks and components
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from "./hooks/useBoardScale";
@@ -143,13 +144,17 @@ export const BoardComponent = ({
 
   // Handle leaving match - memoized
   const onLeaveMatch = useCallback(async () => {
-    leaveMatch(playerState).then(() => {
-      setPlayerState({
-        ...playerState,
-        matchID: "",
-        playerCredentials: ""
-      });
+    const clearMatch = () => setPlayerState({
+      ...playerState,
+      matchID: "",
+      playerCredentials: ""
     });
+    // vs-Bots matches have no server match to leave.
+    if (isBotMatch(playerState.matchID)) {
+      clearMatch();
+      return;
+    }
+    leaveMatch(playerState).then(clearMatch);
   }, [leaveMatch, playerState, setPlayerState]);
 
   // Handle ending round - memoized

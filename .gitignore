@@ -48,3 +48,5 @@ shared/**/*.d.ts.map
 # Claude
 .claude/
 
+# QA
+/.playwright-mcp

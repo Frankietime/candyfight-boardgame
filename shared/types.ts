@@ -43,6 +43,9 @@ export interface GameState {
   cardMarket: Card[];
   roundEndingCounter: number;
   gameEndingCounter: number;
+  /** Seat that takes the first turn of the current round's mainPhase (rotates
+   *  with TurnOrder.DEFAULT). Stamped at round start; drives the ⭐ marker. */
+  firstPlayerID?: string;
   ranking: PlayerGameState[];
   /** Public view of all players for UI display */
   playersViewModel: PlayerViewModel[];

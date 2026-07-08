@@ -228,6 +228,7 @@ export const GameInfoComponent = ({
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {playersPublicInfo.map((p, index) => {
                             const isCurrent = ctx.currentPlayer === p.id;
+                            const isFirstPlayer = G.firstPlayerID === p.id;
                             const name = matchData?.players?.[index]?.name ?? `Player ${index + 1}`;
 
                             return (
@@ -257,6 +258,9 @@ export const GameInfoComponent = ({
                                     <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                         {name}
                                     </span>
+                                    {isFirstPlayer && (
+                                        <span title="First player" style={{ fontSize: "14px", flexShrink: 0 }}>⭐</span>
+                                    )}
                                     {p.hasRevealed && (
                                         <span style={{ fontSize: "13px", fontWeight: 700, color: "#555" }}>REVEALED</span>
                                     )}
@@ -278,7 +282,8 @@ export const GameInfoComponent = ({
     );
 };
 
-const playerColors = ["#ef4444", "#22c55e", "#a855f7", "#eab308"];
+// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
+const playerColors = ["#ef4444", "#a855f7", "#22c55e", "#eab308"];
 function playerDotColor(id: string): string {
     return playerColors[parseInt(id)] ?? "#888";
 }

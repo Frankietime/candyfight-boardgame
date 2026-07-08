@@ -254,6 +254,7 @@ export const PlayerAreaComponent = memo(({
                     <img src={characterImageMap[player.characterId]} alt="your character" />
                 )}
             </div>
+            {G.firstPlayerID === player.id && <FirstPlayerBadge />}
             {hoveredPortraitId === player.id && <PortraitInfoIcon />}
         </div>
         {enemies.map((enemy, seatIndex) => {
@@ -281,6 +282,7 @@ export const PlayerAreaComponent = memo(({
                             <img src={characterImageMap[enemy.characterId]} alt="enemy character" />
                         )}
                     </div>
+                    {G.firstPlayerID === enemy.id && <FirstPlayerBadge />}
                     {hoveredPortraitId === enemy.id && <PortraitInfoIcon />}
                 </div>
             );
@@ -421,6 +423,33 @@ const EnemyResourceDisplay = memo(({ enemy, pos, name, onPileHover, onPileLeave 
 EnemyResourceDisplay.displayName = "EnemyResourceDisplay";
 
 // ─── Portrait Info Icon ───────────────────────────────────────────────────────
+
+/** Neobrutalist first-player marker: ⭐ chip pinned to the portrait's top-left. */
+const FirstPlayerBadge = () => (
+    <div
+        className="first-player-badge"
+        title="First player"
+        style={{
+            position: "absolute",
+            top: -8,
+            left: -8,
+            width: 24,
+            height: 24,
+            backgroundColor: "#fef08a",
+            border: "2px solid #000",
+            boxShadow: "2px 2px 0 #000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 13,
+            zIndex: 3,
+            pointerEvents: "none",
+            userSelect: "none",
+        }}
+    >
+        ⭐
+    </div>
+);
 
 const PortraitInfoIcon = () => (
     <div

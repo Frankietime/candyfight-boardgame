@@ -1,9 +1,10 @@
 # Implementation Spec - Candy Fight AI Player (Bot)
 
-Status: DRAFT for human review
+Status: IMPLEMENTED 2026-07-08 (Iterations 1+2: enumerate, objectives, greedy bot, Local vs-Bots client mode, reducer fix, Stage B synthesis — all tested; MCTS upgrade remains optional/unbuilt; in-browser visual pass pending)
 Author: planner subagent
 Date: 2026-06-20
 Updated: 2026-06-20 - human decisions applied (see 'Resolved decisions')
+Updated: 2026-07-07 - round-2 decisions: bot is a PREREQUISITE for prototype testing (not a successor). Greedy-first over MCTS; 1 human vs 3 bots; full-economy scope (Stage A+B+reducer all IN); recorder + determinization + neural net OUT of this round. Ambiguities 7 & 8 resolved.
 Inputs reconciled:
 - `backlog/ai-bot-plan.md` (original feature plan)
 - `software-factory/_bmad-output/planning-artifacts/research/technical-candyfight-ai-bot-validation-research-2026-06-20.md` (independent validation, verdict: SOUND-WITH-CHANGES)
@@ -16,11 +17,23 @@ Verified library facts (installed `boardgame.io@0.50.2`):
 ---
 
 ## Goal
-Ship a playable, server-recorded AI opponent for Candy Fight whose first real deliverable is a tuned `MCTSBot` + `objectives` heuristic wired through a correct multi-phase `enumerate`, with behavioral-cloning/ONNX explicitly deferred.
+Ship a bot that ENABLES solo prototype testing: a legal, complete, plausible AI opponent that fills the empty seats (1 human vs up to 3 bots) so full games can be played and the ruleset/balance can be exercised without gathering humans.
+
+The bot does NOT need to be fair or strong for this purpose — it needs to make legal moves and finish games. Therefore:
+- **PRIMARY deliverable is a GREEDY bot** (1-ply: score each `enumerate` move with `objectives`, pick the max) — instant moves, no playout think-time, which matters with 3 bots acting per round. It reuses the exact same `enumerate` + `objectives` that a later `MCTSBot` would.
+- `MCTSBot` is an OPTIONAL upgrade if the greedy bot plays too weakly to give useful balance signal. Same wiring, same hooks.
+- Behavioral-cloning/ONNX and determinization (fair/non-cheating search) remain explicitly deferred.
+
+### Round-2 rationale (why now, why this shape)
+The prior draft assumed the bot came AFTER human playtesting. Correction: for a solo dev, prototype testing IS solo-vs-bot, so the bot is a prerequisite. The data-dependency objection (needs recorded games) dissolves because greedy/MCTS need zero data. The full-state "cheating" concern is acceptable here — the designer discounts it during testing — so determinization is out. The recorder is deferred too: `Local()` vs-bot games are not server-persisted and are observed live, so no training data is captured or needed this round.
 
 ---
 
 ## Resolved decisions (human)
+- **Bot is a PREREQUISITE for prototype testing (round-2 CONFIRMED).** Solo dev → prototype testing is solo-vs-bot. The bot enables the testing phase; it is not sequenced after it. Consequence: build now, accept that `enumerate`/`objectives` will need light maintenance as rules change during testing (chicken-and-egg: the bot is needed to even run the games that reveal rule changes).
+- **Bot type: GREEDY first, MCTS optional (round-2 CONFIRMED).** With 3 bots moving per round, MCTS playout think-time (seconds/move × 3) makes testing tedious. A 1-ply greedy bot over `enumerate` + `objectives` gives instant, plausible, legal play and reuses the same hooks. Upgrade to `MCTSBot` only if greedy is too weak for balance signal.
+- **Seats: 1 human + up to 3 bots (round-2 CONFIRMED, resolves Ambiguity 8).** Bots fill ALL empty seats of a 3-4 player table via `Local({ bots })`. Tests exercise N-player dynamics (district presence contests, 3+ combat). `objectives` must be N-player safe.
+- **Full-economy scope (round-2 CONFIRMED).** The bot must play the whole game including the card-buying/economy line, so Stage B (subtask 12) AND the reducer fix (subtask 13) are IN this round's critical path, not deferred.
 - **Hidden information: full-state PvE for v1 (CONFIRMED).** The v1 MCTS searches the real `G`, including opponents' hands. Accepted tradeoff: the bot is stronger-than-fair and does not model uncertainty. Fair-play (determinization) is the planned Stage 2 upgrade (see Deferred scope), not a rewrite - it swaps only the state the search reads.
 - **Input-requiring locations (DISCARD/TRASH/BUY_CARD): option (b) param synthesis, IN SCOPE (CONFIRMED essential).** Card-buying/discard/trash is an essential part of the game, so the bot must eventually use these locations. Delivered in two stages so the first iteration stays small:
   - **Stage A** (subtask 2): `enumerate` temporarily EXCLUDES input-requiring locations so the first bot is correct and ships. This is a known capability gap, not the end state.
@@ -31,15 +44,18 @@ Ship a playable, server-recorded AI opponent for Candy Fight whose first real de
 
 ## Scope
 
-### In scope (first increment = the only committed milestone)
-1. `enumerate(G, ctx, playerID)` covering all five phases.
-2. `RandomBot` smoke harness (free, validates `enumerate`).
-3. Tuned `MCTSBot` + `objectives(G, ctx, playerID)` as the PRIMARY bot.
-4. Client "vs Bot" mode wiring.
-5. Server-side training-data export endpoint (initial state + move log, deterministic replay) - low cost, no model dependency.
-6. Stage B - `moveParams.cardIds` synthesis so input-requiring locations (card-buying/discard/trash) become usable bot moves (subtask 12). Essential; may land in a second iteration after Stage A ships.
+### In scope (this round, ordered by the two iterations below)
+1. `enumerate(G, ctx, playerID)` covering all five phases, multi-seat aware.
+2. `RandomBot` smoke harness (free, validates `enumerate`) at 4 seats.
+3. `objectives(G, ctx, playerID)` - N-player safe heuristic (the greedy/MCTS scoring hook).
+4. **GREEDY bot** over `enumerate` + `objectives` as the PRIMARY bot (instant moves).
+5. Client "vs Bot" mode wiring - `Local({ bots })` filling all empty seats (1 human vs 3 bots).
+6. Stage B - `moveParams.cardIds` synthesis so input-requiring locations (card-buying/discard/trash) become usable bot moves (subtask 12). IN scope (full-economy confirmed).
+7. Reducer fix (subtask 13) - precedes Stage B.
+8. Optional: `MCTSBot` factory as an upgrade path (subtask 6), only if greedy is too weak.
 
 ### Deferred / future scope (documented, NOT built now)
+- **Training-data recorder + `/api/training-data` endpoint (subtasks 10-11).** Moved OUT of this round: `Local()` vs-bot games aren't server-persisted and are observed live, so no data is captured or needed. Revisit when a learned bot or recorded human sessions are actually pursued.
 - Phase 3-5 of the backlog: `featureExtractor.ts`, Python pipeline (`ai-training/`), ONNX `botModel.ts`/`LearningBot.ts`.
 - If a learned net is later pursued, target AlphaZero-lite self-play (reuses `enumerate` + a value net) rather than behavioral cloning. Behavioral cloning is at most an optional warm-start.
 - **Stage 2 - Determinization (fair, non-cheating MCTS).** Upgrade path off full-state PvE; see dedicated subsection below.
@@ -126,7 +142,12 @@ Consequence for **Stage A** (subtask 2): `enumerate` only emits `placeWorker` fo
 - Tune weights so terminal win signal (reached via playout `gameover`) dominates; objectives only break ties when `playoutDepth` does not reach `gameover`.
 - Acceptance: pure-function unit tests (subtask 9) for each checker on hand-built states.
 
-### 6. MCTS bot factory  (M)
+### 6a. GREEDY bot (PRIMARY, round-2)  (S)
+- File: `shared/ai/CandyGreedyBot.ts` (new)
+- Changes: export `createCandyGreedyBot(seed?)` returning a custom `Bot` subclass whose `play(state, playerID)` calls `enumerate(G, ctx, playerID)`, scores each candidate by applying `objectives` weights to the RESULTING state (or, cheaper, to current `G` as a static eval — start static, upgrade to 1-ply lookahead if needed), and returns the max-scoring move. No playouts → instant. Ties broken by `seed`-seeded RNG for variety across bots/seats.
+- Acceptance: full 4-seat game (subtask 7) terminates, zero `INVALID_MOVE`; picks non-random, objective-improving moves on hand-built states (unit test).
+
+### 6. MCTS bot factory (OPTIONAL upgrade)  (M)
 - File: `shared/ai/CandyMctsBot.ts` (new)
 - Changes: export a factory `createCandyMctsBot(seed?)` returning `new MCTSBot({ game: Game, enumerate, objectives, seed, iterations, playoutDepth })`. Set `iterations` and `playoutDepth` as functions of `(G, ctx)`: cheap in `characterSelectionPhase`/`combatPhase`/`endGamePhase` (e.g. 50/10), deeper in `mainPhase` (start 300/40; tune). Keep `game: Game` so MCTS can step the real reducer.
 - Acceptance: subtask 7 full game; bot beats RandomBot over N seeded games (subtask 10 metric).
@@ -206,7 +227,10 @@ Consequence for **Stage A** (subtask 2): `enumerate` only emits `placeWorker` fo
 ## Dependencies
 - 2,3 depend on 1. 4 depends on 3. 5 -> 6 -> 7 (6 depends on 1-3 and 5). 8 depends on 6. 9 depends on 1,2,5. 10 independent of bot (depends only on game completion). 11 depends on 10.
 - Stage B: 13 (reducer fix) SHOULD precede 12 (param synthesis); 12 depends on 1-2 and re-runs the bot tests (7) with input-requiring locations enabled.
-- Recommended order: **Iteration 1 (Stage A ship)** 1 -> 2 -> 3 -> 4 -> 9 -> 5 -> 6 -> 7 -> 8, then 10 -> 11 in parallel. **Iteration 2 (Stage B)** 13 -> 12 -> re-verify 7/9.
+- Recommended order (round-2, greedy-first, recorder dropped):
+  - **Iteration 1 (playable multi-bot core loop):** 9 (tests first, TDD) -> 1 -> 2 -> 3 -> 4 -> 5 -> **6a (greedy)** -> 7 -> 8 (client vs-Bot, `Local({ bots })` filling all empty seats).
+  - **Iteration 2 (economy line):** 13 (reducer fix) -> 12 (Stage B synthesis) -> re-verify 7/9.
+  - **Optional:** 6 (`MCTSBot`) only if the greedy bot is too weak for useful balance signal.
 
 ## TDD test plan (concrete)
 Runner: Vitest (`shared/vitest.config.ts`, `globals:true`, node env), invoked by `npm run test -w @candyfight/shared`. Mirror `shared/tests/mainPhase.test.ts` (uses `boardgame.io/client` `Client` + `createTestGame`).
@@ -248,10 +272,11 @@ Do NOT use "win rate vs RandomBot after 50 games" as the success bar (RandomBot 
 - **`selectCard` omission** - RESOLVED by code: `placeWorker` (Game.ts) takes the card as an explicit arg and validates/plays THAT; it never reads `player.selectedCard`. `selectCard` is a UI-only highlight. Omitting it from `enumerate` is safe.
 - **`draw` looping** - RESOLVED by code (confirmed real): the `draw` move draws exactly 1 card and has NO hand cap, NO `hasPlayedCard` guard, and does NOT end the turn (deck rebuilds from discard when empty) -> unbounded. There is no engine hand-size ceiling. Decision: `enumerate` offers `draw` only when `!player.hasPlayedCard` AND `player.hand.length < DRAW_CAP` (constant, default 8 - a bot heuristic, not a rule). Reconsider value during MCTS tuning (subtask 6/7).
 
+### Resolved (round-2)
+7. **Think-time / bot budget** - RESOLVED: greedy 1-ply bot chosen as primary precisely to avoid MCTS playout cost (critical with 3 bots/round). Branching factor still worth measuring IF upgrading to MCTS, but not blocking for greedy (instant).
+8. **`numPlayers` for vs-Bot** - RESOLVED: 1 human + up to 3 bots fill ALL empty seats via `Local({ bots })`. `objectives` N-player safe; tests at 4 seats.
+
 ### Open
-3. Input-requiring locations: first increment SKIPS DISCARD/TRASH/BUY_CARD locations (High Council, Markets, Bargain). This removes the entire card-buying/economy line from the bot's options - acceptable for v1, or is auto-synthesis of `moveParams.cardIds` (pick lowest-value cards) required immediately? (Note: `placeWorker` ignoring failed cost execution is arguably a core bug worth fixing in the reducer regardless.)
+3. Input-requiring locations - RESOLVED to full-economy (Stage B + reducer fix IN). Remaining open detail: the exact value heuristic for which cards to discard/trash/buy (tuning; keep pluggable per subtask 12).
 4. `selectCard` omission from `enumerate` - confirm `selectCard` is purely a UI highlight and is not a precondition for any move (code review supports omission, but confirm no card effect path depends on `player.selectedCard`).
-5. Recorder target: do we need bot games recorded? If yes, `Local()` vs-Bot will not satisfy it - decide between (a) human-games-only recording now, or (b) building a server-seated headless bot (extra scope).
-6. Persistence/storage: the server currently uses boardgame.io's default storage (no explicit adapter in `server/server.ts`). Confirm `server.db` exposes `listMatches`/`fetch` with `{initialState, log}` in the deployed storage backend before relying on it for export.
-7. MCTS tuning budget: target per-move think-time for the in-browser bot? This bounds `iterations`/`playoutDepth`. Long games + `placeWorker` branching (up to 4x4xhand) can be heavy; needs an empirical branching-factor measurement (the validation flags this as the key unmeasured variable).
-8. `numPlayers` for vs-Bot: 1 human vs 1 bot only, or human + multiple bots filling a 3-4 seat match? Affects lobby UX and `Local({ bots })` seat mapping.
+6. Persistence/storage: deferred with the recorder (out of scope this round).

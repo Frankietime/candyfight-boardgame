@@ -40,7 +40,8 @@ const actionIcons: Dictionary<string> = {
   [LocationActionsEnum.DRAW]: DRAW,
 };
 
-const workerIcons: string[] = [redWorker, greenWorker, violetWorker, yellowWorker];
+// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
+const workerIcons: string[] = [redWorker, violetWorker, greenWorker, yellowWorker];
 
 // Size presets in Tailwind classes
 const sizeClasses = {

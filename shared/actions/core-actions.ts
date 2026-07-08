@@ -37,9 +37,9 @@ const takeFromHand = (player: PlayerGameState, cardIds: string[]): Card[] | null
 };
 
 const doDraw = (player: PlayerGameState) => {
-  if (player.deck.length > 0) {
-    player.hand.push(player.deck.pop()!);
-  }
+  const card = player.deck.pop();
+  // Guard against an exhausted deck+discard: never push undefined into the hand.
+  if (card !== undefined) player.hand.push(card);
 };
 
 const rebuildDeck = (player: PlayerGameState, random: any): Card[] => {
@@ -155,9 +155,11 @@ const trashHandler: ActionHandler<TrashActionParams> = {
       return "Must select at least one card to trash";
     }
 
-    // Check minimum deck size (can't trash if would go below 5 total cards)
+    // Check minimum deck size: the REMAINING collection after trashing must
+    // keep at least 5 cards. (Checking the pre-trash total allowed 6 → 4,
+    // which later hung maintenancePhase — hands could never refill to 5.)
     const totalCards = player.deck.length + player.discardPile.length + player.hand.length;
-    if (totalCards <= 5) {
+    if (totalCards - params.cardIds.length < 5) {
       return "Cannot trash: would reduce deck below minimum size";
     }
 

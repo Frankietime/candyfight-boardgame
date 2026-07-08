@@ -33,10 +33,12 @@ export enum RequirementType {
     RESOURCE = "resource",
 }
 
+// Seat colors match the board seating (viewed from the human seat 0):
+// 0 red (human, bottom-left) · 1 violet (top-right) · 2 green (bottom-right) · 3 yellow (top-left)
 export enum PlayerColorsEnum {
     "red" = 0,
-    "green" = 1,
-    "violet" = 2,
+    "violet" = 1,
+    "green" = 2,
     "yellow" = 3,
 }
 
