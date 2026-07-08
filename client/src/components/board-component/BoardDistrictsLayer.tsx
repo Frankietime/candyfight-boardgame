@@ -6,6 +6,7 @@ import { PlayerColorsEnum } from "@candyfight/shared/enums";
 import { LocationComponent } from "../location-component/LocationComponent";
 import { locsXPos, locsYPos } from "./constants";
 import { DistrictIcon } from "../ui/GameIcon";
+import { anchors } from "@candyfight/shared/tutorial/types";
 
 export interface BoardDistrictsLayerProps {
   /** Array of districts to render */
@@ -155,6 +156,7 @@ const DistrictContainer = memo(({
             selectedCard={selectedCard}
             player={player}
             marketCards={marketCards}
+            tutorAnchorId={anchors.location(districtIndex, locIndex)}
           />
         </div>
       ))}
@@ -190,6 +192,7 @@ const DistrictHeader = memo(({
 
   return (
     <div
+      data-tutor-id={anchors.district(district.id)}
       className={`district-header district-header--${district.id.toLowerCase()}`}
       style={{ top: headerTop, left: headerLeft, width: headerWidth }}
     >

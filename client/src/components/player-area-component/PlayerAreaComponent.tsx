@@ -5,6 +5,8 @@ import { WorkerComponent } from "../icon-components/WorkerComponent"
 import { CardComponent } from "../card-components/CardComponent";
 import { CardMini } from "../card-components/CardMini";
 import { CharacterEnum } from "@candyfight/shared/enums";
+import { anchors } from "@candyfight/shared/tutorial/types";
+import { useT } from "../../i18n/useT";
 import chilldudes from "../../assets/characters/character-chilldudes.png";
 import kawaiisis from "../../assets/characters/character-kawaiisis.png";
 import streetwizards from "../../assets/characters/character-streetwizards.png";
@@ -55,9 +57,11 @@ interface PilePopoverProps {
     onLeave: () => void;
     /** Show cards in random order instead of alphabetically (use for deck) */
     shuffle?: boolean;
+    /** Tutorial signal anchor id for the pile counter. */
+    anchorId?: string;
 }
 
-const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = false }: PilePopoverProps) => {
+const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = false, anchorId }: PilePopoverProps) => {
     const [flashing, setFlashing] = useState(false);
     const prevCount = useRef(count);
 
@@ -78,6 +82,7 @@ const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = fal
 
     return (
         <div
+            {...(anchorId ? { "data-tutor-id": anchorId } : {})}
             style={{ position: 'relative' }}
             className={flashing ? 'stat-glow' : undefined}
             onAnimationEnd={() => setFlashing(false)}
@@ -91,7 +96,7 @@ const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = fal
 
 PilePopover.displayName = "PilePopover";
 
-const FlashOnChange = ({ value, className, children }: { value: number; className?: string; children: React.ReactNode }) => {
+const FlashOnChange = ({ value, className, children, anchorId }: { value: number; className?: string; children: React.ReactNode; anchorId?: string }) => {
     const [flashing, setFlashing] = useState(false);
     const prevRef = useRef(value);
     useEffect(() => {
@@ -102,6 +107,7 @@ const FlashOnChange = ({ value, className, children }: { value: number; classNam
     }, [value]);
     return (
         <div
+            {...(anchorId ? { "data-tutor-id": anchorId } : {})}
             className={`${className ?? ''}${flashing ? ' stat-glow' : ''}`}
             onAnimationEnd={() => setFlashing(false)}
         >
@@ -118,13 +124,16 @@ interface HandCardWrapperProps {
     index: number;
     isDisabled: boolean;
     isSelected: boolean;
+    isNew: boolean;
     onClick: () => void;
     onHover: (card: Card) => void;
     onLeave: () => void;
 }
 
-const HandCardWrapper = memo(({ card, index, isDisabled, isSelected, onClick, onHover, onLeave }: HandCardWrapperProps) => (
+const HandCardWrapper = memo(({ card, index, isDisabled, isSelected, isNew, onClick, onHover, onLeave }: HandCardWrapperProps) => (
     <div
+        data-tutor-id={anchors.handCard(card.id)}
+        className={isNew ? "card-drawn-flash" : undefined}
         style={{ position: 'absolute', top: 540, left: 390 + index * 105, width: 105, height: 157 }}
         onMouseEnter={() => onHover(card)}
         onMouseLeave={onLeave}
@@ -149,6 +158,12 @@ export type PlayerAreaComponentProps = {
     playerView: PlayerViewModel[];
     playerNames: string[];
     currentPlayerId: string;
+    /**
+     * Tutorial hook: when set, force-open the detail modal for this player id so a
+     * tutorial step can glow elements inside it (e.g. the Signet ability). Clearing
+     * it closes the forced modal. Normal play leaves this undefined.
+     */
+    autoOpenPlayerModalId?: string;
 }
 
 export const PlayerAreaComponent = memo(({
@@ -159,6 +174,7 @@ export const PlayerAreaComponent = memo(({
     playerView,
     playerNames,
     currentPlayerId,
+    autoOpenPlayerModalId,
 }: PlayerAreaComponentProps) => {
     const onSelectCard = useCallback((card: Card) => moves.selectCard(card), [moves]);
     const onPass = useCallback(() => moves.pass(), [moves]);
@@ -176,6 +192,24 @@ export const PlayerAreaComponent = memo(({
     const [hoveredPortraitId, setHoveredPortraitId] = useState<string | null>(null);
     const closeModal = useCallback(() => setPlayerModal(null), []);
 
+    // Tutorial: open/close the detail modal only when the requested id *changes*,
+    // so normal play (where this stays undefined) never has its modal disturbed.
+    const prevAutoOpenId = useRef<string | undefined>(undefined);
+    useEffect(() => {
+        if (autoOpenPlayerModalId === prevAutoOpenId.current) return;
+        prevAutoOpenId.current = autoOpenPlayerModalId;
+
+        if (autoOpenPlayerModalId === undefined) {
+            setPlayerModal(null);
+            return;
+        }
+        const isOwn = autoOpenPlayerModalId === player.id;
+        const data = isOwn ? player : playerView.find(p => p.id === autoOpenPlayerModalId);
+        if (!data) return;
+        const name = playerNames[parseInt(autoOpenPlayerModalId)] ?? `Player ${parseInt(autoOpenPlayerModalId) + 1}`;
+        setPlayerModal({ data, name, isOwn });
+    }, [autoOpenPlayerModalId, player, playerView, playerNames]);
+
     const onPileHover = useCallback((cards: Card[], title: string) => {
         setPileOverlay({ cards, title });
     }, []);
@@ -184,9 +218,23 @@ export const PlayerAreaComponent = memo(({
     const onCardHover = useCallback((card: Card) => setHoveredCard(card), []);
     const onCardLeave = useCallback(() => setHoveredCard(null), []);
 
+    // Flash cards that just entered the hand (drawn / dealt).
+    const prevHandIds = useRef<Set<string>>(new Set());
+    const [newCardIds, setNewCardIds] = useState<Set<string>>(new Set());
+    useEffect(() => {
+        const currentIds = (player.hand ?? []).map(c => c.id);
+        const added = currentIds.filter(id => !prevHandIds.current.has(id));
+        prevHandIds.current = new Set(currentIds);
+        if (added.length === 0) return;
+        setNewCardIds(new Set(added));
+        const timer = setTimeout(() => setNewCardIds(new Set()), 900);
+        return () => clearTimeout(timer);
+    }, [player.hand]);
+
     return (<>
         {/* Character portraits — rendered first so they sit behind all other board elements */}
         <div
+            data-tutor-id={anchors.characterInfo(player.id)}
             className={`current-player-portrait-frame${currentPlayerId === 'all' || player.id === currentPlayerId ? " proto-glow" : ""}`}
             style={{
                 position: "absolute",
@@ -243,16 +291,17 @@ export const PlayerAreaComponent = memo(({
             x={281} y={463}
             mirror={0}
             playerID={parseInt(player.id!)}
+            tutorAnchorId={anchors.workerPool(player.id)}
         />
 
         {/* Current Player Resources */}
         <div className="player-resource-container absolute">
-            <FlashOnChange value={player.victoryPoints} className="victory-points">{player.victoryPoints}</FlashOnChange>
-            <FlashOnChange value={player.candy}>Candy<hr /><div>{player.candy}</div></FlashOnChange>
-            <FlashOnChange value={player.loot}>Loot<hr /><div>{player.loot}</div></FlashOnChange>
-            <PilePopover cards={player.deck} label="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle />
-            <PilePopover cards={player.discardPile} label="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} />
-            <PilePopover cards={player.trashPile} label="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} />
+            <FlashOnChange value={player.victoryPoints} className="victory-points" anchorId={anchors.vp(player.id)}>{player.victoryPoints}</FlashOnChange>
+            <FlashOnChange value={player.candy} anchorId={anchors.resource(player.id, "candy")}>Candy<hr /><div>{player.candy}</div></FlashOnChange>
+            <FlashOnChange value={player.loot} anchorId={anchors.resource(player.id, "loot")}>Loot<hr /><div>{player.loot}</div></FlashOnChange>
+            <PilePopover cards={player.deck} label="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle anchorId={anchors.pile(player.id, "deck")} />
+            <PilePopover cards={player.discardPile} label="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "discard")} />
+            <PilePopover cards={player.trashPile} label="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "trash")} />
         </div>
 
         {/* Enemy Player Resources */}
@@ -282,6 +331,7 @@ export const PlayerAreaComponent = memo(({
                     index={index}
                     isDisabled={player.currentNumberOfWorkers == 0}
                     isSelected={card?.id == selectedCard?.id}
+                    isNew={newCardIds.has(card?.id)}
                     onClick={() => onSelectCard(card)}
                     onHover={onCardHover}
                     onLeave={onCardLeave}
@@ -291,10 +341,12 @@ export const PlayerAreaComponent = memo(({
 
         {/* Action Buttons */}
         <div
+            data-tutor-id={anchors.passButton()}
             className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}${player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
             onClick={player.hasPlayedCard ? onPass : undefined}
         />
         <div
+            data-tutor-id={anchors.revealButton()}
             className={`reveal-btn${player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
             onClick={onReveal}
         />
@@ -308,8 +360,8 @@ export const PlayerAreaComponent = memo(({
                 </div>
                 <div className="pile-modal-cards">
                     {pileOverlay.cards.map((card, i) => (
-                        <div key={`pile-card-${card.id}-${i}`} className="pile-card-slot">
-                            <CardComponent card={card} x={0} y={0} w={90} h={268} show={true} />
+                        <div key={`pile-card-${card.id}-${i}`} data-tutor-id={anchors.pileCard(card.id)} className="pile-card-slot">
+                            <CardComponent card={card} x={0} y={0} w={90} h={157} show={true} />
                         </div>
                     ))}
                 </div>
@@ -440,6 +492,7 @@ const PileSection = ({ title, cards }: { title: string; cards: Card[] }) => (
 );
 
 const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: PlayerDetailModalProps) => {
+    const t = useT();
     const isFull = isFullPlayerState(data);
     const characterImg = data.characterId ? characterImageMap[data.characterId] : null;
 
@@ -500,7 +553,7 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                         <div style={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>{name}</div>
                         {data.characterId && (
                             <div style={{ fontSize: 11, color: "#555", marginTop: 3, fontWeight: 600 }}>
-                                {data.characterId}
+                                {t(`character.${data.characterId}.name`)}
                             </div>
                         )}
                         {isOwn && (
@@ -556,6 +609,41 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                         </div>
                     ))}
                 </div>
+
+                {/* Signet ability — fired by playing the Signet card */}
+                {data.characterId && (
+                    <div
+                        data-tutor-id={anchors.signetInfo(data.id)}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 12,
+                            padding: "12px 18px",
+                            borderBottom: nb.border,
+                            backgroundColor: "#faf5ff",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <span
+                            style={{
+                                fontSize: 22,
+                                lineHeight: 1,
+                                filter: "drop-shadow(1px 1px 0 #000)",
+                            }}
+                            aria-hidden
+                        >
+                            💍
+                        </span>
+                        <div>
+                            <div style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c3aed" }}>
+                                {t("characterModal.signetTitle")}
+                            </div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginTop: 2 }}>
+                                {t(`character.${data.characterId}.signet`)}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Piles */}
                 <div style={{ padding: "16px 18px" }}>

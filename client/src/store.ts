@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { ComponentType } from "react";
 import { PlayerState } from "@candyfight/shared/types";
 import { getRandomPlayerName } from "@candyfight/shared/services/moves/playerServices";
+import { DEFAULT_LOCALE, Locale } from "@candyfight/shared/i18n";
 
 /**
  * boardgame.io Client component type.
@@ -33,6 +34,14 @@ type AppState = {
   // boardgame.io transport factory
   server: SocketIOTransportFactory | null;
   setServer: (server: SocketIOTransportFactory | null) => void;
+
+  // Tutorial mode
+  tutorialOpen: boolean;
+  setTutorialOpen: (open: boolean) => void;
+
+  // i18n — Spanish by default
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -46,4 +55,10 @@ export const useAppStore = create<AppState>((set) => ({
 
   server: null,
   setServer: (server) => set({ server }),
+
+  tutorialOpen: false,
+  setTutorialOpen: (tutorialOpen) => set({ tutorialOpen }),
+
+  locale: DEFAULT_LOCALE,
+  setLocale: (locale) => set({ locale }),
 }));

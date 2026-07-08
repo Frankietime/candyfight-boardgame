@@ -20,6 +20,8 @@ export interface LocationComponentProps extends Location {
     selectedCard?: Card;
     player: PlayerGameState;
     marketCards?: Card[];
+    /** Tutorial signal anchor id (set on the root element so overlays can target it). */
+    tutorAnchorId?: string;
 }
 
 export const LocationComponent = memo(({
@@ -37,16 +39,20 @@ export const LocationComponent = memo(({
     player,
     isRestrictedArea,
     marketCards,
+    tutorAnchorId,
 }: LocationComponentProps) => {
     const isClickDisabled = isDisabled || isRestrictedArea;
     const isTaken = !isNullOrEmpty(takenByPlayerID);
     const isMarket = !!reward.actions?.some(a => a.actionId === LocationActionsEnum.BUY_CARD);
     const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
 
-    // Memoize whether this location shows the glow effect
+    // Memoize whether this location shows the glow effect.
+    // Guard on a real selected card: with no card selected there is no valid
+    // placement, and passing an empty object crashes isWorkerPlacementValid
+    // (reads cardInPlay.districtIds).
     const showGlow = useMemo(() =>
-        !isRestrictedArea && !isSelected && !isDisabled &&
-        isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard ?? {} as Card),
+        !isRestrictedArea && !isSelected && !isDisabled && !!selectedCard?.districtIds &&
+        isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard),
         [isRestrictedArea, isSelected, isDisabled, player, cost, reward, selectedCard]
     );
 
@@ -100,6 +106,7 @@ export const LocationComponent = memo(({
     return (
         <>
         <div
+            {...(tutorAnchorId ? { "data-tutor-id": tutorAnchorId } : {})}
             className={`absolute border-2 border-solid ${
           isTaken
             ? takenPlayerClass
@@ -143,9 +150,9 @@ export const LocationComponent = memo(({
                         </div>
                     </div>
 
-                    {/* Worker Area */}
+                    {/* Worker Area — flashes once when the worker is placed (mount) */}
                     {isTaken && (
-                        <div className="worker-image-container">
+                        <div className="worker-image-container worker-placed-flash">
                             <WorkerIcon playerId={parseInt(takenByPlayerID!)} size="sm" />
                         </div>
                     )}

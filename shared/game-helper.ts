@@ -73,7 +73,7 @@ export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLoca
         !playerState.hasPlayedCard &&
         playerState.currentNumberOfWorkers > 0 &&
         isNullOrEmpty(currentLocation.takenByPlayerID) &&
-        currentLocation.cost.districtIconIds.every(lid => cardInPlay.districtIds.includes(lid)) &&
+        currentLocation.cost.districtIconIds.every(lid => cardInPlay?.districtIds?.includes(lid)) &&
         canPayLocationCosts(playerState, currentLocation, cardInPlay)
     );
 }

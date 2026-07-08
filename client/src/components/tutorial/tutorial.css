@@ -1,0 +1,74 @@
+/* Tutorial signal overlay styling — bold golden focus boxes, red arrows. */
+
+:root {
+  --tutor-gold: #ffc400;
+  --tutor-gold-bright: #ffdb4d;
+  --tutor-red: #ff2733;
+}
+
+.tutor-glow-ring {
+  pointer-events: none;
+  border-radius: 10px;
+  /* Thick golden frame */
+  border: 5px solid var(--tutor-gold);
+  box-sizing: border-box;
+  /* Intense layered glow (outer bloom + inner sheen) */
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 22px 8px rgba(255, 196, 0, 0.9),
+    0 0 6px 2px rgba(255, 219, 77, 1),
+    inset 0 0 14px 2px rgba(255, 196, 0, 0.55);
+  animation: tutor-gold-pulse 1.05s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+@keyframes tutor-gold-pulse {
+  0%, 100% {
+    border-color: var(--tutor-gold);
+    box-shadow:
+      0 0 0 2px rgba(0, 0, 0, 0.35),
+      0 0 16px 5px rgba(255, 196, 0, 0.75),
+      0 0 5px 1px rgba(255, 219, 77, 0.9),
+      inset 0 0 10px 2px rgba(255, 196, 0, 0.45);
+  }
+  50% {
+    border-color: var(--tutor-gold-bright);
+    box-shadow:
+      0 0 0 2px rgba(0, 0, 0, 0.4),
+      0 0 34px 12px rgba(255, 196, 0, 1),
+      0 0 10px 3px rgba(255, 233, 128, 1),
+      inset 0 0 18px 4px rgba(255, 210, 40, 0.7);
+  }
+}
+
+/* Highlight a specific card inside a selection modal (tutorial market buy). */
+.tutor-card-highlight {
+  border-radius: 8px;
+  outline: 4px solid var(--tutor-gold, #ffc400);
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 20px 7px rgba(255, 196, 0, 0.9),
+    0 0 6px 2px rgba(255, 219, 77, 1);
+  animation: tutor-gold-pulse 1.05s ease-in-out infinite;
+}
+
+.tutor-arrow-line {
+  filter: drop-shadow(0 0 5px rgba(255, 39, 51, 0.85));
+  animation: tutor-arrow-dash 0.8s linear infinite;
+}
+
+@keyframes tutor-arrow-dash {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tutor-glow-ring {
+    animation: none;
+  }
+  .tutor-arrow-line {
+    animation: none;
+  }
+}

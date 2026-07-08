@@ -5,12 +5,13 @@
  * Used for DISCARD, TRASH, and similar actions.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button, Dialog, Flex } from "@radix-ui/themes";
 import { Card } from "@candyfight/shared/types";
 import { CardSelectionInputSpec, isCardSelectionSpec } from "@candyfight/shared/actions";
 import { InputHandlerProps, CardSelectionResult, inputHandlerRegistry } from "../../actions/input-handlers";
 import { CardComponent } from "../card-components/CardComponent";
+import { anchors } from "@candyfight/shared/tutorial/types";
 
 export interface CardSelectionHandlerProps extends InputHandlerProps<CardSelectionResult> {
   /** Title to display in the modal */
@@ -26,9 +27,25 @@ export function CardSelectionHandler({
   maxCount,
   excludeCardId,
   marketCards,
+  highlightCardId,
+  lockToCardIds,
   title,
 }: CardSelectionHandlerProps) {
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
+
+  // The orchestrator unmounts this dialog (open={true}) the instant a selection
+  // completes, rather than animating it closed. Radix can leave `pointer-events:
+  // none` on <body> in that case, which freezes the whole page (e.g. you can't
+  // return to the menu after buying in the tutorial). Restore it on unmount.
+  useEffect(() => () => {
+    if (document.body.style.pointerEvents === "none") {
+      document.body.style.pointerEvents = "";
+    }
+  }, []);
+
+  // Tutorial gating: when a lock list is present, only those cards are selectable.
+  const lockSet = lockToCardIds ? new Set(lockToCardIds) : null;
+  const isLocked = (cardId: string) => lockSet !== null && !lockSet.has(cardId);
 
   // Get card selection specific spec
   const cardSpec = isCardSelectionSpec(inputSpec) ? inputSpec : null;
@@ -79,6 +96,7 @@ export function CardSelectionHandler({
 
   // Handle card click
   const handleCardClick = (card: Card) => {
+    if (isLocked(card.id)) return; // tutorial: non-target cards are not selectable
     const isSelected = selectedCards.some(c => c.id === card.id);
 
     if (isSelected) {
@@ -125,12 +143,13 @@ export function CardSelectionHandler({
 
         <Flex gap="2" justify="center" wrap="wrap">
           {sourceCards.map((card, index) => (
-            <div key={`select-card-${card.id}-${index}`} style={{ position: "relative", width: 90, height: 134 }}>
+            <div key={`select-card-${card.id}-${index}`} data-tutor-id={anchors.pileCard(card.id)} className={highlightCardId === card.id ? "tutor-card-highlight" : undefined} style={{ position: "relative", width: 90, height: 157 }}>
               <CardComponent
                 card={card}
                 isSelected={selectedCards.some(c => c.id === card.id)}
+                isDisabled={isLocked(card.id)}
                 w={90}
-                h={134}
+                h={157}
                 y={0}
                 x={0}
                 show={true}

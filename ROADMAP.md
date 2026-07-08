@@ -3,11 +3,11 @@ CANDY FIGHT
 RPG + Worker Placement + Deckbuilder
 
 ROADMAP
-- AI
+- Tutor
 - Prototype Testing
 - Fixes & Enhacements (Trackers?)
+- AI
 - UI + Concept Art + Lore
-- Tutor
 - RPG + Deckbuilding / Analisis del modelo de negocio y plataformas
 - Alfa Testing
 - Mods: aleatorizacion del tablero?

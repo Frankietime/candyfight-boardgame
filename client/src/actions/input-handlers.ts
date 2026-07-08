@@ -37,6 +37,16 @@ export interface InputHandlerProps<TResult = unknown> {
 
   /** Market cards available for purchase (used when source === 'market') */
   marketCards?: Card[];
+
+  /** Tutorial-only: card id to visually highlight in the selection grid. */
+  highlightCardId?: string;
+
+  /**
+   * Tutorial-only: when set, ONLY these card ids are selectable; every other card in
+   * the grid is disabled. Used to force the player to pick exactly the cards the
+   * lesson calls for (market card, specific trash fodder, …).
+   */
+  lockToCardIds?: string[];
 }
 
 /**

@@ -1,7 +1,10 @@
 import "./App.css";
 import { LobbyComponent } from "./components/lobby-component/LobbyComponent";
 import { BoardComponent } from "./components/board-component/BoardComponent";
+import { TutorialMode } from "./components/tutorial/TutorialMode";
 import { useAppStore } from "./store";
+import { useT } from "./i18n/useT";
+import { LanguageToggle } from "./i18n/LanguageToggle";
 import { useEffect, useMemo } from "react";
 import { SocketIO } from "boardgame.io/multiplayer";
 import { Client as ClientComponent} from "boardgame.io/react";
@@ -18,8 +21,13 @@ export default function App() {
 
     playerState,
     server,
-    setServer
+    setServer,
+
+    tutorialOpen,
+    setTutorialOpen,
   } = useAppStore();
+
+  const t = useT();
 
   let socketIOserver: (transportOpts: any) => SocketIOTransport = useMemo(() => { 
     
@@ -52,16 +60,41 @@ export default function App() {
 
   const isGameInCourse = () => playerState.matchID != null && playerState.matchID != "";
 
+  if (tutorialOpen) {
+    return <TutorialMode onClose={() => setTutorialOpen(false)} />;
+  }
+
   return (
       <div className="flex justify-center nes-poiter">
-        { !isGameInCourse() && GameClientComponent ? 
-          <LobbyComponent />
-            :        
+        { !isGameInCourse() && GameClientComponent ?
+          <>
+            <LobbyComponent />
+            <div style={{ position: "fixed", bottom: 20, right: 20, zIndex: 50, display: "flex", alignItems: "center", gap: 12 }}>
+              <LanguageToggle />
+              <button
+                onClick={() => setTutorialOpen(true)}
+                style={{
+                  border: "2px solid #000",
+                  boxShadow: "4px 4px 0 #000",
+                  backgroundColor: "#fef08a",
+                  padding: "12px 20px",
+                  fontWeight: 900,
+                  fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
+                  cursor: "pointer",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                🍬 {t("lobby.howToPlay")}
+              </button>
+            </div>
+          </>
+            :
           <GameClientComponent
-            matchID={playerState.matchID} 
-            playerID={playerState.playerID ? playerState.playerID : "0"} 
+            matchID={playerState.matchID}
+            playerID={playerState.playerID ? playerState.playerID : "0"}
             credentials={playerState.playerCredentials ? playerState.playerCredentials : undefined}
-          />  
+          />
         }
       </div>
   );

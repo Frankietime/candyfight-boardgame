@@ -34,6 +34,12 @@ export interface PendingActionRequest {
   /** Market cards available for purchase (passed through to CardSelectionHandler) */
   marketCards?: Card[];
 
+  /** Tutorial-only: card id to highlight inside the selection modal. */
+  highlightCardId?: string;
+
+  /** Tutorial-only: restrict selection to these card ids (disable the rest). */
+  lockToCardIds?: string[];
+
   /** Callback when input is collected */
   onComplete: (params: ActionParams) => void;
 
@@ -55,6 +61,8 @@ export interface ActionOrchestratorState {
       location?: Location;
       costAction?: CostAction;
       marketCards?: Card[];
+      highlightCardId?: string;
+      lockToCardIds?: string[];
       onComplete: (params: ActionParams) => void;
       onCancel?: () => void;
     }
@@ -79,6 +87,8 @@ export function useActionOrchestrator(): ActionOrchestratorState {
       location?: Location;
       costAction?: CostAction;
       marketCards?: Card[];
+      highlightCardId?: string;
+      lockToCardIds?: string[];
       onComplete: (params: ActionParams) => void;
       onCancel?: () => void;
     }
@@ -114,6 +124,8 @@ export function useActionOrchestrator(): ActionOrchestratorState {
       location: options.location,
       costAction: options.costAction,
       marketCards: options.marketCards,
+      highlightCardId: options.highlightCardId,
+      lockToCardIds: options.lockToCardIds,
       onComplete: (params) => {
         setPendingRequest(null);
         options.onComplete(params);
@@ -202,7 +214,7 @@ export function ActionOrchestratorRenderer({
     return null;
   }
 
-  const { inputSpec, costAction, marketCards, onComplete, onCancel, displayName } = pendingRequest;
+  const { inputSpec, costAction, marketCards, highlightCardId, lockToCardIds, onComplete, onCancel, displayName } = pendingRequest;
 
   // Get the handler component for this input type
   const HandlerComponent = inputHandlerRegistry.getHandler(inputSpec.inputType);
@@ -234,6 +246,8 @@ export function ActionOrchestratorRenderer({
       maxCount={maxCount}
       excludeCardId={excludeCardId}
       marketCards={marketCards}
+      highlightCardId={highlightCardId}
+      lockToCardIds={lockToCardIds}
     />
   );
 }
