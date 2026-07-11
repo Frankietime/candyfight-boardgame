@@ -1,6 +1,6 @@
 import { Game as GameInterface } from "boardgame.io";
-import { INVALID_MOVE, Stage, TurnOrder } from "boardgame.io/core";
-import { GAME_NAME } from "./constants";
+import { INVALID_MOVE, Stage } from "boardgame.io/core";
+import { GAME_NAME, seatRing } from "./constants";
 import { Card, GameConfig, GameState, MetaGameState, DEFAULT_GAME_CONFIG } from "./types";
 import { CharacterEnum } from "./enums";
 import {
@@ -26,6 +26,7 @@ import { playerView } from "./services/playerViewService";
 import { getCurrentLocation, getCurrentPlayer } from "./services/moves/helper";
 import { getPlayersList } from "./services/moves/playerServices";
 import { appendLog } from "./services/logService";
+import { stampSignetAbility } from "./characters/character-definitions";
 import { enumerate } from "./ai/botEnumerate";
 
 export const Game: GameInterface<GameState> = {
@@ -81,6 +82,8 @@ export const Game: GameInterface<GameState> = {
                             .filter(Boolean);
                         if (taken.includes(characterId)) return INVALID_MOVE;
                         player.characterId = characterId;
+                        // Print the character's signet ability onto the Signet card.
+                        stampSignetAbility(player);
                         appendLog(mgState.G, {
                             playerID: actingPlayerID,
                             phase: mgState.ctx.phase ?? '',
@@ -115,23 +118,23 @@ export const Game: GameInterface<GameState> = {
             endIf: ({ G }) => getPlayersList(G).every(p => p.hasRevealed),
             turn: {
                 minMoves: 1,
-                onBegin: (mgState: MetaGameState) => {
-                    // First turn of this round's mainPhase (cleared each
-                    // maintenance) → this seat is the round's first player.
-                    if (!mgState.G.firstPlayerID) {
-                        mgState.G.firstPlayerID = mgState.ctx.currentPlayer;
-                    }
-                    resetTurnState(getCurrentPlayer(mgState));
-                },
+                onBegin: (mgState: MetaGameState) => resetTurnState(getCurrentPlayer(mgState)),
                 endIf: (mgState: MetaGameState) => getCurrentPlayer(mgState).hasRevealed,
+                // Turns run COUNTER-CLOCKWISE around the table (see SEAT_TURN_ORDER):
+                // red → green → violet → yellow. The round's first player is
+                // rotated along the ring each maintenance (resetEndPhaseTriggers).
                 order: {
-                    first: TurnOrder.DEFAULT.first,
+                    first: ({ G, ctx }: { G: GameState, ctx: any }) => {
+                        const pos = ctx.playOrder.indexOf(G.firstPlayerID ?? "0");
+                        return pos >= 0 ? pos : 0;
+                    },
                     next: ({ G, ctx }: { G: GameState, ctx: any }) => {
-                        for (let i = 1; i <= ctx.numPlayers; i++) {
-                            const pos = (ctx.playOrderPos + i) % ctx.numPlayers;
-                            const playerID = ctx.playOrder[pos];
-                            if (!G.players[playerID]?.hasRevealed) {
-                                return pos;
+                        const ring = seatRing(ctx.numPlayers);
+                        const currentIdx = ring.indexOf(ctx.playOrder[ctx.playOrderPos]);
+                        for (let i = 1; i <= ring.length; i++) {
+                            const seat = ring[(currentIdx + i) % ring.length];
+                            if (!G.players[seat]?.hasRevealed) {
+                                return ctx.playOrder.indexOf(seat);
                             }
                         }
                         return undefined; // all revealed; phase.endIf will transition
@@ -152,7 +155,7 @@ export const Game: GameInterface<GameState> = {
                     undoable: false
                 },
                 selectCard: {
-                    move: (mgState: MetaGameState, selectedCard: Card) => {
+                    move: (mgState: MetaGameState, selectedCard: Card | null) => {
                         const result = selectCard(getCurrentPlayer(mgState), selectedCard);
                         return result;
                     },
@@ -187,6 +190,9 @@ export const Game: GameInterface<GameState> = {
                 },
                 reveal: {
                     move: (mgState: MetaGameState) => {
+                        // One action XOR reveal per turn: a player who placed a
+                        // worker this turn must pass — they cannot also reveal.
+                        if (getCurrentPlayer(mgState).hasPlayedCard) return INVALID_MOVE;
                         revealPlayer(getCurrentPlayer(mgState));
                         appendLog(mgState.G, {
                             playerID: mgState.ctx.currentPlayer,

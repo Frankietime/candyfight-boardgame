@@ -1,8 +1,8 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Ctx } from "boardgame.io";
 import { LobbyAPI } from "boardgame.io";
 import { District, Location, Card, PlayerGameState, PlayerViewModel } from "@candyfight/shared/types";
-import { PlayerColorsEnum } from "@candyfight/shared/enums";
+import { playerSeatColor } from "@candyfight/shared/constants";
 import { LocationComponent } from "../location-component/LocationComponent";
 import { locsXPos, locsYPos } from "./constants";
 import { DistrictIcon } from "../ui/GameIcon";
@@ -87,7 +87,7 @@ interface DistrictContainerProps {
 
 const TILE_W = Math.round(1280 / 12); // 107px
 const TILE_H = Math.round(720 / 12);  //  60px
-const HEADER_H = 24;                  // approximate header height (px)
+const HEADER_H = 32;                  // approximate header height (px) — matches .district-header
 const HEADER_GAP = 8;                 // gap between header and tile edge
 const HEADER_MARGIN = 6;              // horizontal overhang on each side
 
@@ -196,8 +196,8 @@ const DistrictHeader = memo(({
       className={`district-header district-header--${district.id.toLowerCase()}`}
       style={{ top: headerTop, left: headerLeft, width: headerWidth }}
     >
-      <DistrictIcon districtId={district.id} size="sm" />
-      <span>{district.name}</span>
+      <DistrictIcon districtId={district.id} size="md" />
+      <span className="district-header-name">{district.name}</span>
       <span className="district-header-separator">|</span>
       {!isCombatPhase && district.presence ? (
         <PresenceDisplay
@@ -226,22 +226,47 @@ interface PresenceDisplayProps {
 
 const PresenceDisplay = memo(({ presence, playersViewModel }: PresenceDisplayProps) => (
   <span className="inline-flex items-center gap-2">
-    {playersViewModel.map(player => {
-      const amount = presence[player.id]?.amount ?? 0;
-      if (amount <= 0) return null;
-      return (
-        <span
-          key={`presence-${player.id}`}
-          style={{ color: PlayerColorsEnum[parseInt(player.id)] as string, fontWeight: 700 }}
-        >
-          {amount}
-        </span>
-      );
-    })}
+    {playersViewModel
+      .map(player => ({ id: player.id, amount: presence[player.id]?.amount ?? 0 }))
+      .filter(p => p.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .map(p => (
+        <PresenceCounter
+          key={`presence-${p.id}`}
+          playerID={p.id}
+          amount={p.amount}
+        />
+      ))}
   </span>
 ));
 
 PresenceDisplay.displayName = "PresenceDisplay";
+
+/**
+ * A single player's presence number, in their seat color. Pops on mount
+ * (presence gained from zero) and whenever the amount changes.
+ */
+const PresenceCounter = ({ playerID, amount }: { playerID: string; amount: number }) => {
+  const [flashing, setFlashing] = useState(true);
+  const prevAmount = useRef(amount);
+
+  useEffect(() => {
+    if (prevAmount.current !== amount) {
+      prevAmount.current = amount;
+      setFlashing(true);
+    }
+  }, [amount]);
+
+  return (
+    <span
+      className={`presence-counter${flashing ? " presence-flash" : ""}`}
+      style={{ color: playerSeatColor(playerID) }}
+      onAnimationEnd={() => setFlashing(false)}
+    >
+      {amount}
+    </span>
+  );
+};
 
 /**
  * Display district winner during combat phase
@@ -256,12 +281,13 @@ const WinnerDisplay = memo(({ winnerId, matchData }: WinnerDisplayProps) => (
     style={{
       fontWeight: 600,
       display: "inline",
+      color: "#fff", // readable on the header's black plate
     }}
   >
     Winner:{" "}
     <span
       style={{
-        color: winnerId ? (PlayerColorsEnum[parseInt(winnerId)] as string) : "black",
+        color: winnerId ? (playerSeatColor(winnerId)) : "#fff",
       }}
     >
       {" "}

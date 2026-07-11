@@ -1,56 +1,56 @@
-/* Tutorial signal overlay styling — bold golden focus boxes, red arrows. */
+/* Tutorial signal overlay styling — bold turquoise focus boxes, red arrows. */
 
 :root {
-  --tutor-gold: #ffc400;
-  --tutor-gold-bright: #ffdb4d;
+  --tutor-glow: #40e0d0;
+  --tutor-glow-bright: #7ff0e4;
   --tutor-red: #ff2733;
 }
 
 .tutor-glow-ring {
   pointer-events: none;
   border-radius: 10px;
-  /* Thick golden frame */
-  border: 5px solid var(--tutor-gold);
+  /* Thick turquoise frame */
+  border: 5px solid var(--tutor-glow);
   box-sizing: border-box;
   /* Intense layered glow (outer bloom + inner sheen) */
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.35),
-    0 0 22px 8px rgba(255, 196, 0, 0.9),
-    0 0 6px 2px rgba(255, 219, 77, 1),
-    inset 0 0 14px 2px rgba(255, 196, 0, 0.55);
-  animation: tutor-gold-pulse 1.05s ease-in-out infinite;
+    0 0 22px 8px rgba(64, 224, 208, 0.9),
+    0 0 6px 2px rgba(127, 240, 228, 1),
+    inset 0 0 14px 2px rgba(64, 224, 208, 0.55);
+  animation: tutor-glow-pulse 1.05s ease-in-out infinite;
   will-change: box-shadow, border-color;
 }
 
-@keyframes tutor-gold-pulse {
+@keyframes tutor-glow-pulse {
   0%, 100% {
-    border-color: var(--tutor-gold);
+    border-color: var(--tutor-glow);
     box-shadow:
       0 0 0 2px rgba(0, 0, 0, 0.35),
-      0 0 16px 5px rgba(255, 196, 0, 0.75),
-      0 0 5px 1px rgba(255, 219, 77, 0.9),
-      inset 0 0 10px 2px rgba(255, 196, 0, 0.45);
+      0 0 16px 5px rgba(64, 224, 208, 0.75),
+      0 0 5px 1px rgba(127, 240, 228, 0.9),
+      inset 0 0 10px 2px rgba(64, 224, 208, 0.45);
   }
   50% {
-    border-color: var(--tutor-gold-bright);
+    border-color: var(--tutor-glow-bright);
     box-shadow:
       0 0 0 2px rgba(0, 0, 0, 0.4),
-      0 0 34px 12px rgba(255, 196, 0, 1),
-      0 0 10px 3px rgba(255, 233, 128, 1),
-      inset 0 0 18px 4px rgba(255, 210, 40, 0.7);
+      0 0 34px 12px rgba(64, 224, 208, 1),
+      0 0 10px 3px rgba(178, 245, 238, 1),
+      inset 0 0 18px 4px rgba(64, 224, 208, 0.7);
   }
 }
 
 /* Highlight a specific card inside a selection modal (tutorial market buy). */
 .tutor-card-highlight {
   border-radius: 8px;
-  outline: 4px solid var(--tutor-gold, #ffc400);
+  outline: 4px solid var(--tutor-glow, #40e0d0);
   outline-offset: 2px;
   box-shadow:
     0 0 0 2px rgba(0, 0, 0, 0.35),
-    0 0 20px 7px rgba(255, 196, 0, 0.9),
-    0 0 6px 2px rgba(255, 219, 77, 1);
-  animation: tutor-gold-pulse 1.05s ease-in-out infinite;
+    0 0 20px 7px rgba(64, 224, 208, 0.9),
+    0 0 6px 2px rgba(127, 240, 228, 1);
+  animation: tutor-glow-pulse 1.05s ease-in-out infinite;
 }
 
 .tutor-arrow-line {

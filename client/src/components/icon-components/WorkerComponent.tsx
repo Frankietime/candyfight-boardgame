@@ -22,11 +22,17 @@ export const WorkerComponent = ({
         <div
             {...(tutorAnchorId ? { "data-tutor-id": tutorAnchorId } : {})}
             className={"absolute player-" + playerID + "-worker worker-container"}
+            style={{ zIndex: 30 }} // agents always render above any board element
         >
             <div className="worker-container">
                 {Array.from({length: numerOfWorkers}).map((_, index) => (
-                    <div key={index} className="worker-image-container" style={{ left: index * 10, width: "40%", height: "40%" }}>
-                        <img src={workerIconsByPlayerId[playerID]}/>
+                    <div key={index} className="worker-image-container" style={{ left: index * 10, width: "60%", height: "60%" }}>
+                        {/* objectFit keeps the sprite's original proportions inside the slot */}
+                        <img
+                            src={workerIconsByPlayerId[playerID]}
+                            className="worker-outline"
+                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                        />
                     </div>
                 ))}
             </div>

@@ -20,6 +20,7 @@ import { isWorkerPlacementValid } from "../game-helper";
 import { placeWorker, WorkerMoveParams } from "../services/moves/workerPlacementService";
 import { draw as drawService, selectCard as selectCardService } from "../services/moves/moves";
 import { resolveCombat } from "../services/moves/phaseService";
+import { stampSignetAbility } from "../characters/character-definitions";
 import { appendLog } from "../services/logService";
 import { createDeterministicRandom, DeterministicRandom } from "./deterministicRandom";
 import { TutorMoveResult } from "./types";
@@ -71,6 +72,9 @@ export const buildTutorState = (seed: TutorStateSeed): GameState => {
             trashPile: [],
             hasRevealed: false,
         };
+        // Tutorial seats preset their character (no selectCharacter move), so
+        // print the signet ability onto their Signet cards here.
+        stampSignetAbility(players[p.id]);
     });
 
     const districts = getInitialDistrictsState();

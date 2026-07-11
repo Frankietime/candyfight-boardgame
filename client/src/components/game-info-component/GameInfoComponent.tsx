@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useAppStore } from "../../store";
 import { Ctx } from "boardgame.io";
 import { Card, GameState, LogEntry, PlayerViewModel } from "@candyfight/shared/types";
+import { PLAYER_SEAT_COLORS, playerSeatColor } from "@candyfight/shared/constants";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
 import { CardMini } from "../card-components/CardMini";
 
@@ -282,10 +283,9 @@ export const GameInfoComponent = ({
     );
 };
 
-// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
-const playerColors = ["#ef4444", "#a855f7", "#22c55e", "#eab308"];
+const playerColors = [...PLAYER_SEAT_COLORS];
 function playerDotColor(id: string): string {
-    return playerColors[parseInt(id)] ?? "#888";
+    return playerSeatColor(id);
 }
 
 interface GameLogProps {

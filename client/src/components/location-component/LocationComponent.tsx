@@ -7,6 +7,7 @@ import { DistrictIconComponent } from "../icon-components/DistrictIconComponent"
 import { WorkerIcon } from "../ui/GameIcon";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
+import { playerSeatColor } from "@candyfight/shared/constants";
 import { CardMini } from "../card-components/CardMini";
 
 export interface LocationComponentProps extends Location {
@@ -46,15 +47,19 @@ export const LocationComponent = memo(({
     const isMarket = !!reward.actions?.some(a => a.actionId === LocationActionsEnum.BUY_CARD);
     const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
 
-    // Memoize whether this location shows the glow effect.
-    // Guard on a real selected card: with no card selected there is no valid
-    // placement, and passing an empty object crashes isWorkerPlacementValid
-    // (reads cardInPlay.districtIds).
-    const showGlow = useMemo(() =>
-        !isRestrictedArea && !isSelected && !isDisabled && !!selectedCard?.districtIds &&
-        isWorkerPlacementValid(player, { cost, reward } as Location, selectedCard),
-        [isRestrictedArea, isSelected, isDisabled, player, cost, reward, selectedCard]
-    );
+    // Glow marks a playable spot. With a card selected: only that card's valid
+    // placements. With NO card selected: the general view — any location
+    // playable with ANY card in the hand glows. (The isDisabled prop can't
+    // gate this: it's true whenever no card is selected.)
+    const showGlow = useMemo(() => {
+        if (isRestrictedArea || isSelected || isTaken) return false;
+        if (name.includes("Sword Master") && player.maxNumberOfWorkers >= 3) return false;
+        const loc = { cost, reward, isRestrictedArea, takenByPlayerID } as Location;
+        if (selectedCard?.districtIds) {
+            return isWorkerPlacementValid(player, loc, selectedCard);
+        }
+        return (player.hand ?? []).some(c => !!c?.districtIds && isWorkerPlacementValid(player, loc, c));
+    }, [isRestrictedArea, isSelected, isTaken, name, player, cost, reward, takenByPlayerID, selectedCard]);
 
     // Memoize cost icons
     const costIcons = useMemo(() =>
@@ -107,14 +112,21 @@ export const LocationComponent = memo(({
         <>
         <div
             {...(tutorAnchorId ? { "data-tutor-id": tutorAnchorId } : {})}
-            className={`absolute border-2 border-solid ${
+            className={`location-tile absolute border-2 border-solid ${
           isTaken
             ? takenPlayerClass
             : isClickDisabled
               ? ''
               : 'hover:brightness-110 cursor-pointer'
-        }`}
-            style={{ top: y, left: x, width: TILE_W, height: TILE_H, boxSizing: "content-box" }}
+        }${!isTaken && !showGlow ? ' location-unplayable' : ''}`}
+            style={{
+                top: y, left: x, width: TILE_W, height: TILE_H, boxSizing: "content-box",
+                // Claimed locations: thin seat-color border marks the owner;
+                // the tile content is grayed out via .location-taken CSS.
+                ...(isTaken ? {
+                    borderColor: playerSeatColor(takenByPlayerID!),
+                } : {}),
+            }}
             onClick={isClickDisabled || isTaken ? undefined : onClick}
             onMouseEnter={isMarket && marketCards?.length ? (e) => setHoverPos({ x: e.clientX, y: e.clientY }) : undefined}
             onMouseMove={isMarket && marketCards?.length ? (e) => setHoverPos({ x: e.clientX, y: e.clientY }) : undefined}

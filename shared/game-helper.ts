@@ -1,6 +1,6 @@
 import { LocationCost, PlayerGameState, Location, Dictionary, GameState, District, GameConfig, DEFAULT_GAME_CONFIG } from "./types";
 import { isNullOrEmpty } from "./common-methods";
-import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "./constants";
+import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED, seatRing, nextSeat } from "./constants";
 import { ResourceEnum } from "./enums";
 import { Card } from "./types";
 import { getInitialDeck } from "./services/cardServices";
@@ -38,6 +38,7 @@ export const getInitialPlayersState = (numberOfPlayers: number, plugins: Default
         initialPlayersState[Id.toString()] = {
             id: Id.toString(),
             characterId: undefined,
+            cardsInPlay: [],
             currentNumberOfWorkers: 0,
             maxNumberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
             selectedCard: NO_CARD_SELECTED,
@@ -85,13 +86,18 @@ export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLoca
 
 export const resetEndPhaseTriggers = (G: GameState) => {
     G.roundEndingCounter = 0;
-    G.firstPlayerID = undefined; // re-stamped by the round's first mainPhase turn
+    // First player rotates COUNTER-CLOCKWISE each round (red → green → violet → yellow).
+    // Round 1 starts at the ring's first seat.
+    G.firstPlayerID = G.firstPlayerID === undefined
+        ? seatRing(G.config.numPlayers)[0]
+        : nextSeat(G.firstPlayerID, G.config.numPlayers);
     getPlayersList(G).forEach(p => p.hasRevealed = false);
 }
 
 export const playersSetup = (G: GameState) => {
     getPlayersList(G).forEach(p => {
         p.currentNumberOfWorkers = p.maxNumberOfWorkers;
+        p.cardsInPlay = []; // last round's played cards (drives the enemy-played-card display)
     })
 }
 

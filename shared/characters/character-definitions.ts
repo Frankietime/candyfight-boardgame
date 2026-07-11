@@ -2,6 +2,24 @@ import { CharacterEnum, LocationActionsEnum, ResourceEnum } from "../enums";
 import { MetaGameState, PlayerGameState } from "../types";
 import { ActionContext, actionRegistry } from "../actions/action-registry";
 
+/**
+ * Prints the chosen character's signet ability onto the player's Signet
+ * card(s): card renderers display `effect.name`, so after this the card itself
+ * says what the signet does (e.g. "Gain 2 candy + 1 extra presence…") instead
+ * of the generic "Signet Trigger". Call when the character is selected.
+ */
+export const stampSignetAbility = (player: PlayerGameState): void => {
+    if (!player.characterId) return;
+    const description = characterDefinitions[player.characterId].signetAbilityDescription;
+    [...player.deck, ...player.hand, ...player.discardPile].forEach(card => {
+        card.primaryEffects?.forEach(effect => {
+            if (effect.actionId === LocationActionsEnum.SIGNET_TRIGGER) {
+                effect.name = description;
+            }
+        });
+    });
+};
+
 export interface CharacterDefinition {
     id: CharacterEnum;
     name: string;

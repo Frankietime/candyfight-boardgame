@@ -28,7 +28,7 @@
     /* ===== UI Accent Colors ===== */
     /* Focus glow shared with the tutorial: intense gold. */
     --color-selection: #ffc400;
-    --color-glow: #ffc400;
+    --color-glow: #40e0d0; /* turquoise — the one glow color, everywhere */
     --color-vp-text: rgb(66, 1, 141);
     --color-vp-shadow: goldenrod;
 
@@ -209,6 +209,29 @@
   color: white;
 }
 
+/* Animated dotted placement lines: character → played location.
+   Marching-ants effect by sliding the dash offset. */
+.placement-line {
+  animation: placement-dash 0.9s linear infinite;
+}
+
+@keyframes placement-dash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+/* Outline that follows the sprite's SILHOUETTE (drop-shadow respects the
+   PNG alpha, unlike border which would draw the bounding box). Applied to
+   every agent/worker sprite — in the pool and placed on locations. */
+.worker-outline {
+  filter:
+    drop-shadow(1px 0 0 #000)
+    drop-shadow(-1px 0 0 #000)
+    drop-shadow(0 1px 0 #000)
+    drop-shadow(0 -1px 0 #000);
+}
+
 /* Migrated from WorkerComponent.scss */
 .worker-container {
   top: 530px;
@@ -366,7 +389,7 @@
   width: 35px;
   height: 220px;
   top: 310px;
-  left: 255px;
+  left: 263px; /* clear of the portrait's seat-color plate (ends at x=250) */
 }
 
 .player-resource-container div div {
@@ -434,7 +457,7 @@
 }
 
 .location-container.proto-glow .location-name-container {
-  background-color: var(--color-glow);
+  background-color: var(--glow-color, var(--color-glow));
 }
 
 .location-icons-container {
@@ -507,23 +530,41 @@
 /* ===== District Header Styles ===== */
 
 :root {
-  --color-district-loc1: #006fa3;   /* cyan readable on white */
-  --color-district-loc2: #2e7a00;   /* green readable on white */
-  --color-district-loc3: #b84c00;   /* orange readable on white */
-  --color-district-loc4: #7a00b0;   /* magenta readable on white */
+  --color-district-loc1: #3b82f6;   /* CONURBAPLEX — blue */
+  --color-district-loc2: #a855f7;   /* ECOPLEX — violet */
+  --color-district-loc3: #facc15;   /* Streets — yellow */
+  --color-district-loc4: #22c55e;   /* AGI Control Zone — green */
 }
+
+/* Taken locations (an agent already sits there) and locations the viewer
+   can't currently play: gray the tile content out. The worker icon is NOT
+   in these subtrees, so it keeps its seat color. */
+.location-taken .location-name-container,
+.location-taken .location-cost-container,
+.location-taken .location-reward-container,
+.location-unplayable .location-name-container,
+.location-unplayable .location-cost-container,
+.location-unplayable .location-reward-container {
+  filter: grayscale(1) opacity(0.5);
+}
+
+/* Location glow matches its district's color (overrides the global turquoise) */
+.district-LOC1 .proto-glow { --glow-color: var(--color-district-loc1); }
+.district-LOC2 .proto-glow { --glow-color: var(--color-district-loc2); }
+.district-LOC3 .proto-glow { --glow-color: var(--color-district-loc3); }
+.district-LOC4 .proto-glow { --glow-color: var(--color-district-loc4); }
 
 .district-header {
   position: absolute;
-  height: 24px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 5px;
-  background: rgba(255, 255, 255, 0.93);
+  gap: 6px;
+  padding: 0 8px;
+  background: rgba(0, 0, 0, 0.88);
   border: 1px solid currentColor;
   box-shadow: 0 0 6px 1px color-mix(in oklab, currentColor 55%, transparent);
-  font-size: 8pt;
+  font-size: 10pt;
   font-weight: 700;
   color: #111;
   text-transform: uppercase;
@@ -539,19 +580,54 @@
 .district-header--loc3 { color: var(--color-district-loc3); }
 .district-header--loc4 { color: var(--color-district-loc4); }
 
+/* Name reads white on the black plate; the district color stays on border/glow/icon */
+.district-header-name {
+  color: #fff;
+}
+
 .district-header-separator {
-  opacity: 0.5;
+  opacity: 0.6;
   margin: 0 2px;
   font-weight: 400;
-  color: #555;
+  color: #999;
+}
+
+/* ===== District presence counter (value changed / appeared) ===== */
+
+@keyframes presence-pop {
+  0%   { transform: scale(1);   filter: brightness(1); }
+  35%  { transform: scale(1.7); filter: brightness(1.4) drop-shadow(0 0 7px var(--color-glow)); }
+  70%  { transform: scale(1.15); filter: brightness(1.2) drop-shadow(0 0 4px var(--color-glow)); }
+  100% { transform: scale(1);   filter: brightness(1); }
+}
+
+.presence-counter {
+  display: inline-block;
+  font-size: 12pt;
+  font-weight: 800;
+  transform-origin: center;
+}
+
+.presence-counter.presence-flash {
+  animation: presence-pop 0.65s ease-out;
+}
+
+/* Combat results: winner's presence number glows */
+@keyframes presence-winner-glow {
+  0%, 100% { text-shadow: 0 0 3px var(--color-glow); }
+  50%      { text-shadow: 0 0 8px var(--color-glow), 0 0 14px var(--color-glow); }
+}
+
+.presence-winner-glow {
+  animation: presence-winner-glow 1.6s ease-in-out infinite;
 }
 
 /* ===== Stat Flash (resource/pile value changed) ===== */
 
 @keyframes stat-glow {
   0%   { transform: scale(1);    filter: brightness(1); }
-  30%  { transform: scale(1.4);  filter: brightness(1.5) drop-shadow(0 0 9px #ffc400); }
-  60%  { transform: scale(1.12); filter: brightness(1.3) drop-shadow(0 0 6px #ffdb4d); }
+  30%  { transform: scale(1.4);  filter: brightness(1.5) drop-shadow(0 0 9px var(--color-glow)); }
+  60%  { transform: scale(1.12); filter: brightness(1.3) drop-shadow(0 0 6px var(--color-glow)); }
   100% { transform: scale(1);    filter: brightness(1); }
 }
 
@@ -563,9 +639,9 @@
 /* ===== Worker placed (location claimed) ===== */
 
 @keyframes worker-placed {
-  0%   { transform: scale(0.2);  opacity: 0; filter: drop-shadow(0 0 0 rgba(255, 196, 0, 0)); }
-  40%  { transform: scale(1.45); opacity: 1; filter: drop-shadow(0 0 9px rgba(255, 196, 0, 1)); }
-  70%  { transform: scale(0.9);              filter: drop-shadow(0 0 5px rgba(255, 196, 0, 0.7)); }
+  0%   { transform: scale(0.2);  opacity: 0; filter: drop-shadow(0 0 0 rgba(64, 224, 208, 0)); }
+  40%  { transform: scale(1.45); opacity: 1; filter: drop-shadow(0 0 9px rgba(64, 224, 208, 1)); }
+  70%  { transform: scale(0.9);              filter: drop-shadow(0 0 5px rgba(64, 224, 208, 0.7)); }
   100% { transform: scale(1);               filter: drop-shadow(0 0 4px var(--color-glow)); }
 }
 
@@ -577,9 +653,9 @@
 /* ===== Card drawn (entered hand) ===== */
 
 @keyframes card-drawn {
-  0%   { transform: translateY(10px) scale(0.88); filter: drop-shadow(0 0 0 rgba(255, 196, 0, 0)); }
-  35%  { transform: translateY(0)    scale(1.07); filter: drop-shadow(0 0 13px rgba(255, 196, 0, 0.95)); }
-  100% { transform: translateY(0)    scale(1);    filter: drop-shadow(0 0 0 rgba(255, 196, 0, 0)); }
+  0%   { transform: translateY(10px) scale(0.88); filter: drop-shadow(0 0 0 rgba(64, 224, 208, 0)); }
+  35%  { transform: translateY(0)    scale(1.07); filter: drop-shadow(0 0 13px rgba(64, 224, 208, 0.95)); }
+  100% { transform: translateY(0)    scale(1);    filter: drop-shadow(0 0 0 rgba(64, 224, 208, 0)); }
 }
 
 .card-drawn-flash {
@@ -591,25 +667,25 @@
 
 @keyframes btn-glow {
   0%, 100% { box-shadow: none; }
-  50%      { box-shadow: 0 0 0 4px rgba(254, 240, 138, 0.85), 0 0 22px rgba(254, 240, 138, 0.55); }
+  50%      { box-shadow: 0 0 0 4px rgba(64, 224, 208, 0.85), 0 0 22px rgba(64, 224, 208, 0.55); }
 }
 
 .pass-btn.should-glow,
 .reveal-btn.should-glow {
   animation: btn-glow 1.4s ease-in-out infinite;
-  border-color: #fef08a !important;
+  border-color: #40e0d0 !important;
 }
 
 .pass-btn:not(.disabled):hover,
 .reveal-btn:hover {
-  box-shadow: 0 0 0 4px rgba(254, 240, 138, 0.9), 0 0 22px rgba(254, 240, 138, 0.65);
+  box-shadow: 0 0 0 4px rgba(64, 224, 208, 0.9), 0 0 22px rgba(64, 224, 208, 0.65);
 }
 
 /* ===== Portrait Info Icon (hover) ===== */
 
 @keyframes info-glow {
-  0%, 100% { box-shadow: 0 0 4px 3px rgba(254, 240, 138, 0.9), 0 0 0 2px #000; }
-  50%       { box-shadow: 0 0 14px 8px rgba(254, 240, 138, 1),   0 0 0 2px #000; }
+  0%, 100% { box-shadow: 0 0 4px 3px rgba(64, 224, 208, 0.9), 0 0 0 2px #000; }
+  50%       { box-shadow: 0 0 14px 8px rgba(64, 224, 208, 1),   0 0 0 2px #000; }
 }
 
 .portrait-info-icon {
@@ -637,10 +713,25 @@
   object-position: center top;
 }
 
+/* The player whose turn it is: markedly stronger glow over the whole character area */
 .current-player-portrait-frame.proto-glow {
-  --glow-size: 20px;
-  --glow-border: 6px;
-  --glow-speed: 2.2s;
+  --glow-size: 34px;
+  --glow-border: 8px;
+  --glow-alpha: 1;
+  --glow-speed: 1.4s;
+}
+
+/* ===== Round Start Burst (first player of the round) ===== */
+
+@keyframes round-start-burst {
+  0%   { box-shadow: 0 0 0 0 rgba(64, 224, 208, 0); }
+  25%  { box-shadow: 0 0 80px 40px rgba(64, 224, 208, 1), 0 0 0 6px rgba(64, 224, 208, 0.9); }
+  60%  { box-shadow: 0 0 45px 20px rgba(64, 224, 208, 0.85), 0 0 0 3px rgba(64, 224, 208, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(64, 224, 208, 0); }
+}
+
+.round-start-burst {
+  animation: round-start-burst 0.9s ease-out 3;
 }
 
 /* ===== Pile Hover Modal (market-modal style, board-centered) ===== */

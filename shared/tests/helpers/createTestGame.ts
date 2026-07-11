@@ -72,6 +72,7 @@ export const createTestGame = (): GameInterface<GameState> => ({
                 i.toString(),
                 {
                     id: i.toString(),
+                    cardsInPlay: [],
                     currentNumberOfWorkers: 0,   // playersSetup will set to maxWorkers
                     maxNumberOfWorkers: INITIAL_NUMBER_OF_WORKERS,
                     selectedCard: NO_CARD_SELECTED,

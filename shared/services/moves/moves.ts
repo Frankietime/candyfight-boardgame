@@ -4,7 +4,12 @@ import { isPlayCardValid } from "../../game-helper";
 import { getCurrentPlayer, takeFromHand } from "./helper";
 import { log } from "../../common-methods";
 
-export const selectCard = (player: PlayerGameState, selectedCard: Card) => {
+export const selectCard = (player: PlayerGameState, selectedCard?: Card | null) => {
+    // No card = deselect: back to the "all possible plays" board view.
+    if (selectedCard == null) {
+        player.selectedCard = undefined;
+        return;
+    }
     if (!isPlayCardValid(player, selectedCard.id))
         return INVALID_MOVE;
     player.selectedCard = selectedCard;

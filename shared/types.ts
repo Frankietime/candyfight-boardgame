@@ -109,6 +109,8 @@ export type PlayerViewModel = {
   deckLength: number;
   discardPile: Card[];
   trashPile: Card[];
+  /** Cards played this round (public — the play is visible on the board). */
+  cardsInPlay: Card[];
   handLength: number;
   candy: number;
   loot: number;

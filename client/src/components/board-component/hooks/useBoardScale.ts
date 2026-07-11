@@ -71,16 +71,24 @@ export function getScaleStyle(scale: number): React.CSSProperties {
 /**
  * Utility to generate board container styles (transform handled by CSS class via --scale variable)
  */
+// Board backdrop under the (transparent-margin) board art: turquoise core
+// fading out to a dark gray at the edges.
+const BOARD_EDGE_GRAY = "#4a4a4a";
+const BOARD_BACKDROP_GRADIENT =
+  `radial-gradient(ellipse at center, #40e0d0 0%, #58a9a1 40%, ${BOARD_EDGE_GRAY} 78%)`;
+
 export function getBoardContainerStyle(
   backgroundImage?: string
 ): React.CSSProperties {
   return {
     width: BOARD_DIMENSIONS.WIDTH,
     height: BOARD_DIMENSIONS.HEIGHT,
-    ...(backgroundImage && {
-      backgroundImage: `url(${backgroundImage})`,
-      backgroundSize: "100% 100%",
-    }),
+    backgroundColor: BOARD_EDGE_GRAY,
+    // First layer paints on top: the board art sits over the gradient.
+    backgroundImage: backgroundImage
+      ? `url(${backgroundImage}), ${BOARD_BACKDROP_GRADIENT}`
+      : BOARD_BACKDROP_GRADIENT,
+    backgroundSize: "100% 100%, 100% 100%",
     imageRendering: "crisp-edges",
   } as React.CSSProperties;
 }

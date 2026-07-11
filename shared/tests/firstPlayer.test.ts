@@ -43,6 +43,41 @@ describe("G.firstPlayerID", () => {
         expect(G.firstPlayerID).toBe(first); // unchanged mid-round
     });
 
+    it("4 players: turns run COUNTER-CLOCKWISE (0 red → 2 green → 1 violet → 3 yellow)", () => {
+        const client = Client({
+            game: { ...createTestGame(), playerView: undefined },
+            numPlayers: 4,
+            playerID: "0",
+        });
+        client.start();
+        const chars = Object.values(CharacterEnum);
+        for (let i = 0; i < 4; i++) {
+            client.updatePlayerID(String(i));
+            client.moves.selectCharacter(chars[i]);
+        }
+
+        // Round 1 starts at the ring's first seat, then walks the ring as
+        // each player reveals.
+        const sequence: string[] = [];
+        for (let i = 0; i < 4; i++) {
+            const seat = client.getState()!.ctx.currentPlayer;
+            sequence.push(seat);
+            client.updatePlayerID(seat);
+            client.moves.reveal();
+        }
+        expect(sequence).toEqual(["0", "2", "1", "3"]);
+
+        // Next round's first player also rotates counter-clockwise: after red comes green.
+        for (const seat of ["0", "1", "2", "3"]) {
+            client.updatePlayerID(seat);
+            client.moves.endRound();
+        }
+        const { G, ctx } = client.getState()! as any;
+        expect(ctx.phase).toBe("mainPhase");
+        expect(G.firstPlayerID).toBe("2");
+        expect(ctx.currentPlayer).toBe("2");
+    });
+
     it("is re-stamped for the next round (rotates with TurnOrder.DEFAULT)", () => {
         const client = startGame();
         const round1First = (client.getState()!.G as any).firstPlayerID;

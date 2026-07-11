@@ -13,6 +13,7 @@ export const toPublicPlayer = (player: PlayerGameState): PlayerViewModel => ({
     deckLength: player.deck.length,
     discardPile: player.discardPile,
     trashPile: player.trashPile,
+    cardsInPlay: player.cardsInPlay ?? [],
     handLength: player.hand.length,
     candy: player.candy,
     loot: player.loot,

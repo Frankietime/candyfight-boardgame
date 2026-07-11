@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Table } from "@radix-ui/themes";
-import { PlayerColorsEnum } from "@candyfight/shared/enums";
+import { playerSeatColor } from "@candyfight/shared/constants";
 import { LobbyAPI } from "boardgame.io";
 import { District, PlayerGameState, PlayerPresence } from "@candyfight/shared/types";
 
@@ -58,38 +58,72 @@ export interface CombatResultsProps {
   matchData: LobbyAPI.Match;
 }
 
-export const CombatResultsTable = memo(({ districts, matchData }: CombatResultsProps) => (
-  <Table.Root size="1">
-    <Table.Header>
-      <Table.Row>
-        <Table.ColumnHeaderCell>District</Table.ColumnHeaderCell>
-        <Table.ColumnHeaderCell>Winner</Table.ColumnHeaderCell>
-        <Table.ColumnHeaderCell>Ranking</Table.ColumnHeaderCell>
-      </Table.Row>
-    </Table.Header>
+/** A district is tied when players contested it but nobody won it. */
+const isTiedDistrict = (district: District): boolean =>
+  !district.combatWinnerId &&
+  Object.values(district.presence).some(p => p.amount > 0);
 
-    <Table.Body>
-      {districts.map((district, index) => (
-        <Table.Row key={`district-result-${district.id}-${index}`}>
-          <Table.RowHeaderCell>
-            <span className="font-semibold">
-              {district.id} - {district.name}
-            </span>
-          </Table.RowHeaderCell>
-          <Table.Cell>
-            <DistrictWinner
-              winnerId={district.combatWinnerId}
-              matchData={matchData}
-            />
-          </Table.Cell>
-          <Table.Cell>
-            <PresenceRanking presence={district.presence} />
-          </Table.Cell>
+export const CombatResultsTable = memo(({ districts, matchData }: CombatResultsProps) => {
+  return (
+    <Table.Root size="1">
+      <Table.Header>
+        <Table.Row>
+          <Table.ColumnHeaderCell>District</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Ranking</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>Winner</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell>VP</Table.ColumnHeaderCell>
         </Table.Row>
-      ))}
-    </Table.Body>
-  </Table.Root>
-));
+      </Table.Header>
+
+      <Table.Body>
+        {districts.map((district, index) => {
+          const tied = isTiedDistrict(district);
+          return (
+            <Table.Row
+              key={`district-result-${district.id}-${index}`}
+              style={
+                tied
+                  ? { opacity: 0.45, filter: "grayscale(1)" }
+                  : district.combatWinnerId
+                    ? { backgroundColor: "#fef08a" } // won district → accent yellow
+                    : undefined
+              }
+            >
+              <Table.RowHeaderCell>
+                <span className="font-semibold">
+                  {district.id} - {district.name}
+                </span>
+              </Table.RowHeaderCell>
+              <Table.Cell>
+                <PresenceRanking
+                  presence={district.presence}
+                  winnerId={district.combatWinnerId}
+                />
+              </Table.Cell>
+              <Table.Cell>
+                <DistrictWinner
+                  winnerId={district.combatWinnerId}
+                  tied={tied}
+                  matchData={matchData}
+                />
+              </Table.Cell>
+              <Table.Cell>
+                {district.combatWinnerId ? (
+                  <span className="font-semibold" style={{ color: playerSeatColor(district.combatWinnerId) }}>
+                    +1
+                  </span>
+                ) : (
+                  <span style={{ color: "#888" }}>-</span>
+                )}
+              </Table.Cell>
+            </Table.Row>
+          );
+        })}
+
+      </Table.Body>
+    </Table.Root>
+  );
+});
 
 CombatResultsTable.displayName = "CombatResultsTable";
 
@@ -103,7 +137,7 @@ interface PlayerNameProps {
 
 const PlayerName = memo(({ playerId, name }: PlayerNameProps) => {
   const playerIndex = parseInt(playerId);
-  const color = PlayerColorsEnum[playerIndex] as string;
+  const color = playerSeatColor(playerIndex);
 
   return (
     <span
@@ -123,15 +157,17 @@ PlayerName.displayName = "PlayerName";
 interface DistrictWinnerProps {
   winnerId: string | null | undefined;
   matchData: LobbyAPI.Match;
+  /** Contested but nobody won — render "Tie" instead of "-" */
+  tied?: boolean;
 }
 
-const DistrictWinner = memo(({ winnerId, matchData }: DistrictWinnerProps) => {
+const DistrictWinner = memo(({ winnerId, matchData, tied }: DistrictWinnerProps) => {
   if (!winnerId) {
-    return <span>-</span>;
+    return <span className="italic" style={{ color: "#888" }}>{tied ? "Tie" : "-"}</span>;
   }
 
   const playerIndex = parseInt(winnerId);
-  const color = PlayerColorsEnum[playerIndex] as string;
+  const color = playerSeatColor(playerIndex);
   const name = matchData.players[playerIndex]?.name ?? `Player ${playerIndex + 1}`;
 
   return (
@@ -151,9 +187,11 @@ DistrictWinner.displayName = "DistrictWinner";
  */
 interface PresenceRankingProps {
   presence: Record<string, PlayerPresence>;
+  /** Winner's presence number gets a glow in their seat color */
+  winnerId?: string | null;
 }
 
-const PresenceRanking = memo(({ presence }: PresenceRankingProps) => {
+const PresenceRanking = memo(({ presence, winnerId }: PresenceRankingProps) => {
   // Sort by amount descending
   const sortedPresence = Object.keys(presence)
     .map(k => presence[k])
@@ -162,14 +200,15 @@ const PresenceRanking = memo(({ presence }: PresenceRankingProps) => {
   return (
     <>
       {sortedPresence.map((p, index, array) => {
-        const color = PlayerColorsEnum[parseInt(p.playerID)] as string;
+        const color = playerSeatColor(p.playerID);
         const isLast = index === array.length - 1;
+        const isWinner = winnerId != null && p.playerID === winnerId;
 
         return (
           <span key={`presence-${p.playerID}`}>
             <span
-              className="font-semibold italic"
-              style={{ color }}
+              className={`font-semibold italic${isWinner ? " presence-winner-glow" : ""}`}
+              style={{ color, fontSize: isWinner ? "1.7em" : undefined }}
             >
               {p.amount ?? ""}
             </span>

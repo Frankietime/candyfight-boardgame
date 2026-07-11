@@ -114,13 +114,16 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
         moves.push({ move: "draw", args: [] });
     }
 
-    // pass: only after a placement (mirrors the reducer's hasPlayedCard guard).
+    // One action XOR reveal per turn:
+    // pass: the only follow-up after a placement (mirrors the reducer guard).
     if (player.hasPlayedCard) {
         moves.push({ move: "pass", args: [] });
+    } else {
+        // reveal: only on a turn without a placement — still guarantees progress
+        // (every turn starts with hasPlayedCard reset, so reveal is always
+        // reachable and the phase can always end).
+        moves.push({ move: "reveal", args: [] });
     }
-
-    // reveal: always legal — also guarantees the game can always progress.
-    moves.push({ move: "reveal", args: [] });
 
     // Note: `selectCard` is intentionally omitted. It only sets a UI highlight;
     // `placeWorker` takes the card directly and never reads `player.selectedCard`.

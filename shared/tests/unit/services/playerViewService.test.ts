@@ -22,6 +22,7 @@ describe("toPublicPlayer", () => {
             deckLength: 2,
             discardPile: [],
             trashPile: [],
+            cardsInPlay: [],
             handLength: 1,
             candy: 4,
             loot: 1,

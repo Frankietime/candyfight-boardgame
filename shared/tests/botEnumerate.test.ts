@@ -182,7 +182,7 @@ describe("enumerate — mainPhase (Stage A)", () => {
         expect(names).not.toContain("pass");
     });
 
-    it("offers pass and drops draw/placeWorker after a placement", () => {
+    it("offers ONLY pass after a placement (one action XOR reveal)", () => {
         const client = reachMainPhase();
         const seat = CTX(client).currentPlayer;
         client.updatePlayerID(seat);
@@ -191,10 +191,7 @@ describe("enumerate — mainPhase (Stage A)", () => {
         client.moves.placeWorker(...(first.args as [number, number, any]));
 
         const names = moveNames(enumerate(G(client), CTX(client), seat));
-        expect(names).toContain("pass");
-        expect(names).toContain("reveal");
-        expect(names).not.toContain("draw");
-        expect(names).not.toContain("placeWorker");
+        expect(names).toEqual(["pass"]);
     });
 
     it("stops offering draw when deck and discard are both empty (no-op guard)", () => {

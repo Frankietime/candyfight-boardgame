@@ -9,9 +9,15 @@ export interface CardMiniProps {
     card: Card;
     width?: number;
     height?: number;
+    /** Header district-icon size in px. Crank it up when the card will be
+     *  scaled down (played-card miniatures) so icons stay readable. */
+    iconSize?: number;
+    /** Hide the effect text (illegible when scaled down; avoids a scrollbar).
+     *  The body stays blank — except the Signet, marked with a big "S". */
+    showBody?: boolean;
 }
 
-export const CardMini = ({ card, width = 105, height = 157 }: CardMiniProps) => (
+export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showBody = true }: CardMiniProps) => (
     <div
         style={{
             width,
@@ -34,13 +40,14 @@ export const CardMini = ({ card, width = 105, height = 157 }: CardMiniProps) => 
                 flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
+                flexWrap: "wrap",
                 gap: 4,
                 minHeight: 32,
             }}
         >
             {card.districtIds?.length > 0 ? (
                 card.districtIds.map(id => (
-                    <img key={id} src={districtIcons[id]} style={{ width: 16, height: 16 }} />
+                    <img key={id} src={districtIcons[id]} style={{ width: iconSize, height: iconSize }} />
                 ))
             ) : (
                 <span style={{ fontSize: "10px", fontWeight: 900 }}>{card.name}</span>
@@ -49,7 +56,14 @@ export const CardMini = ({ card, width = 105, height = 157 }: CardMiniProps) => 
 
         <div style={{ borderBottom: "1px solid #000" }} />
 
-        {/* Body */}
+        {/* Body — blank in miniature mode (big "S" marks the Signet) */}
+        {!showBody ? (
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {card.name?.toLowerCase() === "signet" && (
+                    <span style={{ fontSize: 72, fontWeight: 900, lineHeight: 1 }}>S</span>
+                )}
+            </div>
+        ) : (
         <div style={{ flex: 1, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
             {card.primaryResources?.map((r, i) => (
                 <div key={i} style={{ fontSize: "10px" }}>
@@ -76,5 +90,6 @@ export const CardMini = ({ card, width = 105, height = 157 }: CardMiniProps) => 
                 <div style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>—</div>
             )}
         </div>
+        )}
     </div>
 );

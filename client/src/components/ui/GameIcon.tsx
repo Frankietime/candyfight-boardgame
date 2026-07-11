@@ -100,7 +100,9 @@ export const GameIcon = memo(({
       <img
         src={src}
         alt={`${type}-${id}`}
-        className={`${sizeClasses[size]} inline-block`}
+        // Workers keep their natural proportions (height-driven, auto width);
+        // forcing the square size classes flattens the sprite.
+        className={`${type === "worker" ? `${sizeClasses[size].split(" ")[0]} w-auto worker-outline` : sizeClasses[size]} inline-block`}
       />
       {amount !== undefined && amount > 0 && (
         <span className="text-xs">x{amount}</span>

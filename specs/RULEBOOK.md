@@ -74,16 +74,18 @@ Automatic upkeep at the start of every round:
 ### 4.3 Main Phase (the heart of the game)
 
 Players take turns in rotation. Turn order rotates each round, and **already-revealed
-players are skipped**. On **your turn** you may:
+players are skipped**. On **your turn** you do **ONE of the two** (never both):
 
-- **Draw** a card from your deck (optional).
-- **Place a worker** — your main action (see §5). One worker placement per turn.
-- **Pass** — end your turn but stay in the round (only allowed after you've played a card).
-- **Reveal** — **end your participation in the round.** You take no more turns this round.
+- **Play an action** — place a worker (see §5; you may **draw** from your deck first).
+  One worker placement per turn. After placing you **Pass** to end your turn and stay
+  in the round.
+- **Reveal** — **end your participation in the round.** You take no more turns this
+  round. Only allowed on a turn where you have **not** placed a worker.
 
 You hold **2 workers**, so across your turns you can place up to two workers before you
-run out (or before you choose to reveal). When **every player has revealed**, the Main
-Phase ends.
+run out (or before you choose to reveal — on a later turn, since placing and revealing
+are mutually exclusive within the same turn). When **every player has revealed**, the
+Main Phase ends.
 
 ### 4.4 Combat Phase
 

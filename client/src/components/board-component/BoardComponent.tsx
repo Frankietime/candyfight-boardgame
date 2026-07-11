@@ -3,7 +3,7 @@ import { BoardProps } from "boardgame.io/react";
 import { GameState, PlayerGameState, Location, Card, isFullPlayerState } from "@candyfight/shared/types";
 import { GameInfoComponent } from "../game-info-component/GameInfoComponent";
 import { isNullOrEmpty } from "@candyfight/shared/common-methods";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { useAppStore } from "../../store";
 import { PlayerAreaComponent } from "../player-area-component/PlayerAreaComponent";
@@ -142,6 +142,17 @@ export const BoardComponent = ({
     }
   }, [player, G.districts, G.cardMarket, selectedCard, actionOrchestrator, moves]);
 
+  // Clicking empty board space (not the hand, a location, a dialog or an
+  // action button) deselects the card — back to the "all possible plays" view.
+  const onBoardClick = useCallback((e: MouseEvent) => {
+    if (!selectedCard) return;
+    const target = e.target as HTMLElement;
+    if (target.closest(
+      ".hand-container, .location-tile, .pile-modal, .pass-btn, .reveal-btn, .card-selection-dialog-content, [role='dialog']"
+    )) return;
+    moves.selectCard(null);
+  }, [selectedCard, moves]);
+
   // Handle leaving match - memoized
   const onLeaveMatch = useCallback(async () => {
     const clearMatch = () => setPlayerState({
@@ -211,6 +222,7 @@ export const BoardComponent = ({
             <div
               style={getBoardContainerStyle(mapBg)}
               className="board-container relative mx-auto"
+              onClick={onBoardClick}
             >
               {/* Districts Layer */}
               <BoardDistrictsLayer

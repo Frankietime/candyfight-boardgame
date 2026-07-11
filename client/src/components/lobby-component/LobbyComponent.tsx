@@ -7,6 +7,7 @@ import { getRandomPlayerName } from '@candyfight/shared/services/moves/playerSer
 import { generateBattleEvent } from './helper';
 import { GameConfigModal } from './GameConfigModal';
 import { GameConfig } from '@candyfight/shared/types';
+import { PLAYER_SEAT_COLORS } from '@candyfight/shared/constants';
 import { BOT_MATCH_ID } from '../../botMatch';
 
 // Neobrutalist design tokens (from ficcionarios)
@@ -22,8 +23,7 @@ const nb = {
   font: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`,
 };
 
-// Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)
-const playerColors = ['#ef4444', '#a855f7', '#22c55e', '#eab308'];
+const playerColors = PLAYER_SEAT_COLORS;
 
 // Shared style helpers
 const card: React.CSSProperties = {

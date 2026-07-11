@@ -16,6 +16,21 @@ describe("selectCard", () => {
         const player = makePlayer({ hasPlayedCard: true });
         expect(selectCard(player, makeCard())).toBe(INVALID_MOVE);
     });
+
+    it("clears the selection when called with no card (deselect)", () => {
+        const player = makePlayer({ hasPlayedCard: false });
+        player.selectedCard = makeCard({ id: "c1" });
+        const result = selectCard(player, null);
+        expect(result).toBeUndefined();
+        expect(player.selectedCard).toBeUndefined();
+    });
+
+    it("deselects even after a card has been played (no validation on clear)", () => {
+        const player = makePlayer({ hasPlayedCard: true });
+        player.selectedCard = makeCard({ id: "c1" });
+        expect(selectCard(player, undefined)).toBeUndefined();
+        expect(player.selectedCard).toBeUndefined();
+    });
 });
 
 describe("draw", () => {
