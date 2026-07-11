@@ -289,6 +289,7 @@ export const TutorController = ({ chapter, playerNames, onExit }: TutorControlle
                     onExit={onExit}
                     isLastStep={isLastStep}
                     elevated={dialogElevated}
+                    anchorTopRight={dialogElevated}
                 />
             )}
         </div>

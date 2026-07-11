@@ -31,6 +31,11 @@ export interface TutorDialogProps {
     isLastStep: boolean;
     /** Raise above real phase modals (e.g. combat results) so it stays readable. */
     elevated?: boolean;
+    /**
+     * A modal owns the screen center: dock the narration top-right and show an
+     * arrow pointing down-left toward the modal's info.
+     */
+    anchorTopRight?: boolean;
 }
 
 export const TutorDialog = ({
@@ -44,6 +49,7 @@ export const TutorDialog = ({
     onExit,
     isLastStep,
     elevated = false,
+    anchorTopRight = false,
 }: TutorDialogProps) => {
     const t = useT();
     // Rendered in a body portal so `elevated` can sit above modals (e.g. the Radix
@@ -53,10 +59,9 @@ export const TutorDialog = ({
             data-tutor-id="tutor-dialog"
             style={{
                 position: "fixed",
-                bottom: 18,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: "min(720px, 94vw)",
+                ...(anchorTopRight
+                    ? { top: 18, right: 18, width: "min(440px, 90vw)" }
+                    : { bottom: 18, left: "50%", transform: "translateX(-50%)", width: "min(720px, 94vw)" }),
                 zIndex: elevated ? 2147483646 : 1100,
                 backgroundColor: "#fff",
                 border: nb.border,
@@ -64,6 +69,26 @@ export const TutorDialog = ({
                 fontFamily: nb.font,
             }}
         >
+            {/* Arrow pointing down-left, toward the modal's info at screen center */}
+            {anchorTopRight && (
+                <svg
+                    className="tutor-modal-arrow"
+                    width="120"
+                    height="120"
+                    viewBox="0 0 120 120"
+                    style={{
+                        position: "absolute",
+                        left: -126,
+                        bottom: -104,
+                        overflow: "visible",
+                        pointerEvents: "none",
+                        filter: "drop-shadow(0 0 5px rgba(255, 39, 51, 0.85))",
+                    }}
+                >
+                    <line x1="106" y1="14" x2="34" y2="86" stroke="#ff2733" strokeWidth="8" strokeLinecap="round" />
+                    <polygon points="12,108 42,94 26,78" fill="#ff2733" />
+                </svg>
+            )}
             {/* Header */}
             <div
                 style={{

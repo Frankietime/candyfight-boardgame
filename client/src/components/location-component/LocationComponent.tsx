@@ -98,6 +98,8 @@ export const LocationComponent = memo(({
                         <ResourceComponent key={`reward-action-${index}-${i}`} resourceId={action.actionId ?? ""} />
                     );
                 }
+                // Stubbed mechanic — hidden from the tile until it actually does something.
+                if (action.actionId === LocationActionsEnum.ADVANCE_TRACKER) return null;
                 return <span key={`action-${index}`}><hr /><div className="reward-action-item">{action.name}</div></span>;
             })}
         </>
@@ -203,7 +205,7 @@ const MarketPopover = ({ cards, anchorX, anchorY }: { cards: Card[]; anchorX: nu
                 padding: PADDING,
                 zIndex: 200,
                 pointerEvents: "none",
-                backgroundColor: "#e0d4fc",
+                backgroundColor: "#111",
                 border: "2px solid #000",
                 boxShadow: "4px 4px 0 #000",
             }}

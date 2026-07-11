@@ -81,6 +81,8 @@ export const GameDialog = memo(({
           ...sizeStyle,
           ...(height && { height }),
           ...(top && { top }),
+          backgroundColor: "#111",
+          color: "#eee",
         }}
       >
         {title && (

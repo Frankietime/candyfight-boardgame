@@ -236,12 +236,9 @@
 .worker-container {
   top: 530px;
   left: 256px;
-  width: 16%;
-}
-
-.worker-container .worker-image-container {
-  display: inline-block;
-  margin-right: 3px;
+  display: flex;
+  gap: 3px;
+  width: fit-content; /* tight box: tutor glow anchor + never covers the hand */
 }
 
 /* Migrated from PlayerAreaComponent.scss */
@@ -264,7 +261,7 @@
 
 /* ===== CardComponent Styles ===== */
 .card {
-  font-size: 12px;
+  font-size: 9px; /* NES font: 1/4 smaller so card text fits */
   overflow-wrap: break-word;
   background-color: white;
   /* Fill the sized wrapper from CardComponent (h ?? 157) so large previews
@@ -383,13 +380,16 @@
 
 .player-resource-container {
   color: white;
-  font-size: 9px;
+  font-size: 14px;
   font-weight: 600;
   text-align: center;
-  width: 35px;
+  width: 60px;
   height: 220px;
-  top: 310px;
-  left: 263px; /* clear of the portrait's seat-color plate (ends at x=250) */
+  top: 325px;
+  left: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .player-resource-container div div {
@@ -408,6 +408,7 @@
 .location-component-container {
   width: calc(1280px / 12);
   height: calc(720px / 12);
+  font-size: 10px; /* NES font — matches the location title size */
   background-color: var(--color-location-bg);
   font-size: 12px;
 }
@@ -444,15 +445,17 @@
   overflow-wrap: break-word;
   height: 45px;
   color: var(--color-location-cost);
+  font-size: 6px; /* matches the reward text */
 }
 
 .location-name-container {
   width: 100%;
   height: 13px;
   background-color: var(--color-location-name-bg);
-  font-size: 8pt;
+  font-size: 10px;
   font-weight: 600;
   text-align: center;
+  overflow: hidden;
   transition: background-color 0.3s ease;
 }
 
@@ -480,6 +483,7 @@
 
 .location-reward-container {
   padding-top: 4px;
+  font-size: 6px;
 }
 
 .location-reward-container hr {
@@ -622,6 +626,29 @@
   animation: presence-winner-glow 1.6s ease-in-out infinite;
 }
 
+/* ===== Global NES font ===== */
+/* Press Start 2P everywhere — !important so it beats the many inline
+   fontFamily styles. Fallbacks keep emoji/symbols on system fonts. */
+*,
+*::before,
+*::after {
+  font-family: "Press Start 2P", -apple-system, "Segoe UI", sans-serif !important;
+}
+
+/* Radix tables live inside dark dialogs: cells take the row/root color
+   instead of Radix's own near-black default. */
+.rt-TableCell,
+.rt-TableRowHeaderCell,
+.rt-TableColumnHeaderCell {
+  color: inherit;
+}
+
+/* Dialog titles on dark dialogs */
+.rt-DialogContent .rt-DialogTitle,
+.rt-DialogContent .rt-Heading {
+  color: #eee;
+}
+
 /* ===== Stat Flash (resource/pile value changed) ===== */
 
 @keyframes stat-glow {
@@ -745,8 +772,9 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  background: white;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  background: #111;
+  border: 2px solid #000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
   padding: 12px 20px;
   z-index: 1000;
   pointer-events: none;
@@ -757,13 +785,13 @@
 .pile-modal-title {
   font-size: 11pt;
   font-weight: 700;
-  color: #222;
+  color: #eee;
   white-space: nowrap;
 }
 
 .pile-modal-subtitle {
   font-size: 8pt;
-  color: gray;
+  color: #aaa;
   white-space: nowrap;
 }
 
@@ -798,7 +826,7 @@
 
 .hand-preview-centered .card {
   height: 314px;
-  font-size: 24px;
+  font-size: 18px; /* keeps the 2× ratio over the 9px hand cards */
   box-shadow: 6px 6px 0 #000;
 }
 

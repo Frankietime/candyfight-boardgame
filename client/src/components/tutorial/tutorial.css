@@ -58,6 +58,16 @@
   animation: tutor-arrow-dash 0.8s linear infinite;
 }
 
+/* Arrow from the top-right docked narration toward the open modal */
+@keyframes tutor-modal-arrow-bob {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(-8px, 8px); }
+}
+
+.tutor-modal-arrow {
+  animation: tutor-modal-arrow-bob 0.9s ease-in-out infinite;
+}
+
 @keyframes tutor-arrow-dash {
   to {
     stroke-dashoffset: -18;
@@ -69,6 +79,9 @@
     animation: none;
   }
   .tutor-arrow-line {
+    animation: none;
+  }
+  .tutor-modal-arrow {
     animation: none;
   }
 }

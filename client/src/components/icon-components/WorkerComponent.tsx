@@ -10,10 +10,12 @@ export interface WorkerComponentProps {
     tutorAnchorId?: string;
 }
 
+/**
+ * The current player's worker pool. The root box hugs the sprites tightly:
+ * it is the tutorial glow anchor (a loose box reads as highlighting nothing)
+ * and it must never block clicks on the hand cards below it.
+ */
 export const WorkerComponent = ({
-    x,
-    y,
-    mirror,
     numerOfWorkers = 0,
     playerID,
     tutorAnchorId,
@@ -22,20 +24,16 @@ export const WorkerComponent = ({
         <div
             {...(tutorAnchorId ? { "data-tutor-id": tutorAnchorId } : {})}
             className={"absolute player-" + playerID + "-worker worker-container"}
-            style={{ zIndex: 30 }} // agents always render above any board element
+            style={{ zIndex: 30, pointerEvents: "none" }}
         >
-            <div className="worker-container">
-                {Array.from({length: numerOfWorkers}).map((_, index) => (
-                    <div key={index} className="worker-image-container" style={{ left: index * 10, width: "60%", height: "60%" }}>
-                        {/* objectFit keeps the sprite's original proportions inside the slot */}
-                        <img
-                            src={workerIconsByPlayerId[playerID]}
-                            className="worker-outline"
-                            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                        />
-                    </div>
-                ))}
-            </div>
+            {Array.from({ length: numerOfWorkers }).map((_, index) => (
+                <img
+                    key={index}
+                    src={workerIconsByPlayerId[playerID]}
+                    className="worker-outline"
+                    style={{ height: 40, width: "auto" }}
+                />
+            ))}
         </div>
     );
 };

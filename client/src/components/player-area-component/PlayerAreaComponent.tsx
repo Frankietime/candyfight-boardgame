@@ -2,7 +2,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Card, GameState, PlayerGameState, PlayerViewModel, isFullPlayerState } from "@candyfight/shared/types"
 import { WorkerComponent } from "../icon-components/WorkerComponent"
-import { workerIconsByPlayerId } from "../icon-components/constants";
+import { workerIconsByPlayerId, resourceIconsDict } from "../icon-components/constants";
+import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { locsXPos, locsYPos } from "../board-component/constants";
 import { playerSeatColor, seatRing } from "@candyfight/shared/constants";
 import { calculateCombatWinner } from "@candyfight/shared/game-helper";
@@ -37,37 +38,67 @@ const P_BOT_Y   = 280;
 const PORTRAIT_CURRENT_LEFT = 52;
 const PORTRAIT_CURRENT = { left: PORTRAIT_CURRENT_LEFT, top: P_BOT_Y, width: P_W, height: P_H };
 // Enemy slots follow the turn ring from the viewer's seat (bottom-left):
-// whoever plays right after me sits top-left, then top-right, then
-// bottom-right — the turn glow orbits bottom-left → top-left → top-right →
-// bottom-right on EVERY viewer's screen.
+// whoever plays right after me sits bottom-right, then top-right, then
+// top-left — the turn glow orbits bottom-left → bottom-right → top-right →
+// top-left on EVERY viewer's screen.
 // Exception: with a single enemy (2P) they sit top-right, face to face.
 const PORTRAIT_ENEMIES = [
-    // slot 0 (top-left): aligned with the current player's portrait so it
+    { left: P_RIGHT_X, top: P_BOT_Y, width: P_W, height: P_H }, // slot 0: bottom-right
+    { left: P_RIGHT_X, top: P_TOP_Y, width: P_W, height: P_H }, // slot 1: top-right
+    // slot 2 (top-left): aligned with the current player's portrait so it
     // clears its own deck/discard/trash panel on the right
     { left: PORTRAIT_CURRENT_LEFT, top: P_TOP_Y, width: P_W, height: P_H },
-    { left: P_RIGHT_X, top: P_TOP_Y, width: P_W, height: P_H }, // slot 1: top-right
-    { left: P_RIGHT_X, top: P_BOT_Y, width: P_W, height: P_H }, // slot 2: bottom-right
 ];
 
 // Stats panel positions: right-column portraits → stats to the LEFT; left-column → stats to the RIGHT.
 // Top slots sit beside the lower half of the portrait, clear of the turquoise
 // backdrop plate (which bleeds BACKDROP_BLEED px past the frame on every side).
-const STATS_W = 35; // matches .player-resource-container width in CSS
+const STATS_W = 60; // matches .player-resource-container width in CSS
 const STATS_BELOW_Y = P_TOP_Y + 80; // beside the lower half of the top portraits, clear of the plate's top ornaments
 const ENEMY_STATS_POSITIONS = [
-    // slot 0 (top-left): just right of the plate edge (52 + 190 + 16 bleed + gap)
-    { left: 262, top: STATS_BELOW_Y },
-    { left: P_RIGHT_X - STATS_W - 20, top: STATS_BELOW_Y }, // slot 1: top-right
-    // slot 2 (bottom-right): aligned with the current player's panel (y=310)
-    { left: P_RIGHT_X - STATS_W - 20, top: 310 },
+    // slot 0 (bottom-right): aligned with the current player's panel
+    { left: P_RIGHT_X - STATS_W - 5, top: 310 },
+    { left: P_RIGHT_X - STATS_W - 5, top: STATS_BELOW_Y }, // slot 1: top-right
+    // slot 2 (top-left): just right of the plate edge, slightly below mid-portrait
+    { left: 247, top: STATS_BELOW_Y + 5 },
 ];
+
+/** Card-counter icon (draw/discard/trash action art). */
+const PileIcon = ({ actionId, title }: { actionId: LocationActionsEnum; title: string }) => (
+    <img
+        src={resourceIconsDict[actionId]}
+        alt={title}
+        title={title}
+        style={{ height: 24, width: "auto", display: "inline-block" }}
+    />
+);
+
+/** Deck counter icon: the draw-card action art. */
+const DeckIcon = () => <PileIcon actionId={LocationActionsEnum.DRAW} title="Deck" />;
+
+/** Hand counter icon. */
+const HandIcon = () => (
+    <span title="Hand" style={{ fontSize: 20, lineHeight: 1 }} aria-label="Hand">✋</span>
+);
+
+/** One counter row: icon (or text) and number side by side. */
+const CounterRow = ({ label, count }: { label: React.ReactNode; count: number }) => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, height: 26 }}>
+        {label}
+        {/* margin/lineHeight reset: legacy `div div` CSS pushes the number off-center */}
+        <div style={{ margin: 0, lineHeight: 1 }}>{count}</div>
+    </div>
+);
 
 /**
  * Pile label that calls parent callbacks on hover — renders no overlay itself.
  */
 interface PilePopoverProps {
     cards: Card[];
-    label: string;
+    /** What the counter shows (text or an icon). */
+    label: React.ReactNode;
+    /** Pile name for the centered overlay title and the tooltip. */
+    title: string;
     count: number;
     onHover: (cards: Card[], title: string) => void;
     onLeave: () => void;
@@ -77,7 +108,7 @@ interface PilePopoverProps {
     anchorId?: string;
 }
 
-const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = false, anchorId }: PilePopoverProps) => {
+const PilePopover = memo(({ cards, label, title, count, onHover, onLeave, shuffle = false, anchorId }: PilePopoverProps) => {
     const [flashing, setFlashing] = useState(false);
     const prevCount = useRef(count);
 
@@ -93,7 +124,7 @@ const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = fal
         const display = shuffle
             ? [...cards].sort(() => Math.random() - 0.5)
             : [...cards].sort((a, b) => a.name.localeCompare(b.name));
-        onHover(display, label);
+        onHover(display, title);
     };
 
     return (
@@ -101,11 +132,12 @@ const PilePopover = memo(({ cards, label, count, onHover, onLeave, shuffle = fal
             {...(anchorId ? { "data-tutor-id": anchorId } : {})}
             style={{ position: 'relative' }}
             className={flashing ? 'stat-glow' : undefined}
+            title={title}
             onAnimationEnd={() => setFlashing(false)}
             onMouseEnter={handleEnter}
             onMouseLeave={onLeave}
         >
-            <div>{label}<hr /><div>{count}</div></div>
+            <CounterRow label={label} count={count} />
         </div>
     );
 });
@@ -262,7 +294,8 @@ export const PlayerAreaComponent = memo(({
     const onCardLeave = useCallback(() => setHoveredCard(null), []);
 
     // Turn-order position (1-based) per seat, following the seating ring
-    // from the round's first player. Drives the 1st/2nd/3rd/4th badges.
+    // forward from the round's first player — the same walk the engine's
+    // turn order does, so badge numbers always match the actual sequence.
     const turnPositionBySeat = useMemo(() => {
         const positions: Record<string, number> = {};
         if (G.firstPlayerID !== undefined) {
@@ -354,7 +387,7 @@ export const PlayerAreaComponent = memo(({
             <DominanceBadges districtIds={dominanceBySeat[player.id]} />
             {hoveredPortraitId === player.id && <PortraitInfoIcon />}
         </div>
-        <WorkersRow count={player.currentNumberOfWorkers} playerId={player.id} rect={PORTRAIT_CURRENT} />
+        {/* Own workers live only in the play area tray (WorkerComponent below) */}
         <CardsInPlayRow cards={player.cardsInPlay ?? []} rect={PORTRAIT_CURRENT} onHover={onCardHover} onLeave={onCardLeave} />
         {enemies.map((enemy, i) => {
             const slot = PORTRAIT_ENEMIES[enemySlotIndex(i)];
@@ -401,7 +434,7 @@ export const PlayerAreaComponent = memo(({
         })}
 
         {/* Animated dotted lines from each character to the locations they played */}
-        <PlacementLinesOverlay districts={G.districts} seatRects={seatRects} />
+        <PlacementLinesOverlay districts={G.districts} seatRects={seatRects} currentPlayerId={currentPlayerId} />
 
         <WorkerComponent
             numerOfWorkers={player.currentNumberOfWorkers}
@@ -413,10 +446,10 @@ export const PlayerAreaComponent = memo(({
 
         {/* Current Player Resources — candy/loot/VP live on the portrait overlays now */}
         <div className="player-resource-container absolute">
-            <div>Hand<hr /><div>{player.hand?.length ?? 0}</div></div>
-            <PilePopover cards={player.deck} label="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle anchorId={anchors.pile(player.id, "deck")} />
-            <PilePopover cards={player.discardPile} label="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "discard")} />
-            <PilePopover cards={player.trashPile} label="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "trash")} />
+            <div title="Hand"><CounterRow label={<HandIcon />} count={player.hand?.length ?? 0} /></div>
+            <PilePopover cards={player.deck} label={<DeckIcon />} title="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle anchorId={anchors.pile(player.id, "deck")} />
+            <PilePopover cards={player.discardPile} label={<PileIcon actionId={LocationActionsEnum.DISCARD} title="Discard" />} title="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "discard")} />
+            <PilePopover cards={player.trashPile} label={<PileIcon actionId={LocationActionsEnum.TRASH} title="Trash" />} title="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "trash")} />
         </div>
 
         {/* Enemy Player Resources */}
@@ -453,15 +486,15 @@ export const PlayerAreaComponent = memo(({
             ))}
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons — glow only prompts on MY turn, never while enemies act */}
         <div
             data-tutor-id={anchors.passButton()}
-            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}${player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
+            className={`pass-btn${!player.hasPlayedCard ? " disabled" : ""}${currentPlayerId === player.id && player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
             onClick={player.hasPlayedCard ? onPass : undefined}
         />
         <div
             data-tutor-id={anchors.revealButton()}
-            className={`reveal-btn${player.hasPlayedCard ? " disabled" : ""}${!player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
+            className={`reveal-btn${player.hasPlayedCard ? " disabled" : ""}${currentPlayerId === player.id && !player.hasPlayedCard && player.currentNumberOfWorkers === 0 ? " should-glow" : ""}`}
             onClick={!player.hasPlayedCard ? onReveal : undefined}
         />
 
@@ -522,11 +555,10 @@ const EnemyResourceDisplay = memo(({ enemy, pos, onPileHover, onPileLeave }: Ene
         className="player-resource-container absolute"
         style={{ top: pos.top, left: pos.left }}
     >
-        <div className={`bg-player-${enemy.id}`} style={{ height: "3px", width: "100%", marginBottom: "4px" }} />
-        <div>Hand<hr /><div>{enemy.handLength}</div></div>
-        <div>Deck<hr /><div>{enemy.deckLength}</div></div>
-        <PilePopover cards={enemy.discardPile} label="Discard" count={enemy.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} />
-        <PilePopover cards={enemy.trashPile} label="Trash" count={enemy.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} />
+        <div title="Hand"><CounterRow label={<HandIcon />} count={enemy.handLength} /></div>
+        <div title="Deck"><CounterRow label={<DeckIcon />} count={enemy.deckLength} /></div>
+        <PilePopover cards={enemy.discardPile} label={<PileIcon actionId={LocationActionsEnum.DISCARD} title="Discard" />} title="Discard" count={enemy.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} />
+        <PilePopover cards={enemy.trashPile} label={<PileIcon actionId={LocationActionsEnum.TRASH} title="Trash" />} title="Trash" count={enemy.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} />
     </div>
 ));
 
@@ -536,14 +568,14 @@ EnemyResourceDisplay.displayName = "EnemyResourceDisplay";
 
 /**
  * Animated dotted line from a character portrait to the location they just
- * played, in the player's seat color — a TEMPORARY indicator: each line shows
- * when the claim happens and fades out after a few seconds.
+ * played, in the player's seat color. Each line shows when the claim happens
+ * and lasts only while it is still that player's turn — the moment the turn
+ * passes to someone else, their lines are erased.
  */
-const PLACEMENT_LINE_TTL_MS = 4000;
-
-const PlacementLinesOverlay = ({ districts, seatRects }: {
+const PlacementLinesOverlay = ({ districts, seatRects, currentPlayerId }: {
     districts: GameState["districts"];
     seatRects: Record<string, { left: number; top: number; width: number; height: number }>;
+    currentPlayerId: string;
 }) => {
     const TILE_W = Math.round(1280 / 12);
     const TILE_H = Math.round(720 / 12);
@@ -566,12 +598,10 @@ const PlacementLinesOverlay = ({ districts, seatRects }: {
         });
     });
 
-    // Temporary visibility: a line lights up when its claim first appears and
-    // expires after the TTL. Timers live across renders; cleared on unmount.
+    // A line lights up when its claim first appears (seenRef prevents old
+    // claims from re-lighting when the same player gets another turn).
     const [visible, setVisible] = useState<Record<string, true>>({});
     const seenRef = useRef<Set<string>>(new Set());
-    const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-    useEffect(() => () => { timersRef.current.forEach(clearTimeout); }, []);
 
     const signature = allLines.map(l => l.key).join("|");
     useEffect(() => {
@@ -580,13 +610,6 @@ const PlacementLinesOverlay = ({ districts, seatRects }: {
             if (seenRef.current.has(key)) continue;
             seenRef.current.add(key);
             setVisible(v => ({ ...v, [key]: true }));
-            timersRef.current.set(key, setTimeout(() => {
-                timersRef.current.delete(key);
-                setVisible(v => {
-                    const { [key]: _gone, ...rest } = v;
-                    return rest as Record<string, true>;
-                });
-            }, PLACEMENT_LINE_TTL_MS));
         }
         // Claims cleared (new round): forget them so next round re-triggers.
         for (const key of [...seenRef.current]) {
@@ -594,6 +617,16 @@ const PlacementLinesOverlay = ({ districts, seatRects }: {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [signature]);
+
+    // Turn passed: erase every line that isn't the acting player's. (Line keys
+    // are `${seat}-...`; in combat phase currentPlayerId is 'all' → all erased.)
+    useEffect(() => {
+        setVisible(v => {
+            const kept = Object.keys(v).filter(k => k.startsWith(`${currentPlayerId}-`));
+            if (kept.length === Object.keys(v).length) return v;
+            return Object.fromEntries(kept.map(k => [k, true])) as Record<string, true>;
+        });
+    }, [currentPlayerId]);
 
     const lines = allLines.filter(l => visible[l.key]);
     if (lines.length === 0) return null;
@@ -646,19 +679,29 @@ const WorkersRow = ({ count, playerId, rect }: {
             display: "flex",
             justifyContent: "flex-end",
             paddingRight: 4,
-            gap: 2,
             zIndex: 30, // above any board element
             pointerEvents: "none",
         }}
     >
-        {Array.from({ length: count }).map((_, i) => (
-            <img
-                key={i}
-                src={workerIconsByPlayerId[parseInt(playerId)]}
-                className="worker-outline"
-                style={{ height: AGENT_H, width: "auto" }}
-            />
-        ))}
+        {count > 0 && (
+            <div
+                style={{
+                    display: "flex",
+                    gap: 2,
+                    padding: "2px 5px",
+                    backgroundColor: "rgba(90, 90, 90, 0.75)", // grayed plate over the character art
+                }}
+            >
+                {Array.from({ length: count }).map((_, i) => (
+                    <img
+                        key={i}
+                        src={workerIconsByPlayerId[parseInt(playerId)]}
+                        className="worker-outline"
+                        style={{ height: AGENT_H, width: "auto" }}
+                    />
+                ))}
+            </div>
+        )}
     </div>
 );
 
@@ -839,7 +882,7 @@ const TurnOrderBadge = ({ position }: { position: number }) => {
             title={isFirst ? "First player" : `Plays ${ORDINALS[position - 1] ?? position}`}
             style={{
                 position: "absolute",
-                top: -8,
+                top: -30, // fully above the portrait frame, not over the character art
                 left: -8,
                 height: 22,
                 padding: "0 6px",
@@ -887,8 +930,8 @@ const DominanceBadges = ({ districtIds }: { districtIds?: string[] }) => {
                     key={`dominance-${id}`}
                     title={`Dominating ${id}`}
                     style={{
-                        width: 24,
-                        height: 24,
+                        width: 36,
+                        height: 36,
                         backgroundColor: "#fff",
                         border: "2px solid #000",
                         boxShadow: "2px 2px 0 #000",
@@ -897,7 +940,7 @@ const DominanceBadges = ({ districtIds }: { districtIds?: string[] }) => {
                         justifyContent: "center",
                     }}
                 >
-                    <DistrictIcon districtId={id} size="sm" />
+                    <DistrictIcon districtId={id} size="lg" />
                 </div>
             ))}
         </div>
@@ -951,18 +994,18 @@ interface PlayerDetailModalProps {
 
 const Stat = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-        <span style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: "#777" }}>{label}</span>
-        <span style={{ fontSize: 16, fontWeight: 900, color: "#111" }}>{value}</span>
+        <span style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.07em", color: "#999" }}>{label}</span>
+        <span style={{ fontSize: 16, fontWeight: 900, color: "#eee" }}>{value}</span>
     </div>
 );
 
 const PileSection = ({ title, cards }: { title: string; cards: Card[] }) => (
     <div style={{ marginTop: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#555", marginBottom: 10 }}>
-            {title} <span style={{ color: "#aaa", fontWeight: 400 }}>({cards.length})</span>
+        <div style={{ fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#aaa", marginBottom: 10 }}>
+            {title} <span style={{ color: "#777", fontWeight: 400 }}>({cards.length})</span>
         </div>
         {cards.length === 0 ? (
-            <div style={{ fontSize: 11, color: "#bbb", fontStyle: "italic" }}>Empty</div>
+            <div style={{ fontSize: 11, color: "#888", fontStyle: "italic" }}>Empty</div>
         ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {cards.map((card, i) => (
@@ -1003,7 +1046,8 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                     width: "min(680px, 92vw)",
                     maxHeight: "88vh",
                     overflowY: "auto",
-                    backgroundColor: "#fff",
+                    backgroundColor: "#111",
+                    color: "#eee",
                     border: nb.border,
                     boxShadow: "8px 8px 0 #000",
                     fontFamily: nb.font,
@@ -1080,7 +1124,7 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                             style={{
                                 flex: 1,
                                 padding: "12px 8px",
-                                borderRight: i < arr.length - 1 ? "1px solid #ddd" : "none",
+                                borderRight: i < arr.length - 1 ? "1px solid #333" : "none",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
@@ -1102,7 +1146,7 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                             gap: 12,
                             padding: "12px 18px",
                             borderBottom: nb.border,
-                            backgroundColor: "#faf5ff",
+                            backgroundColor: "#1c1626",
                             flexShrink: 0,
                         }}
                     >
@@ -1117,10 +1161,10 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                             💍
                         </span>
                         <div>
-                            <div style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#7c3aed" }}>
+                            <div style={{ fontSize: 10, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em", color: "#a78bfa" }}>
                                 {t("characterModal.signetTitle")}
                             </div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: "#111", marginTop: 2 }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: "#eee", marginTop: 2 }}>
                                 {t(`character.${data.characterId}.signet`)}
                             </div>
                         </div>
@@ -1130,7 +1174,7 @@ const PlayerDetailModal = ({ data, name, isOwn, characterImageMap, onClose }: Pl
                 {/* Piles */}
                 <div style={{ padding: "16px 18px" }}>
                     {data.hasRevealed && (
-                        <div style={{ marginBottom: 14, fontSize: 11, fontWeight: 700, color: "#555" }}>
+                        <div style={{ marginBottom: 14, fontSize: 11, fontWeight: 700, color: "#aaa" }}>
                             Status: <span style={{ backgroundColor: nb.accent, border: "1px solid #000", padding: "1px 6px" }}>REVEALED</span>
                         </div>
                     )}

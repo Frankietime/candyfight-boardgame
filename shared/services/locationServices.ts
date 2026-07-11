@@ -13,7 +13,7 @@ export const getInitialLocationReward = (): LocationReward => ({
 export const getHighCouncil = (district: DistrictIconsEnum, locIndex: number): Location => ({
     Id: district.toString() + locIndex,
     districtId: district.toString(),
-    name: district.toString() + " - High Council",
+    name: "High Council",
     cost: {
         districtIconIds: [district],
         actions: [discardCost(2)]
@@ -81,7 +81,7 @@ export const getInitialDistrictsState = (): District[] => {
         },
         {
             id: DistrictIconsEnum.D2,
-            name: "ECOPLEX - MARKET",
+            name: "ECOPLEX",
             presence: {},
             x: 613,
             y: 67,
@@ -182,7 +182,7 @@ export const getInitialDistrictsState = (): District[] => {
         },
         {
         id: DistrictIconsEnum.D4,
-        name: "AGI Control Zone",
+        name: "AGI CTRL Z",
         presence: {},
         x: 665,
         y: 344,

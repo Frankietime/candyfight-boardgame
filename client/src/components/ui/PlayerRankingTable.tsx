@@ -16,7 +16,7 @@ export interface EndGameRankingProps {
 }
 
 export const EndGameRankingTable = memo(({ ranking, matchData }: EndGameRankingProps) => (
-  <Table.Root size="1">
+  <Table.Root size="1" style={{ color: "#eee" }}>
     <Table.Header>
       <Table.Row>
         <Table.ColumnHeaderCell>#</Table.ColumnHeaderCell>
@@ -65,13 +65,13 @@ const isTiedDistrict = (district: District): boolean =>
 
 export const CombatResultsTable = memo(({ districts, matchData }: CombatResultsProps) => {
   return (
-    <Table.Root size="1">
+    <Table.Root size="1" style={{ color: "#eee" }}>
       <Table.Header>
-        <Table.Row>
-          <Table.ColumnHeaderCell>District</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Ranking</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>Winner</Table.ColumnHeaderCell>
-          <Table.ColumnHeaderCell>VP</Table.ColumnHeaderCell>
+        <Table.Row style={{ color: "#eee" }}>
+          <Table.ColumnHeaderCell style={{ color: "#eee" }}>District</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell style={{ color: "#eee" }}>Ranking</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell style={{ color: "#eee" }}>Winner</Table.ColumnHeaderCell>
+          <Table.ColumnHeaderCell style={{ color: "#eee" }}>VP</Table.ColumnHeaderCell>
         </Table.Row>
       </Table.Header>
 
@@ -83,10 +83,11 @@ export const CombatResultsTable = memo(({ districts, matchData }: CombatResultsP
               key={`district-result-${district.id}-${index}`}
               style={
                 tied
-                  ? { opacity: 0.45, filter: "grayscale(1)" }
+                  // Tied district: grayed out — light gray text stays legible on black
+                  ? { opacity: 0.55, filter: "grayscale(1)", color: "#999" }
                   : district.combatWinnerId
-                    ? { backgroundColor: "#fef08a" } // won district → accent yellow
-                    : undefined
+                    ? { backgroundColor: "#fef08a", color: "#111" } // won district → accent yellow
+                    : { color: "#eee" }
               }
             >
               <Table.RowHeaderCell>
@@ -212,7 +213,7 @@ const PresenceRanking = memo(({ presence, winnerId }: PresenceRankingProps) => {
             >
               {p.amount ?? ""}
             </span>
-            {!isLast && <span style={{ color: "black" }}> / </span>}
+            {!isLast && <span style={{ opacity: 0.5 }}> / </span>}
           </span>
         );
       })}
