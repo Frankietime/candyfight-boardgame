@@ -101,11 +101,16 @@ describe("placeWorker — input-requiring cost validation", () => {
         const player = after.players[seat];
 
         expect(location.takenByPlayerID).toBe(seat);
-        // Hand: 5 - played(1) - discarded(2) = 2
-        expect(player.hand).toHaveLength(2);
-        // Discard pile: played card + the 2 paid cards
+        // Cost actually paid: the 2 chosen cards left the hand and landed in the
+        // discard pile. (Hand length itself isn't asserted: the played SIGNET
+        // card triggers the character's signet ability, which for some
+        // characters draws a card — so 5 - 1 - 2 is not necessarily the count.)
+        const handIds = player.hand.map(c => c.id);
         const discardedIds = player.discardPile.map(c => c.id);
-        for (const c of toDiscard) expect(discardedIds).toContain(c.id);
+        for (const c of toDiscard) {
+            expect(handIds).not.toContain(c.id);
+            expect(discardedIds).toContain(c.id);
+        }
         // Claim (+1) + ADD_PRESENCE_TOKEN reward (+1); the played SIGNET card's
         // own effects may add more — only the fix's floor is asserted.
         expect(after.districts[HIGH_COUNCIL.d].presence[seat].amount).toBeGreaterThanOrEqual(2);

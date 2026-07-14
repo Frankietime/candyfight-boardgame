@@ -40,8 +40,11 @@ function activeSeats(ctx: any): string[] {
 function playRandomGame(numPlayers: number, seed: number, gameOverride?: any) {
     const rng = mulberry32(seed);
     // playerView disabled → client state exposes the full G that enumerate needs.
+    // Seed the game's random plugin too: deck reshuffles (rebuildDeck →
+    // random.Shuffle) are real randomness now, so without a fixed game seed the
+    // same mulberry32 move-selection seed would still diverge between runs.
     const client = Client({
-        game: gameOverride ?? { ...createTestGame(), playerView: undefined },
+        game: gameOverride ?? { ...createTestGame(), playerView: undefined, seed: String(seed) },
         numPlayers,
     });
     client.start();

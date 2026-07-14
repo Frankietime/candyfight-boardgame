@@ -14,15 +14,29 @@ import { Client } from 'boardgame.io/client';
 import { createTestGame, D3_CARD, D4_CARD, LOC } from './helpers/createTestGame';
 import { revealPlayer, resetTurnState } from '../services/moves/phaseService';
 import { isWorkerPlacementValid } from '../game-helper';
+import { CharacterEnum } from '../enums';
 import type { PlayerGameState } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function makeClient() {
-    const client = Client({ game: createTestGame(), numPlayers: 2, playerID: '0' });
+/**
+ * Boots a 2-player client and advances past characterSelectionPhase into
+ * mainPhase: every seat must pick a character before the game leaves the
+ * selection phase, otherwise it stays stuck there and no mainPhase move runs.
+ * Leaves control on the round's first player (seat "0").
+ */
+function makeClient(game = createTestGame()) {
+    const client = Client({ game, numPlayers: 2, playerID: '0' });
     client.start();
+
+    const chars = Object.values(CharacterEnum);
+    for (let i = 0; i < 2; i++) {
+        client.updatePlayerID(String(i));
+        client.moves.selectCharacter(chars[i]);
+    }
+    client.updatePlayerID(client.getState()!.ctx.currentPlayer);
     return client;
 }
 
@@ -67,46 +81,67 @@ describe('mainPhase → combatPhase transitions', () => {
         expect(client.getState()!.ctx.phase).toBe('combatPhase');
     });
 
-    it('BUG SCENARIO: P0 places + reveals, P1 places Sword Master + reveals → combatPhase', () => {
+    it('BUG SCENARIO: P0 places + passes, P1 places Sword Master + passes, both reveal → combatPhase', () => {
         const client = makeClient();
 
-        // P0: place at Easy Job, then reveal
+        // One action XOR reveal per turn: after placing a worker a player must
+        // pass (they cannot also reveal on the same turn), then reveals later.
+
+        // P0: place at Easy Job, then pass
         client.moves.placeWorker(LOC.EASY_JOB.districtIdx, LOC.EASY_JOB.locationIdx, D3_CARD);
-        client.moves.reveal();
+        client.moves.pass();
 
         expect(client.getState()!.ctx.currentPlayer).toBe('1');
 
-        // P1: place at Sword Master (gains +1 worker), then reveal
+        // P1: place at Sword Master (gains +1 worker), then pass
         client.updatePlayerID('1');
         client.moves.placeWorker(LOC.SWORD_MASTER.districtIdx, LOC.SWORD_MASTER.locationIdx, D4_CARD);
+        client.moves.pass();
+
+        // Neither has revealed yet → back to P0 for a fresh (no-placement) turn
+        expect(client.getState()!.ctx.currentPlayer).toBe('0');
+        client.updatePlayerID('0');
+        client.moves.reveal();
+
+        // P1 reveals → all revealed → combatPhase
+        client.updatePlayerID('1');
         client.moves.reveal();
 
         expect(client.getState()!.ctx.phase).toBe('combatPhase');
     });
 
-    it('P0 reveals first (no placement), P1 places Sword Master + reveals → combatPhase', () => {
+    it('P0 reveals first (no placement), P1 places Sword Master + passes, then reveals → combatPhase', () => {
         const client = makeClient();
 
         // P0: reveal only
         client.moves.reveal();
 
-        // P1: Sword Master + reveal
+        // P1: Sword Master, then pass (cannot reveal on the same turn)
         client.updatePlayerID('1');
         client.moves.placeWorker(LOC.SWORD_MASTER.districtIdx, LOC.SWORD_MASTER.locationIdx, D4_CARD);
+        client.moves.pass();
+
+        // No ghost turn: P0 already revealed, so the turn comes straight back to P1
+        expect(client.getState()!.ctx.currentPlayer).toBe('1');
         client.moves.reveal();
 
         expect(client.getState()!.ctx.phase).toBe('combatPhase');
     });
 
-    it('P0 places Sword Master, P1 reveals → combatPhase', () => {
+    it('P0 places Sword Master + passes, then both reveal → combatPhase', () => {
         const client = makeClient();
 
-        // P0: Sword Master + reveal
+        // P0: Sword Master, then pass
         client.moves.placeWorker(LOC.SWORD_MASTER.districtIdx, LOC.SWORD_MASTER.locationIdx, D4_CARD);
-        client.moves.reveal();
+        client.moves.pass();
 
         // P1: reveal only
         client.updatePlayerID('1');
+        client.moves.reveal();
+
+        // Back to P0 for a fresh turn to reveal → all revealed → combatPhase
+        expect(client.getState()!.ctx.currentPlayer).toBe('0');
+        client.updatePlayerID('0');
         client.moves.reveal();
 
         expect(client.getState()!.ctx.phase).toBe('combatPhase');
@@ -191,8 +226,7 @@ describe('pass mechanic', () => {
                 return state;
             },
         };
-        const c = Client({ game: zeroWorkerGame as any, numPlayers: 2, playerID: '0' });
-        c.start();
+        const c = makeClient(zeroWorkerGame as any);
 
         const stateBefore = c.getState()!;
         c.moves.pass();
