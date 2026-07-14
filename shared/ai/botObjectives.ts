@@ -12,6 +12,7 @@
 import { Ctx } from "boardgame.io";
 import { GameState } from "../types";
 import { getPlayersList } from "../services/moves/playerServices";
+import { calculateCombatWinner } from "../game-helper";
 
 export type Objective = {
     checker: (G: GameState, ctx: Ctx) => boolean;
@@ -25,14 +26,18 @@ const presenceAmount = (G: GameState, districtIdx: number, playerID: string): nu
 const districtsWithPresence = (G: GameState, playerID: string): number =>
     G.districts.filter((_, i) => presenceAmount(G, i, playerID) > 0).length;
 
-/** Districts where `playerID` is the ONLY player present (would win combat). */
+/**
+ * Districts where `playerID` is the ONLY player present (would win combat).
+ * Reuses `calculateCombatWinner` (the same function combat resolution uses)
+ * instead of re-deriving "uncontested" from presence — a district only
+ * counts as solo when `playerID` both has presence AND is the winner (a
+ * single-player-present district always satisfies both).
+ */
 const soloDistricts = (G: GameState, playerID: string): number =>
-    G.districts.filter(d => {
-        const present = Object.keys(d.presence ?? {}).filter(
-            id => (d.presence[id]?.amount ?? 0) > 0
-        );
-        return present.length === 1 && present[0] === playerID;
-    }).length;
+    G.districts.filter(d =>
+        (d.presence?.[playerID]?.amount ?? 0) > 0 &&
+        calculateCombatWinner(d) === playerID
+    ).length;
 
 export function objectives(G: GameState, ctx: Ctx, playerID?: string): Record<string, Objective> {
     const me = playerID ?? ctx.currentPlayer;

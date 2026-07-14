@@ -1,6 +1,6 @@
 import { Game as GameInterface } from "boardgame.io";
 import { INVALID_MOVE, Stage } from "boardgame.io/core";
-import { GAME_NAME, seatRing } from "./constants";
+import { GAME_NAME, HAND_SIZE, seatRing } from "./constants";
 import { Card, GameConfig, GameState, MetaGameState, DEFAULT_GAME_CONFIG } from "./types";
 import { CharacterEnum } from "./enums";
 import {
@@ -102,7 +102,7 @@ export const Game: GameInterface<GameState> = {
             // both empty) counts as dealt too, otherwise this phase never ends
             // and the game freezes.
             endIf: ({ G }) => getPlayersList(G).every(player =>
-                player.hand.length === 5 ||
+                player.hand.length === HAND_SIZE ||
                 (player.deck.length === 0 && player.discardPile.length === 0)
             ),
             onBegin: ({ G, random }) => {
@@ -171,6 +171,18 @@ export const Game: GameInterface<GameState> = {
                     ) => {
                         const location = getCurrentLocation(mgState, districtID, locationID);
                         const player = getCurrentPlayer(mgState);
+
+                        // Out-of-range district/location index: nothing to place at.
+                        if (!location) {
+                            return INVALID_MOVE;
+                        }
+
+                        // Reject a client-supplied Card that isn't actually in the
+                        // player's hand before any mutation runs — otherwise a
+                        // forged card can pay costs/claim a location for free.
+                        if (!player.hand.some(c => c.id === selectedCard.id)) {
+                            return INVALID_MOVE;
+                        }
 
                         if (!isWorkerPlacementValid(player, location, selectedCard)) {
                             return INVALID_MOVE;

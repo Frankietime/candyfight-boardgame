@@ -119,6 +119,46 @@ describe("placeWorker — input-requiring cost validation", () => {
     });
 });
 
+describe("placeWorker — forged card not in hand", () => {
+    it("rejects a card id that is not actually in the player's hand, leaving state unchanged", () => {
+        const { client, seat } = reachMainPhase();
+        const before = structuredClone(G(client));
+
+        // Easy Job (district 2, location 0): no resource cost, only needs a
+        // D3 card — SIGNET's districtIds cover D3, so a forged copy of it
+        // would satisfy isWorkerPlacementValid's district-icon check if the
+        // hand-membership check didn't run first.
+        const forgedCard = { ...SIGNET_CARD, id: "forged-card-not-in-hand" };
+        client.moves.placeWorker(2, 0, forgedCard);
+
+        const after = G(client);
+        expect(after.districts[2].locations[0].takenByPlayerID).toBeUndefined();
+        expect(after.players[seat]).toEqual(before.players[seat]);
+    });
+});
+
+describe("placeWorker — out-of-range district/location index", () => {
+    it("rejects an out-of-range districtID without throwing and without mutating state", () => {
+        const { client, seat } = reachMainPhase();
+        const before = structuredClone(G(client));
+
+        expect(() => client.moves.placeWorker(99, 0, SIGNET_CARD)).not.toThrow();
+
+        const after = G(client);
+        expect(after.players[seat]).toEqual(before.players[seat]);
+    });
+
+    it("rejects an out-of-range locationID without throwing and without mutating state", () => {
+        const { client, seat } = reachMainPhase();
+        const before = structuredClone(G(client));
+
+        expect(() => client.moves.placeWorker(0, 99, SIGNET_CARD)).not.toThrow();
+
+        const after = G(client);
+        expect(after.players[seat]).toEqual(before.players[seat]);
+    });
+});
+
 describe("placeWorker — restricted areas", () => {
     // Restricted areas per locationServices: D1 loc 0, D2 loc 2, D3 loc 2, D4 loc 3.
     const RESTRICTED = [

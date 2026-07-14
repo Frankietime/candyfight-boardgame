@@ -1,8 +1,6 @@
 import { io, Socket } from "socket.io-client";
+import { BACKEND_URL } from "./config";
 
-const SERVER_PORT = Number(import.meta.env.VITE_SERVER_PORT ?? 4000);
-const URL = import.meta.env.VITE_BACKEND_URL ?? `http://${window.location.hostname}:${SERVER_PORT}`;
-
-export const socket: Socket = io(URL, {
+export const socket: Socket = io(BACKEND_URL, {
   transports: ["websocket"],
 });

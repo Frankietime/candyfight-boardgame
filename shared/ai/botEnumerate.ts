@@ -89,10 +89,13 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
             const locations = G.districts[d].locations;
             for (let l = 0; l < locations.length; l++) {
                 const location = locations[l];
+                // Depends only on the location — hoisted out of the per-card
+                // loop so it isn't recomputed once per hand card.
+                const needsInput = locationNeedsInput(location);
                 for (const card of player.hand) {
                     if (!isWorkerPlacementValid(player, location, card)) continue;
 
-                    if (!locationNeedsInput(location)) {
+                    if (!needsInput) {
                         moves.push({ move: "placeWorker", args: [d, l, card] });
                         continue;
                     }

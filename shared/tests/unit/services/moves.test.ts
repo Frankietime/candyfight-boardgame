@@ -58,6 +58,25 @@ describe("draw", () => {
         draw(player, identityRandom, 2);
         expect(player.hand).toHaveLength(2);
     });
+
+    it("rebuilds the deck via random.Shuffle(discardPile), not a positional reversal (regression)", () => {
+        // Old bug: `random.Shuffle(discardPile).map(() => discardPile.pop())`
+        // discarded the shuffled array and instead popped from the ORIGINAL
+        // discardPile, producing a deterministic reverse-order deck with zero
+        // real randomness. With an order-preserving Shuffle stub (identityRandom)
+        // the fix must draw c3 (deck = [c1,c2,c3], pop() takes the last
+        // element); the old bug would draw c1 (deck = [c3,c2,c1] via reversal).
+        const c1 = makeCard({ id: "c1" });
+        const c2 = makeCard({ id: "c2" });
+        const c3 = makeCard({ id: "c3" });
+        const player = makePlayer({ deck: [], discardPile: [c1, c2, c3], hand: [] });
+
+        draw(player, identityRandom, 1);
+
+        expect(player.hand.map(c => c.id)).toEqual(["c3"]);
+        expect(player.discardPile).toEqual([]);
+        expect(player.deck.map(c => c.id)).toEqual(["c1", "c2"]);
+    });
 });
 
 describe("discard", () => {

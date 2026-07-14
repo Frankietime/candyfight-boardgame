@@ -10,7 +10,7 @@
  */
 import { GameState, PlayerGameState, Location, Card } from "../types";
 import { LocationActionsEnum } from "../enums";
-import { MARKET_ROW_SIZE } from "../constants";
+import { MARKET_ROW_SIZE, MIN_COLLECTION_SIZE } from "../constants";
 import { createParams } from "../actions/action-params";
 import { actionRegistry } from "../actions";
 import { WorkerMoveParams } from "../services/moves/workerPlacementService";
@@ -60,9 +60,9 @@ export function synthesizeMoveParams(
                 break;
             case LocationActionsEnum.TRASH: {
                 // Same guard as the trash handler: the remaining collection
-                // must keep at least 5 cards after trashing.
+                // must keep at least MIN_COLLECTION_SIZE cards after trashing.
                 const total = player.deck.length + player.discardPile.length + player.hand.length;
-                if (total - count < 5) return null;
+                if (total - count < MIN_COLLECTION_SIZE) return null;
                 result.costParams = createParams.trash(cardIds);
                 break;
             }

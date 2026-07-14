@@ -17,7 +17,7 @@ describe("getInitialLocationReward", () => {
 describe("getHighCouncil", () => {
     it("costs a discard and rewards advance-tracker + presence", () => {
         const loc = getHighCouncil(DistrictIconsEnum.D1, 2);
-        expect(loc.Id).toBe(`${DistrictIconsEnum.D1}2`);
+        expect(loc.Id).toBe(`${DistrictIconsEnum.D1}-2`);
         expect(loc.cost.actions?.[0].actionId).toBe(LocationActionsEnum.DISCARD);
         const rewardIds = loc.reward.actions?.map(a => a.actionId);
         expect(rewardIds).toEqual([
@@ -51,6 +51,19 @@ describe("getInitialDistrictsState", () => {
     it("marks one restricted area per district", () => {
         for (const d of districts) {
             expect(d.locations.some(l => l.isRestrictedArea)).toBe(true);
+        }
+    });
+
+    it("gives every location a unique Id (regression: 3 D3 locations used to collide on 'LOC30')", () => {
+        const allIds = districts.flatMap(d => d.locations.map(l => l.Id));
+        expect(new Set(allIds).size).toBe(allIds.length);
+    });
+
+    it("builds each Id as `${districtId}-${locIndex}` (index within its own district)", () => {
+        for (const d of districts) {
+            d.locations.forEach((l, locIndex) => {
+                expect(l.Id).toBe(`${d.id}-${locIndex}`);
+            });
         }
     });
 });

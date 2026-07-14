@@ -33,6 +33,25 @@ describe("DRAW action", () => {
         expect(player.hand).toHaveLength(1);
     });
 
+    it("rebuilds the deck via random.Shuffle(discardPile), not a positional reversal (regression)", () => {
+        // Same bug as shared/services/moves/moves.ts::rebuildDeck, duplicated
+        // in this file's copy: `Shuffle(discardPile).map(() => discardPile.pop())`
+        // discards the shuffled array and pops the ORIGINAL in place — a
+        // deterministic reversal, not a shuffle. makeMetaState() defaults to
+        // identityRandom (order-preserving), so the fix must draw c3 (deck =
+        // [c1,c2,c3], pop() takes the last); the bug would draw c1.
+        const c1 = makeCard({ id: "c1" });
+        const c2 = makeCard({ id: "c2" });
+        const c3 = makeCard({ id: "c3" });
+        const player = makePlayer({ deck: [], discardPile: [c1, c2, c3], hand: [] });
+
+        actionRegistry.execute(LocationActionsEnum.DRAW, { actionType: "draw", count: 1 } as any, makeMetaState(), player);
+
+        expect(player.hand.map(c => c.id)).toEqual(["c3"]);
+        expect(player.discardPile).toEqual([]);
+        expect(player.deck.map(c => c.id)).toEqual(["c1", "c2"]);
+    });
+
     it("defaults to drawing one card when no count is given", () => {
         const player = makePlayer({ deck: [makeCard()], hand: [] });
         actionRegistry.execute(LocationActionsEnum.DRAW, {} as any, makeMetaState(), player);

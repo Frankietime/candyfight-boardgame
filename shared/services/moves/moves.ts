@@ -3,6 +3,7 @@ import { Card, MetaGameState, PlayerGameState } from "../../types";
 import { isPlayCardValid } from "../../game-helper";
 import { getCurrentPlayer, takeFromHand } from "./helper";
 import { log } from "../../common-methods";
+import { MIN_COLLECTION_SIZE } from "../../constants";
 
 export const selectCard = (player: PlayerGameState, selectedCard?: Card | null) => {
     // No card = deselect: back to the "all possible plays" board view.
@@ -52,8 +53,8 @@ export const discard = (player: PlayerGameState, cards: Card[]): Card[] | string
 
 export const trash = (player: PlayerGameState, cards: Card[]): Card[] | string => {
 
-    // The remaining collection must keep at least 5 cards after trashing.
-    if ((player.deck.length + player.discardPile.length + player.hand.length) - cards.length < 5)
+    // The remaining collection must keep at least MIN_COLLECTION_SIZE cards after trashing.
+    if ((player.deck.length + player.discardPile.length + player.hand.length) - cards.length < MIN_COLLECTION_SIZE)
         return INVALID_MOVE;
     
     const trashed = takeFromHand(player, cards);
@@ -63,5 +64,11 @@ export const trash = (player: PlayerGameState, cards: Card[]): Card[] | string =
 
 const rebuildDeck = (player: PlayerGameState, random: any): Card[] => {
     log("REBUILD DECK");
-    return player.deck = random.Shuffle(player.discardPile).map(() => player.discardPile.pop());
+    // random.Shuffle returns a NEW shuffled array — it must be kept, not
+    // discarded. The old `.map(() => discardPile.pop())` ignored the shuffled
+    // result and popped from the original (untouched) discardPile, producing
+    // a deterministic reversal instead of a real shuffle.
+    const shuffled = random.Shuffle(player.discardPile);
+    player.discardPile = [];
+    return player.deck = shuffled;
 }

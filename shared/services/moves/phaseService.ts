@@ -11,7 +11,7 @@
  */
 
 import { GameState, PlayerGameState } from "../../types";
-import { NO_CARD_SELECTED } from "../../constants";
+import { HAND_SIZE, NO_CARD_SELECTED } from "../../constants";
 import { calculateCombatWinner } from "../../game-helper";
 import { getPlayersList } from "./playerServices";
 import { draw } from "./moves";
@@ -26,7 +26,7 @@ import { appendLog } from "../logService";
  */
 export const dealHands = (G: GameState, random: any): void => {
     getPlayersList(G).forEach(player => {
-        draw(player, random, 5);
+        draw(player, random, HAND_SIZE);
     });
 };
 

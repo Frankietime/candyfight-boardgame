@@ -17,12 +17,7 @@ import { BOT_MATCH_ID, isBotMatch, makeBots } from "./botMatch";
 export default function App() {
 
   const {
-    client,
-    setClient,
-
     playerState,
-    server,
-    setServer,
 
     tutorialOpen,
     setTutorialOpen,
@@ -32,34 +27,19 @@ export default function App() {
 
   const t = useT();
 
-  let socketIOserver: (transportOpts: any) => SocketIOTransport = useMemo(() => { 
-    
-    if (server != null && server.length == 1)
-      return server;
+  // Pure memos: no store setState during render (that's a side effect, and
+  // under StrictMode's double-invocation it created two live transports).
+  const socketIOserver: (transportOpts: any) => SocketIOTransport = useMemo(
+    () => SocketIO({ server: BACKEND_URL }),
+    []
+  );
 
-    const _server = SocketIO({ server: BACKEND_URL });
-    setServer(_server);
-    return _server; 
-
-  }, []);
-  
-  const GameClientComponent = useMemo(() => {
-    // server = SocketIO({ server: BACKEND_URL });
-    if (client == null || client.defaultProps == null || client.defaultProps.matchID == null) {
-      const gameClientComponent = ClientComponent({ 
-        game: Game, 
-        board: BoardComponent,
-        multiplayer: socketIOserver!,
-        debug: false,
-      });   
-      
-      setClient(gameClientComponent);
-
-      return gameClientComponent;
-    } else {
-      return client;
-    }
-  }, []);
+  const GameClientComponent = useMemo(() => ClientComponent({
+    game: Game,
+    board: BoardComponent,
+    multiplayer: socketIOserver,
+    debug: false,
+  }), [socketIOserver]);
 
   // vs-Bots: a fully client-side match over Local() with greedy bots on every
   // non-human seat. Rebuilt when the seat count changes (new bots object →

@@ -77,8 +77,9 @@ export const BoardComponent = ({
   const isLocationDisabled = useCallback((location: Location): boolean => {
     if (!player) return true;
     return (
-      (location.name.includes("Sword Master") && player.maxNumberOfWorkers >= 3) ||
+      (location.reward.actions?.some(a => a.actionId === LocationActionsEnum.GET_SWORD_MASTER) && player.maxNumberOfWorkers >= 3) ||
       location.isDisabled ||
+      location.takenByPlayerID !== undefined ||
       !selectedCard ||
       player.currentNumberOfWorkers === 0
     );
@@ -89,6 +90,10 @@ export const BoardComponent = ({
     if (!player || player.hasPlayedCard) return;
 
     const selectedLocation = G.districts[districtIndex].locations[locationIndex];
+
+    // A taken location can't be entered again — bail before any input dialog
+    // (trash/buy) is opened, not just in the final plain-placement branch.
+    if (selectedLocation.takenByPlayerID !== undefined) return;
 
     const trashCostAction = selectedLocation.cost.actions?.find(
       a => a.actionId === LocationActionsEnum.DISCARD || a.actionId === LocationActionsEnum.TRASH
@@ -136,9 +141,8 @@ export const BoardComponent = ({
         onCancel: () => {},
       });
     } else {
-      if (selectedLocation.takenByPlayerID === undefined) {
-        doPlaceWorker();
-      }
+      // takenByPlayerID already guarded by the early return above.
+      doPlaceWorker();
     }
   }, [player, G.districts, G.cardMarket, selectedCard, actionOrchestrator, moves]);
 
@@ -173,6 +177,15 @@ export const BoardComponent = ({
     moves.endRound();
     setRoundIsEnding(true);
   }, [moves]);
+
+  // Visible market row and player names - memoized so child React.memo
+  // components (BoardDistrictsLayer, PlayerAreaComponent) don't see a new
+  // array identity every render.
+  const marketCards = useMemo(() => G.cardMarket.slice(0, MARKET_ROW_SIZE), [G.cardMarket]);
+  const playerNames = useMemo(
+    () => matchData?.players.map((p, i) => p?.name ?? `Player ${i + 1}`) ?? [],
+    [matchData?.players]
+  );
 
   // Check if we're ready to render the full board
   const isReady = !isNullOrEmpty(matchID) && G.districts && G.players && player && matchData;
@@ -234,7 +247,7 @@ export const BoardComponent = ({
                 selectedCard={selectedCard}
                 onLocationSelect={onLocationSelect}
                 isLocationDisabled={isLocationDisabled}
-                marketCards={G.cardMarket.slice(0, MARKET_ROW_SIZE)}
+                marketCards={marketCards}
               />
 
               {/* Action Orchestrator Renderer */}
@@ -251,7 +264,7 @@ export const BoardComponent = ({
                 moves={moves}
                 player={player}
                 selectedCard={selectedCard}
-                playerNames={matchData.players.map((p, i) => p?.name ?? `Player ${i + 1}`)}
+                playerNames={playerNames}
                 currentPlayerId={ctx.phase === 'combatPhase' ? 'all' : ctx.currentPlayer}
               />
 

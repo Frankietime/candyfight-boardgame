@@ -1,6 +1,17 @@
 export const GAME_NAME = "project-district";
 export const INITIAL_NUMBER_OF_WORKERS = 2;
 
+/** Cards a full hand holds (maintenance phase deals up to this many). */
+export const HAND_SIZE = 5;
+
+/**
+ * Floor on a player's total collection (deck + discard + hand) after a
+ * trash. Semantically distinct from HAND_SIZE even though both happen to be
+ * 5 today — this guards against trashing a collection so small it could
+ * never refill a hand again, not the hand size itself.
+ */
+export const MIN_COLLECTION_SIZE = 5;
+
 /**
  * Sentinel value indicating no card is selected.
  * Intentionally undefined so that `!selectedCard` checks work correctly.

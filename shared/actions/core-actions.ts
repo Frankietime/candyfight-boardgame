@@ -17,7 +17,7 @@ import {
   GetSwordMasterParams,
   BuyCardActionParams,
 } from "./action-params";
-import { MARKET_ROW_SIZE } from "../constants";
+import { MARKET_ROW_SIZE, MIN_COLLECTION_SIZE } from "../constants";
 import { Card, MetaGameState, PlayerGameState } from "../types";
 import { characterDefinitions } from "../characters/character-definitions";
 import { appendLog } from "../services/logService";
@@ -43,7 +43,13 @@ const doDraw = (player: PlayerGameState) => {
 };
 
 const rebuildDeck = (player: PlayerGameState, random: any): Card[] => {
-  return player.deck = random.Shuffle(player.discardPile).map(() => player.discardPile.pop());
+  // random.Shuffle returns a NEW shuffled array — it must be kept, not
+  // discarded. The old `.map(() => discardPile.pop())` ignored the shuffled
+  // result and popped from the original (untouched) discardPile, producing
+  // a deterministic reversal instead of a real shuffle.
+  const shuffled = random.Shuffle(player.discardPile);
+  player.discardPile = [];
+  return player.deck = shuffled;
 };
 
 // ============================================================================
@@ -156,10 +162,11 @@ const trashHandler: ActionHandler<TrashActionParams> = {
     }
 
     // Check minimum deck size: the REMAINING collection after trashing must
-    // keep at least 5 cards. (Checking the pre-trash total allowed 6 → 4,
-    // which later hung maintenancePhase — hands could never refill to 5.)
+    // keep at least MIN_COLLECTION_SIZE cards. (Checking the pre-trash total
+    // allowed 6 → 4, which later hung maintenancePhase — hands could never
+    // refill to HAND_SIZE.)
     const totalCards = player.deck.length + player.discardPile.length + player.hand.length;
-    if (totalCards - params.cardIds.length < 5) {
+    if (totalCards - params.cardIds.length < MIN_COLLECTION_SIZE) {
       return "Cannot trash: would reduce deck below minimum size";
     }
 

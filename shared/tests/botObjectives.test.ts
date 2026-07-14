@@ -82,6 +82,15 @@ describe("objectives — boardPresence / soloDistrict", () => {
         const G = makeState({ presence: { 0: { "0": 1, "1": 1 } } });
         expect(check(G, "soloDistrict")).toBe(false);
     });
+    it("soloDistrict false on a tied district (calculateCombatWinner has no winner)", () => {
+        const G = makeState({ presence: { 0: { "0": 2, "1": 2 } } });
+        expect(check(G, "soloDistrict")).toBe(false);
+    });
+    it("soloDistrict true when I clearly outnumber a rival in a shared district (reuses calculateCombatWinner)", () => {
+        const G = makeState({ presence: { 0: { "0": 2, "1": 1 } } });
+        expect(check(G, "soloDistrict")).toBe(true);
+        expect(check(G, "soloDistrict", "1")).toBe(false);
+    });
 });
 
 describe("objectives — economy", () => {
