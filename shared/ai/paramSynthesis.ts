@@ -10,7 +10,8 @@
  */
 import { GameState, PlayerGameState, Location, Card } from "../types";
 import { LocationActionsEnum } from "../enums";
-import { MARKET_ROW_SIZE, MIN_COLLECTION_SIZE } from "../constants";
+import { MIN_COLLECTION_SIZE } from "../constants";
+import { marketRowFor } from "../services/marketServices";
 import { createParams } from "../actions/action-params";
 import { actionRegistry } from "../actions";
 import { WorkerMoveParams } from "../services/moves/workerPlacementService";
@@ -81,7 +82,7 @@ export function synthesizeMoveParams(
         const action = inputRewards[0];
         if (action.actionId !== LocationActionsEnum.BUY_CARD) return null;
 
-        const row = G.cardMarket.slice(0, MARKET_ROW_SIZE);
+        const row = marketRowFor(G, location);
         if (row.length === 0) return null;
         const best = [...row].sort((a, b) => cardValue(b) - cardValue(a))[0];
         result.rewardParams = createParams.buyCard(best.id);

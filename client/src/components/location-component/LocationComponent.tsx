@@ -5,7 +5,7 @@ import { Card, District, Location, PlayerGameState } from "@candyfight/shared/ty
 import { ResourceComponent } from "../icon-components/ResourceComponent";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { WorkerIcon } from "../ui/GameIcon";
-import { LocationActionsEnum } from "@candyfight/shared/enums";
+import { LocationActionsEnum, ResourceEnum } from "@candyfight/shared/enums";
 import { isWorkerPlacementValid } from "@candyfight/shared/game-helper";
 import { playerSeatColor } from "@candyfight/shared/constants";
 import { CardMini } from "../card-components/CardMini";
@@ -19,10 +19,16 @@ export interface LocationComponentProps extends Location {
     onClick: () => void,
     isDisabled: boolean;
     selectedCard?: Card;
-    player: PlayerGameState;
+    /** Optional in editorMode — no live player drives the tile there. */
+    player?: PlayerGameState;
     marketCards?: Card[];
     /** Tutorial signal anchor id (set on the root element so overlays can target it). */
     tutorAnchorId?: string;
+    /**
+     * Mod Lab: render the tile as pure content — every tile clickable
+     * (including restricted areas), no glow/playability logic, no dimming.
+     */
+    editorMode?: boolean;
 }
 
 export const LocationComponent = memo(({
@@ -39,10 +45,12 @@ export const LocationComponent = memo(({
     selectedCard,
     player,
     isRestrictedArea,
+    isModDisabled,
     marketCards,
     tutorAnchorId,
+    editorMode = false,
 }: LocationComponentProps) => {
-    const isClickDisabled = isDisabled || isRestrictedArea;
+    const isClickDisabled = editorMode ? false : (isDisabled || isRestrictedArea || isModDisabled);
     const isTaken = !isNullOrEmpty(takenByPlayerID);
     const isMarket = !!reward.actions?.some(a => a.actionId === LocationActionsEnum.BUY_CARD);
     const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
@@ -51,15 +59,23 @@ export const LocationComponent = memo(({
     // placements. With NO card selected: the general view — any location
     // playable with ANY card in the hand glows. (The isDisabled prop can't
     // gate this: it's true whenever no card is selected.)
+    // Worker-granting locations (Sword Master action or a workers resource
+    // reward) are capped at 3 permanent workers — matched by reward content,
+    // not by name, so renamed/modded locations behave correctly.
+    const grantsWorker =
+        !!reward.actions?.some(a => a.actionId === LocationActionsEnum.GET_SWORD_MASTER) ||
+        !!reward.resources?.some(r => r.resourceId === ResourceEnum.Workers);
+
     const showGlow = useMemo(() => {
+        if (editorMode || !player) return false;
         if (isRestrictedArea || isSelected || isTaken) return false;
-        if (name.includes("Sword Master") && player.maxNumberOfWorkers >= 3) return false;
+        if (grantsWorker && player.maxNumberOfWorkers >= 3) return false;
         const loc = { cost, reward, isRestrictedArea, takenByPlayerID } as Location;
         if (selectedCard?.districtIds) {
             return isWorkerPlacementValid(player, loc, selectedCard);
         }
         return (player.hand ?? []).some(c => !!c?.districtIds && isWorkerPlacementValid(player, loc, c));
-    }, [isRestrictedArea, isSelected, isTaken, name, player, cost, reward, takenByPlayerID, selectedCard]);
+    }, [editorMode, isRestrictedArea, isSelected, isTaken, grantsWorker, player, cost, reward, takenByPlayerID, selectedCard]);
 
     // Memoize cost icons
     const costIcons = useMemo(() =>
@@ -120,7 +136,7 @@ export const LocationComponent = memo(({
             : isClickDisabled
               ? ''
               : 'hover:brightness-110 cursor-pointer'
-        }${!isTaken && !showGlow ? ' location-unplayable' : ''}`}
+        }${!editorMode && !isTaken && !showGlow ? ' location-unplayable' : ''}`}
             style={{
                 top: y, left: x, width: TILE_W, height: TILE_H, boxSizing: "content-box",
                 // Claimed locations: thin seat-color border marks the owner;
@@ -172,6 +188,18 @@ export const LocationComponent = memo(({
                     )}
                 </div>
             </div>
+
+            {/* Mod-disabled: red strike-through line over the whole tile */}
+            {isModDisabled && (
+                <svg
+                    width="100%"
+                    height="100%"
+                    preserveAspectRatio="none"
+                    style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 3 }}
+                >
+                    <line x1="0" y1="100%" x2="100%" y2="0" stroke="#ef4444" strokeWidth="5" strokeLinecap="round" />
+                </svg>
+            )}
         </div>
         {hoverPos && isMarket && marketCards?.length ? createPortal(
             <MarketPopover cards={marketCards} anchorX={hoverPos.x} anchorY={hoverPos.y} />,

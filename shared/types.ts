@@ -40,7 +40,9 @@ export type LogEntry = {
 export interface GameState {
   players: Dictionary<PlayerGameState>;
   districts: District[];
-  cardMarket: Card[];
+  /** One shuffled card pile per market tier; each market location sells from
+   *  its own tier's row (see marketServices). */
+  markets: Record<string, Card[]>;
   roundEndingCounter: number;
   gameEndingCounter: number;
   /** Seat that takes the first turn of the current round's mainPhase (rotates
@@ -146,11 +148,19 @@ export type Location = {
   // evitar rewards que requieren elecciones de usuario por el momento
   // la interaccion es mas facil en el momento de pagar el coste (cuando todavia no se ejecuta la move)
   reward: LocationReward;
+  /** Per-round flag (claimed this round); reset by districtsSetup. */
   isDisabled?: boolean;
+  /**
+   * Disabled by the mod's author — struck through with a red line, never
+   * placeable. Unlike isDisabled, this survives the round reset.
+   */
+  isModDisabled?: boolean;
   isSelected?: boolean;
   takenByPlayerID?: string;
   dominanceBy?: string[];
   isRestrictedArea?: boolean;
+  /** Market tier this location sells from (BUY_CARD locations). */
+  marketTierId?: string;
 }
 
 /**
@@ -244,8 +254,15 @@ export type Card = {
 
   /** Complex action effects executed via registry when card is played */
   primaryEffects?: RewardAction[];
-  /** Complex action effects for secondary/delayed execution */
+  /** Complex action effects executed at reveal (see executeRevealEffects) */
   secondaryEffects?: RewardAction[];
+
+  /**
+   * Runtime-only: district where this card was played this round. Stamped on
+   * the cardsInPlay COPY at playCard time (never on the discard instance) so
+   * reveal effects like "+1 Fight" know their target district.
+   */
+  playedDistrictId?: string;
 }
 
 // Utils

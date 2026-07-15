@@ -43,13 +43,13 @@ describe("getTierOneCards", () => {
 });
 
 describe("getTierTwoCards", () => {
-    it("includes two repair-token cards and the miscellaneous cards", () => {
+    it("carries the three curated reveal effects: fight, candy and Puzzle", () => {
         const cards = getTierTwoCards();
-        const repairCards = cards.filter(c => c.secondaryEffects?.[0].actionId === "addRepairToken");
-        expect(repairCards).toHaveLength(2);
-        // Miscellaneous deck contributes Strange Candy + Cooldown entries.
-        expect(cards.some(c => c.name === "Strange Candy")).toBe(true);
-        expect(cards.some(c => c.name === "Cooldown")).toBe(true);
+        expect(cards.some(c => c.secondaryEffects?.[0].actionId === "addPresenceToken")).toBe(true);
+        expect(cards.some(c => c.secondaryResources?.[0].resourceId === "candy")).toBe(true);
+        const puzzle = cards.find(c => c.secondaryEffects?.[0].actionId === "strangeCandyPuzzle");
+        expect(puzzle?.name).toBe("Puzzle");
+        expect(puzzle?.districtIds).toHaveLength(4);
     });
 });
 

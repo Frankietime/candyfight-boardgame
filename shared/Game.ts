@@ -1,7 +1,7 @@
 import { Game as GameInterface } from "boardgame.io";
 import { INVALID_MOVE, Stage } from "boardgame.io/core";
 import { GAME_NAME, HAND_SIZE, seatRing } from "./constants";
-import { Card, GameConfig, GameState, MetaGameState, DEFAULT_GAME_CONFIG } from "./types";
+import { Card, GameConfig, GameState, MetaGameState } from "./types";
 import { CharacterEnum } from "./enums";
 import {
     districtsSetup,
@@ -10,14 +10,15 @@ import {
     playersSetup,
     resetEndPhaseTriggers
 } from "./game-helper";
-import { getMarketTierOneCards } from "./services/cardServices";
 import { getInitialDistrictsState } from "./services/locationServices";
+import { buildDistrictsFromMod, buildMarketsFromMod, resolveModConfig, validateModDefinition } from "./mods";
 import { draw, selectCard } from "./services/moves/moves";
 import { placeWorker, validatePlacementActions } from "./services/moves/workerPlacementService";
 import {
     calculateRanking,
     dealHands,
     discardAllHands,
+    executeRevealEffects,
     resetTurnState,
     resolveCombat,
     revealPlayer
@@ -37,15 +38,24 @@ export const Game: GameInterface<GameState> = {
     maxPlayers: 4,
     
     setup: ({ ctx, ...plugins }, setupData) => {
+        // Cartridge loading: a mod payload in setupData defines the board and
+        // config defaults. Invalid/absent mods fall back to the built-in Base
+        // cartridge (validateSetupData already rejects bad mods server-side;
+        // the fallback covers local/bot matches and defense in depth).
+        const modResult = setupData?.mod ? validateModDefinition(setupData.mod) : null;
+        const mod = modResult?.ok ? modResult.mod : undefined;
         const config: GameConfig = {
-            ...DEFAULT_GAME_CONFIG,
-            ...(setupData ?? {}),
+            ...resolveModConfig(mod, setupData),
             numPlayers: ctx.numPlayers,
         };
         return {
-            players: getInitialPlayersState(ctx.numPlayers, plugins, config),
-            districts: getInitialDistrictsState(),
-            cardMarket: plugins.random.Shuffle([...getMarketTierOneCards()]),
+            players: getInitialPlayersState(ctx.numPlayers, plugins, config, mod),
+            districts: mod ? buildDistrictsFromMod(mod) : getInitialDistrictsState(),
+            markets: Object.fromEntries(
+                Object.entries(buildMarketsFromMod(mod)).map(
+                    ([tierId, pile]) => [tierId, plugins.random.Shuffle(pile)]
+                )
+            ),
             roundEndingCounter: 0,
             gameEndingCounter: 0,
             ranking: [],
@@ -53,6 +63,16 @@ export const Game: GameInterface<GameState> = {
             config,
             log: [],
         };
+    },
+
+    // Reject bad cartridges at match creation (server responds 4xx) instead
+    // of silently falling back to the base board.
+    validateSetupData: (setupData) => {
+        if (setupData?.mod) {
+            const result = validateModDefinition(setupData.mod);
+            if (!result.ok) return `Invalid mod: ${result.errors.join("; ")}`;
+        }
+        return undefined;
     },
 
     playerView,
@@ -65,15 +85,15 @@ export const Game: GameInterface<GameState> = {
                 const players = getPlayersList(G);
                 return players.length > 0 && players.every(p => p.characterId !== undefined);
             },
-            // maxMoves removes a seat from activePlayers after its one move, so
-            // bot drivers (Local({ bots }) master loop) advance to the next seat
-            // instead of re-asking a seat that already acted.
-            turn: { activePlayers: { all: Stage.NULL, maxMoves: 1 } },
+            // SEQUENTIAL selection: seat 0 (the host/human) picks first, then
+            // the other seats in order. maxMoves auto-ends each turn after the
+            // pick. Sequential also keeps Local({ bots }) drivers from asking
+            // a bot for a move while it must wait (a bot with no legal moves
+            // crashes boardgame.io's local bot runner with a null action).
+            turn: { maxMoves: 1 },
             moves: {
                 selectCharacter: {
                     move: (mgState: MetaGameState, characterId: CharacterEnum) => {
-                        // With activePlayers, mgState.playerID is the acting player.
-                        // ctx.currentPlayer is the turn player (always "0") — wrong here.
                         const actingPlayerID = mgState.playerID ?? mgState.ctx.currentPlayer;
                         const player = mgState.G.players[actingPlayerID];
                         if (!player || player.characterId) return INVALID_MOVE;
@@ -212,6 +232,9 @@ export const Game: GameInterface<GameState> = {
                             type: 'move',
                             message: 'revealed',
                         });
+                        // Reveal fires the secondary effects of this round's
+                        // played cards (+1 Fight / +1 Candy / Puzzle).
+                        executeRevealEffects(mgState, getCurrentPlayer(mgState));
                         mgState.events?.endTurn?.();
                     }
                 },

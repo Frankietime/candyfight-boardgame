@@ -10,12 +10,15 @@
  * End Game Phase: calculateRanking
  */
 
-import { GameState, PlayerGameState } from "../../types";
+import { GameState, MetaGameState, PlayerGameState } from "../../types";
 import { HAND_SIZE, NO_CARD_SELECTED } from "../../constants";
+import { LocationActionsEnum } from "../../enums";
 import { calculateCombatWinner } from "../../game-helper";
 import { getPlayersList } from "./playerServices";
 import { draw } from "./moves";
-import { appendLog } from "../logService";
+import { appendLog, formatResources } from "../logService";
+import { addResources } from "../resourceServices";
+import { actionRegistry } from "../../actions";
 
 // ============================================================================
 // MAINTENANCE PHASE
@@ -48,6 +51,41 @@ export const resetTurnState = (player: PlayerGameState): void => {
  */
 export const revealPlayer = (player: PlayerGameState): void => {
     player.hasRevealed = true;
+};
+
+/**
+ * Fires the reveal (secondary) effects of every card the player played this
+ * round, in play order: secondaryResources are added directly; each
+ * secondaryEffect runs through the action registry. "+1 Fight" targets the
+ * district where its card was played (playedDistrictId stamped by playCard).
+ */
+export const executeRevealEffects = (mgState: MetaGameState, player: PlayerGameState): void => {
+    (player.cardsInPlay ?? []).forEach(card => {
+        if (card.secondaryResources?.length) {
+            addResources(player, card.secondaryResources);
+            appendLog(mgState.G, {
+                playerID: player.id,
+                phase: mgState.ctx.phase ?? '',
+                type: 'effect',
+                message: `${card.name}: gained ${formatResources(card.secondaryResources)} (reveal)`,
+                card,
+            });
+        }
+        card.secondaryEffects?.forEach(effect => {
+            const params =
+                effect.actionId === LocationActionsEnum.ADD_PRESENCE_TOKEN
+                    ? { ...(effect.params ?? {}), districtId: (effect.params as any)?.districtId ?? card.playedDistrictId }
+                    : (effect.params ?? {});
+            actionRegistry.execute(effect.actionId, params, mgState, player, {});
+            appendLog(mgState.G, {
+                playerID: player.id,
+                phase: mgState.ctx.phase ?? '',
+                type: 'effect',
+                message: `${card.name}: ${effect.name} (reveal)`,
+                card,
+            });
+        });
+    });
 };
 
 // ============================================================================

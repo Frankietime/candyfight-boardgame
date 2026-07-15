@@ -3,6 +3,7 @@ import { actionRegistry } from "../../actions";
 import { ActionParams } from "../../actions/action-params";
 import { discard } from "./moves";
 import { appendLog, formatResources } from "../logService";
+import { addResources, deductResources } from "../resourceServices";
 
 /**
  * Structured move params carrying user-provided inputs for cost and reward actions.
@@ -132,13 +133,13 @@ const playCard = (
     });
 
     // Apply card resources (simple +/- values)
-    card.primaryResources?.forEach(res => {
-        player[res.resourceId] += res.amount;
-    });
+    addResources(player, card.primaryResources ?? []);
 
     player.currentNumberOfWorkers -= 1;
     player.hasPlayedCard = true;
-    player.cardsInPlay?.push(card);
+    // Copy (not the discard instance) stamped with where it was played, so
+    // reveal effects can target that district.
+    player.cardsInPlay?.push({ ...card, playedDistrictId: location.districtId });
 
     const resourceStr = card.primaryResources?.length
         ? ` (${formatResources(card.primaryResources)})`
@@ -162,9 +163,7 @@ const payCosts = (
     moveParams?: WorkerMoveParams | ActionParams
 ): void => {
     // Deduct resource costs
-    location.cost.resources?.forEach(res => {
-        player[res.resourceId] -= res.amount;
-    });
+    deductResources(player, location.cost.resources ?? []);
 
     // Execute cost actions (may use moveParams for user input).
     // validatePlacementActions ran before any mutation, so a failure here is
@@ -197,9 +196,7 @@ const collectRewards = (
     moveParams?: WorkerMoveParams | ActionParams
 ): void => {
     // Add resource rewards
-    location.reward.resources?.forEach(res => {
-        player[res.resourceId] += res.amount;
-    });
+    addResources(player, location.reward.resources ?? []);
 
     // Execute reward actions (validated up front, same as costs).
     location.reward.actions?.forEach(action => {

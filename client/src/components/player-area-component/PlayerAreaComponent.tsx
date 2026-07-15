@@ -12,6 +12,7 @@ import { CardComponent } from "../card-components/CardComponent";
 import { CardMini } from "../card-components/CardMini";
 import { CharacterEnum } from "@candyfight/shared/enums";
 import { anchors } from "@candyfight/shared/tutorial/types";
+import { claimFlashSlot } from "../ui/flashQueue";
 import { useT } from "../../i18n/useT";
 import chilldudes from "../../assets/characters/character-chilldudes.png";
 import kawaiisis from "../../assets/characters/character-kawaiisis.png";
@@ -112,10 +113,17 @@ const PilePopover = memo(({ cards, label, title, count, onHover, onLeave, shuffl
     const [flashing, setFlashing] = useState(false);
     const prevCount = useRef(count);
 
+    // Flashes are staggered through the global queue — sequential, never parallel.
     useEffect(() => {
         if (prevCount.current !== count) {
             prevCount.current = count;
-            setFlashing(true);
+            const delay = claimFlashSlot();
+            if (delay <= 0) {
+                setFlashing(true);
+                return;
+            }
+            const timer = setTimeout(() => setFlashing(true), delay);
+            return () => clearTimeout(timer);
         }
     }, [count]);
 
@@ -147,10 +155,17 @@ PilePopover.displayName = "PilePopover";
 const FlashOnChange = ({ value, className, children, anchorId }: { value: number; className?: string; children: React.ReactNode; anchorId?: string }) => {
     const [flashing, setFlashing] = useState(false);
     const prevRef = useRef(value);
+    // Staggered via the global flash queue — sequential, never parallel.
     useEffect(() => {
         if (prevRef.current !== value) {
             prevRef.current = value;
-            setFlashing(true);
+            const delay = claimFlashSlot();
+            if (delay <= 0) {
+                setFlashing(true);
+                return;
+            }
+            const timer = setTimeout(() => setFlashing(true), delay);
+            return () => clearTimeout(timer);
         }
     }, [value]);
     return (
@@ -446,7 +461,9 @@ export const PlayerAreaComponent = memo(({
 
         {/* Current Player Resources — candy/loot/VP live on the portrait overlays now */}
         <div className="player-resource-container absolute">
-            <div title="Hand"><CounterRow label={<HandIcon />} count={player.hand?.length ?? 0} /></div>
+            <FlashOnChange value={player.hand?.length ?? 0}>
+                <div title="Hand"><CounterRow label={<HandIcon />} count={player.hand?.length ?? 0} /></div>
+            </FlashOnChange>
             <PilePopover cards={player.deck} label={<DeckIcon />} title="Deck" count={player.deck.length} onHover={onPileHover} onLeave={onPileLeave} shuffle anchorId={anchors.pile(player.id, "deck")} />
             <PilePopover cards={player.discardPile} label={<PileIcon actionId={LocationActionsEnum.DISCARD} title="Discard" />} title="Discard" count={player.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "discard")} />
             <PilePopover cards={player.trashPile} label={<PileIcon actionId={LocationActionsEnum.TRASH} title="Trash" />} title="Trash" count={player.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} anchorId={anchors.pile(player.id, "trash")} />
@@ -555,8 +572,12 @@ const EnemyResourceDisplay = memo(({ enemy, pos, onPileHover, onPileLeave }: Ene
         className="player-resource-container absolute"
         style={{ top: pos.top, left: pos.left }}
     >
-        <div title="Hand"><CounterRow label={<HandIcon />} count={enemy.handLength} /></div>
-        <div title="Deck"><CounterRow label={<DeckIcon />} count={enemy.deckLength} /></div>
+        <FlashOnChange value={enemy.handLength}>
+            <div title="Hand"><CounterRow label={<HandIcon />} count={enemy.handLength} /></div>
+        </FlashOnChange>
+        <FlashOnChange value={enemy.deckLength}>
+            <div title="Deck"><CounterRow label={<DeckIcon />} count={enemy.deckLength} /></div>
+        </FlashOnChange>
         <PilePopover cards={enemy.discardPile} label={<PileIcon actionId={LocationActionsEnum.DISCARD} title="Discard" />} title="Discard" count={enemy.discardPile.length} onHover={onPileHover} onLeave={onPileLeave} />
         <PilePopover cards={enemy.trashPile} label={<PileIcon actionId={LocationActionsEnum.TRASH} title="Trash" />} title="Trash" count={enemy.trashPile.length} onHover={onPileHover} onLeave={onPileLeave} />
     </div>

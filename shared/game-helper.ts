@@ -3,7 +3,8 @@ import { isNullOrEmpty } from "./common-methods";
 import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED, seatRing, nextSeat } from "./constants";
 import { ResourceEnum } from "./enums";
 import { Card } from "./types";
-import { getInitialDeck } from "./services/cardServices";
+import { buildPlayerDeckFromMod } from "./mods/instantiateCards";
+import { ModDefinition } from "./mods/types";
 import _ from "lodash";
 import { DefaultPluginAPIs } from "boardgame.io";
 import { getInitialLocationReward } from "./services/locationServices";
@@ -28,12 +29,18 @@ export const getInitialLocationCost = (districtId: string): LocationCost => ({
     ]
 });
 
-export const getInitialPlayersState = (numberOfPlayers: number, plugins: DefaultPluginAPIs, config: GameConfig = DEFAULT_GAME_CONFIG): Dictionary<PlayerGameState> => {
+export const getInitialPlayersState = (
+    numberOfPlayers: number,
+    plugins: DefaultPluginAPIs,
+    config: GameConfig = DEFAULT_GAME_CONFIG,
+    mod?: ModDefinition
+): Dictionary<PlayerGameState> => {
     let initialPlayersState: {[key: string]: PlayerGameState} = {};
 
     Array.from({ length: numberOfPlayers }).forEach((value: any, Id: number) => {
 
-        let deck = plugins.random.Shuffle(getInitialDeck());
+        // Mod-defined base deck (+ automatic Signet); base cartridge fallback.
+        let deck = plugins.random.Shuffle(buildPlayerDeckFromMod(mod, Id.toString()));
 
         initialPlayersState[Id.toString()] = {
             id: Id.toString(),
@@ -76,6 +83,7 @@ export const isWorkerPlacementValid = (playerState: PlayerGameState, currentLoca
         // bot enumeration reject them too.
         !currentLocation.isRestrictedArea &&
         !currentLocation.isDisabled &&
+        !currentLocation.isModDisabled &&
         !playerState.hasPlayedCard &&
         playerState.currentNumberOfWorkers > 0 &&
         isNullOrEmpty(currentLocation.takenByPlayerID) &&

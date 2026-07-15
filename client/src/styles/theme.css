@@ -260,19 +260,46 @@
 }
 
 /* ===== CardComponent Styles ===== */
+/* The card is the bare canvas asset (card-canvas-3-small.png) with content
+   overprinted on absolutely-positioned zones. Percentages were pixel-measured
+   on the 328×443 PNG: header dither band y 9–23.5%, effect boxes at
+   x 14.6–84.5%, y 26–44.7% (play) and 76.1–94.8% (reveal). The PNG has
+   transparent margins around the card silhouette, so state highlights use
+   drop-shadow (follows the alpha) instead of border/box-shadow. */
 .card {
+  position: relative;
   font-size: 9px; /* NES font: 1/4 smaller so card text fits */
   overflow-wrap: break-word;
-  background-color: white;
   /* Fill the sized wrapper from CardComponent (h ?? 157) so large previews
      (centered hand preview, opponent reveal) scale correctly instead of being
      pinned to the hand height. */
   height: 100%;
-  border: 2px solid black;
+}
+
+.card-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+  user-select: none;
+}
+
+.card-zone {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
 }
 
 .card:hover {
-  border: 2pt solid var(--color-selection);
+  filter:
+    drop-shadow(0 0 2px var(--color-selection))
+    drop-shadow(0 0 2px var(--color-selection));
 }
 
 .card.disabled {
@@ -280,72 +307,67 @@
 }
 
 .card.red {
-  border: 2pt solid red !important;
+  filter:
+    drop-shadow(0 0 3px red)
+    drop-shadow(0 0 3px red) !important;
 }
 
 .card.selected {
-  border: 2pt solid var(--color-selection);
+  filter:
+    drop-shadow(0 0 3px var(--color-selection))
+    drop-shadow(0 0 3px var(--color-selection));
 }
 
-.card.selected .card-name {
-  background-color: var(--color-selection);
-}
-
-.card.selected .card-body .districts {
-  background-color: var(--color-selection);
-}
-
-.card.selected .card-body .play {
-  background-color: var(--color-card-selected-play);
-}
-
-.card.selected .card-body .play-effect {
-  border-bottom: 2pt solid var(--color-card-selected-play);
-}
-
-.card.selected .card-body .reveal {
-  background-color: rgb(190, 190, 190);
-  color: grey;
-  font-style: italic;
-}
-
-.card.selected .card-body .reveal-effect {
-  color: rgb(193, 193, 193);
-  background-color: rgb(236, 236, 236);
-  font-style: italic;
-}
-
+/* Header — dither band above the first box */
 .card-name {
-  background-color: var(--color-card-header);
-  height: 25px;
+  left: 13%;
+  top: 9%;
+  width: 74%;
+  height: 14.5%;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 2px;
   font-weight: 600;
-  text-align: center;
 }
 
-.card-body {
-  max-height: 137px;
+.card-name img {
+  max-height: 100%;
 }
 
-.card-body .districts {
-  background-color: var(--color-card-districts);
+/* Card name prints over the black dither, so it carries its own contrast */
+.non-location-title {
+  color: #fff;
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
 }
 
-.card-body .play {
-  background-color: var(--color-card-play);
+.card-zone-primary {
+  left: 14.6%;
+  top: 26%;
+  width: 69.8%;
+  height: 18.7%;
+  padding: 2px 4px;
 }
 
-.card-body .reveal {
-  background-color: var(--color-card-reveal);
+.card-zone-secondary {
+  left: 14.6%;
+  top: 76.1%;
+  width: 69.8%;
+  height: 18.7%;
+  padding: 2px 4px;
+  font-size: 0.85em; /* reveal text runs longer than play — shrink to fit */
 }
 
-.card-body .play-effect {
-  background-color: var(--color-card-play-effect);
-  border-bottom: 1px solid black;
-}
-
-.card-body .reveal-effect {
-  background-color: var(--color-card-reveal-effect);
-  border-bottom: 1px solid black;
+.card .play,
+.card .reveal {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  opacity: 0.65;
 }
 
 /* ===== BoardComponent Styles ===== */
@@ -827,11 +849,7 @@
 .hand-preview-centered .card {
   height: 314px;
   font-size: 18px; /* keeps the 2× ratio over the 9px hand cards */
-  box-shadow: 6px 6px 0 #000;
-}
-
-.hand-preview-centered .card-name {
-  height: 50px;
+  filter: drop-shadow(6px 6px 0 #000); /* follows the PNG silhouette */
 }
 
 /* ===== Victory Title Glow ===== */
@@ -849,6 +867,3 @@
   animation: proto-glow-pulse 1.8s ease-in-out infinite;
 }
 
-.hand-preview-centered .card-body {
-  max-height: 274px;
-}

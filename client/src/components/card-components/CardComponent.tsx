@@ -1,6 +1,9 @@
 import { memo, useMemo } from "react";
 import { Card } from "@candyfight/shared/types";
+import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
+import { PuzzleRequirement } from "./PuzzleRequirement";
+import { cardCanvasSmall } from "../icon-components/constants";
 
 export type CardComponentProps = {
     w?: number,
@@ -60,7 +63,7 @@ export const CardComponent = memo(({
 
     return (
         <div
-            className={`absolute hover:bg-white/50 ${isSelected ? 'bg-indigo-900/30' : ''}`}
+            className="absolute"
             style={{
                 top: y ?? 0,
                 left: x ?? 0,
@@ -69,34 +72,41 @@ export const CardComponent = memo(({
             }}
             onClick={onClick}
         >
+            {/* The canvas asset is a bare primitive: name/icons and effect text
+                are overprinted on its dither band and two effect boxes. */}
             <div className={cardClassName}>
-                <div className="card-name">
-                    <div>
-                        {card.districtIds?.length > 0
-                            ? districtIcons
-                            : <div className="non-location-title">{card.name}</div>
-                        }
+                <img className="card-canvas" src={cardCanvasSmall} alt="" draggable={false} />
+                <div className="card-zone card-name">
+                    {card.districtIds?.length > 0
+                        ? districtIcons
+                        : <div className="non-location-title">{card.name}</div>
+                    }
+                </div>
+                {((card.primaryEffects?.length ?? 0) > 0 || (card.primaryResources?.length ?? 0) > 0) && (
+                    <div className="card-zone card-zone-primary">
+                        <div className="play">Play</div>
+                        <div className="play-effect">
+                            {[
+                                ...(card.primaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
+                                ...(primaryEffectsText ? [primaryEffectsText] : []),
+                            ].join(", ")}
+                        </div>
                     </div>
-                </div>
-                <hr />
-                <div className="card-body">
-                    {(card.primaryEffects?.length ?? 0) > 0 && (
-                        <div>
-                            <hr />
-                            <div className="play">Play</div>
-                            <hr />
-                            <div className="play-effect">{primaryEffectsText}</div>
+                )}
+                {((card.secondaryEffects?.length ?? 0) > 0 || (card.secondaryResources?.length ?? 0) > 0) && (
+                    <div className="card-zone card-zone-secondary">
+                        <div className="reveal">Reveal</div>
+                        <div className="reveal-effect">
+                            {[
+                                ...(card.secondaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
+                                ...(secondaryEffectsText ? [secondaryEffectsText] : []),
+                            ].join(", ")}
+                            {card.secondaryEffects?.some(e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE) && (
+                                <div style={{ marginTop: 2 }}><PuzzleRequirement /></div>
+                            )}
                         </div>
-                    )}
-                    {(card.secondaryEffects?.length ?? 0) > 0 && (
-                        <div>
-                            <hr />
-                            <div className="reveal">Reveal</div>
-                            <hr />
-                            <div className="reveal-effect">{secondaryEffectsText}</div>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

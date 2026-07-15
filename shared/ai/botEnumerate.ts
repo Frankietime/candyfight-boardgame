@@ -62,6 +62,12 @@ function enumerateCharacterSelection(G: GameState, ctx: Ctx, playerID?: string):
     // Already chose (or unknown seat): nothing to do.
     if (!player || player.characterId) return [];
 
+    // Seat 0 (the human in vs-Bots matches) picks FIRST — every other seat
+    // holds until it has chosen. In all-bot simulations seat 0 is just the
+    // first bot, so the gate still guarantees progress.
+    const seatZero = G.players["0"];
+    if (actingId !== "0" && seatZero && !seatZero.characterId) return [];
+
     const taken = new Set(
         getPlayersList(G)
             .map(p => p.characterId)

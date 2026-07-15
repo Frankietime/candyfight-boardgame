@@ -23,6 +23,12 @@ export const NO_CARD_SELECTED: undefined = undefined;
 export const MARKET_ROW_SIZE = 4;
 
 /**
+ * Tier id of the base game's market pile. Locations without an explicit
+ * marketTierId sell from this tier (phase-1 mod compatibility).
+ */
+export const DEFAULT_MARKET_TIER = "tier1";
+
+/**
  * Seat colors — SINGLE source of truth for every player-color surface
  * (info-panel dots, log dots, lobby chips, presence/ranking text). Indexed by
  * seat id. Matches the board seating viewed from the human seat 0:

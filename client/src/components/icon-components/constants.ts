@@ -14,11 +14,12 @@ import DISCARD from "../../assets/board/action-discard.png";
 import TRASH from "../../assets/board/action-trash.png";
 import DRAW from "../../assets/board/action-draw.png";
 
-import cardCanvas from "../../assets/cards/card-canvas-1-small.png";
-import cardCanvasLarge from "../../assets/cards/card-canvas-1-large.png";
+// The -large exports still have placeholder text ("efecto primario") baked
+// in; the -small (328×443) is the clean primitive and covers every render
+// size, including the 210×314 hover preview.
+import cardCanvas from "../../assets/cards/card-canvas-3-small.png";
 
 export const cardCanvasSmall = cardCanvas;
-export { cardCanvasLarge };
 
 import { Dictionary } from "@candyfight/shared/types";
 import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "@candyfight/shared/enums";
@@ -36,6 +37,15 @@ export const resourceIconsDict: Dictionary<any> = {
     [LocationActionsEnum.DISCARD]: DISCARD,
     [LocationActionsEnum.TRASH]: TRASH,
     [LocationActionsEnum.DRAW]: DRAW,
+}
+
+/**
+ * Emoji fallback for resources without a PNG asset yet (mod-driven render:
+ * new resource types must degrade gracefully, never to a broken <img>).
+ */
+export const resourceEmojiDict: Dictionary<string> = {
+    [ResourceEnum.VictoryPoints]: "⭐",
+    [ResourceEnum.Workers]: "🧍",
 }
 
 // Seat order (from human seat 0): red · violet (top-right) · green (bottom-right) · yellow (top-left)

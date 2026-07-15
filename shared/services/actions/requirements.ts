@@ -7,6 +7,7 @@ import {
   ValidationContext
 } from "../../types";
 import { LocationActionsEnum, RequirementType } from "../../enums";
+import { canAffordResources } from "../resourceServices";
 
 // Requirement data factory: Cards in hand (for discard/trash actions)
 export const cardsInHandRequirement = (count: number): ActionRequirement => ({
@@ -41,10 +42,8 @@ export const canPayLocationCosts = (
 ): boolean => {
   const context: ValidationContext = { selectedCard, location };
 
-  // Check resource costs
-  const hasResources = location.cost.resources?.every(
-    res => player[res.resourceId] >= res.amount
-  ) ?? true;
+  // Check resource costs (candy/loot/VP/workers — central affordability rules)
+  const hasResources = canAffordResources(player, location.cost.resources ?? []);
 
   // Check action costs
   const canPerformActions = location.cost.actions?.every(

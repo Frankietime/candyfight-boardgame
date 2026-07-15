@@ -4,6 +4,7 @@ import { LobbyAPI } from "boardgame.io";
 import { District, Location, Card, PlayerGameState, PlayerViewModel } from "@candyfight/shared/types";
 import { playerSeatColor } from "@candyfight/shared/constants";
 import { LocationComponent } from "../location-component/LocationComponent";
+import { marketTierIdFor } from "@candyfight/shared/services/marketServices";
 import { locsXPos, locsYPos } from "./constants";
 import { DistrictIcon } from "../ui/GameIcon";
 import { anchors } from "@candyfight/shared/tutorial/types";
@@ -25,8 +26,8 @@ export interface BoardDistrictsLayerProps {
   onLocationSelect: (districtIndex: number, locationIndex: number) => void;
   /** Check if location is disabled */
   isLocationDisabled: (location: Location) => boolean;
-  /** Visible market cards for market location hover preview */
-  marketCards?: Card[];
+  /** Visible market row per tier — each market location shows its own tier. */
+  marketRows?: Record<string, Card[]>;
 }
 
 /**
@@ -44,7 +45,7 @@ export const BoardDistrictsLayer = memo(({
   selectedCard,
   onLocationSelect,
   isLocationDisabled,
-  marketCards,
+  marketRows,
 }: BoardDistrictsLayerProps) => {
   return (
     <>
@@ -60,7 +61,7 @@ export const BoardDistrictsLayer = memo(({
           selectedCard={selectedCard}
           onLocationSelect={onLocationSelect}
           isLocationDisabled={isLocationDisabled}
-          marketCards={marketCards}
+          marketRows={marketRows}
         />
       ))}
     </>
@@ -82,7 +83,7 @@ interface DistrictContainerProps {
   selectedCard?: Card;
   onLocationSelect: (districtIndex: number, locationIndex: number) => void;
   isLocationDisabled: (location: Location) => boolean;
-  marketCards?: Card[];
+  marketRows?: Record<string, Card[]>;
 }
 
 const TILE_W = Math.round(1280 / 12); // 107px
@@ -101,7 +102,7 @@ const DistrictContainer = memo(({
   selectedCard,
   onLocationSelect,
   isLocationDisabled,
-  marketCards,
+  marketRows,
 }: DistrictContainerProps) => {
   // Bottom districts (2,3): header below; top districts (0,1): header above
   const isTop = districtIndex >= 2;
@@ -155,7 +156,7 @@ const DistrictContainer = memo(({
             isDisabled={isLocationDisabled(location)}
             selectedCard={selectedCard}
             player={player}
-            marketCards={marketCards}
+            marketCards={marketRows?.[marketTierIdFor(location)]}
             tutorAnchorId={anchors.location(districtIndex, locIndex)}
           />
         </div>

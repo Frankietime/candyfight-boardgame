@@ -12,7 +12,7 @@ import { GameState, Card } from '../../types';
 import { getInitialDistrictsState } from '../../services/locationServices';
 import { getSignetCard, getTierOneCards } from '../../services/cardServices';
 import { DistrictIconsEnum, ResourceEnum } from '../../enums';
-import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from '../../constants';
+import { DEFAULT_MARKET_TIER, INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from '../../constants';
 import { DEFAULT_GAME_CONFIG } from '../../types';
 
 // ─── Exported card constants used in test assertions ───────────────────────
@@ -89,7 +89,7 @@ export const createTestGame = (): GameInterface<GameState> => ({
             ])
         ),
         districts: getInitialDistrictsState(),
-        cardMarket: [],
+        markets: { [DEFAULT_MARKET_TIER]: [] },
         roundEndingCounter: 0,
         gameEndingCounter: 0,
         ranking: [],

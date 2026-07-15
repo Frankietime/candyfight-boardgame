@@ -14,12 +14,12 @@ import { Ctx } from "boardgame.io";
 import { Card, GameState, Location, MetaGameState, PlayerGameState } from "../types";
 import { DEFAULT_GAME_CONFIG, GameConfig } from "../types";
 import { CharacterEnum, ResourceEnum } from "../enums";
-import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "../constants";
+import { DEFAULT_MARKET_TIER, INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "../constants";
 import { getInitialDistrictsState } from "../services/locationServices";
 import { isWorkerPlacementValid } from "../game-helper";
 import { placeWorker, WorkerMoveParams } from "../services/moves/workerPlacementService";
 import { draw as drawService, selectCard as selectCardService } from "../services/moves/moves";
-import { resolveCombat } from "../services/moves/phaseService";
+import { executeRevealEffects, resolveCombat } from "../services/moves/phaseService";
 import { stampSignetAbility } from "../characters/character-definitions";
 import { appendLog } from "../services/logService";
 import { createDeterministicRandom, DeterministicRandom } from "./deterministicRandom";
@@ -44,7 +44,7 @@ export type TutorPlayerSeed = {
 
 export type TutorStateSeed = {
     players: TutorPlayerSeed[];
-    /** Visible market row. */
+    /** Visible market row (seeds the default tier's pile). */
     cardMarket?: Card[];
     config?: Partial<GameConfig>;
     /** Preset presence tokens (for lessons that start mid-round, e.g. combat). */
@@ -86,7 +86,7 @@ export const buildTutorState = (seed: TutorStateSeed): GameState => {
     return {
         players,
         districts,
-        cardMarket: seed.cardMarket ?? [],
+        markets: { [DEFAULT_MARKET_TIER]: seed.cardMarket ?? [] },
         roundEndingCounter: 0,
         gameEndingCounter: 0,
         ranking: [],
@@ -204,6 +204,9 @@ export class TutorEngine {
             type: "move",
             message: "revealed",
         });
+        // Rules parity with the real reveal move: fire secondary effects of
+        // this round's played cards (tutorial content carries none today).
+        executeRevealEffects(this.mgState(), player);
         return { ok: true };
     }
 

@@ -12,6 +12,7 @@ import { useActionOrchestrator, ActionOrchestratorRenderer } from "../../actions
 import { ActionParams } from "@candyfight/shared/actions";
 import { WorkerMoveParams } from "@candyfight/shared/services/moves/workerPlacementService";
 import { MARKET_ROW_SIZE } from "@candyfight/shared/constants";
+import { marketRowFor } from "@candyfight/shared/services/marketServices";
 import { useMatchQuery } from "../../hooks/useMatchQuery";
 import { isBotMatch } from "../../botMatch";
 import { QueryErrorFallback, DistrictLoader } from "../ui";
@@ -79,6 +80,7 @@ export const BoardComponent = ({
     return (
       (location.reward.actions?.some(a => a.actionId === LocationActionsEnum.GET_SWORD_MASTER) && player.maxNumberOfWorkers >= 3) ||
       location.isDisabled ||
+      location.isModDisabled ||
       location.takenByPlayerID !== undefined ||
       !selectedCard ||
       player.currentNumberOfWorkers === 0
@@ -102,7 +104,8 @@ export const BoardComponent = ({
       a => a.actionId === LocationActionsEnum.BUY_CARD
     );
 
-    const marketRow = G.cardMarket.slice(0, MARKET_ROW_SIZE);
+    // The row of the LOCATION's market tier (per-tier markets).
+    const marketRow = marketRowFor(G, selectedLocation);
 
     const doPlaceWorker = (costParams?: ActionParams, rewardParams?: ActionParams) => {
       const moveParams: WorkerMoveParams | undefined =
@@ -144,7 +147,7 @@ export const BoardComponent = ({
       // takenByPlayerID already guarded by the early return above.
       doPlaceWorker();
     }
-  }, [player, G.districts, G.cardMarket, selectedCard, actionOrchestrator, moves]);
+  }, [player, G.districts, G.markets, selectedCard, actionOrchestrator, moves]);
 
   // Clicking empty board space (not the hand, a location, a dialog or an
   // action button) deselects the card — back to the "all possible plays" view.
@@ -181,7 +184,13 @@ export const BoardComponent = ({
   // Visible market row and player names - memoized so child React.memo
   // components (BoardDistrictsLayer, PlayerAreaComponent) don't see a new
   // array identity every render.
-  const marketCards = useMemo(() => G.cardMarket.slice(0, MARKET_ROW_SIZE), [G.cardMarket]);
+  const marketRows = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(G.markets).map(([tierId, pile]) => [tierId, pile.slice(0, MARKET_ROW_SIZE)])
+      ),
+    [G.markets]
+  );
   const playerNames = useMemo(
     () => matchData?.players.map((p, i) => p?.name ?? `Player ${i + 1}`) ?? [],
     [matchData?.players]
@@ -215,6 +224,7 @@ export const BoardComponent = ({
                 playersViewModel={G.playersViewModel}
                 matchData={matchData}
                 playerID={playerID ?? null}
+                currentPlayer={ctx.currentPlayer}
                 moves={moves}
               />
             </div>
@@ -247,7 +257,7 @@ export const BoardComponent = ({
                 selectedCard={selectedCard}
                 onLocationSelect={onLocationSelect}
                 isLocationDisabled={isLocationDisabled}
-                marketCards={marketCards}
+                marketRows={marketRows}
               />
 
               {/* Action Orchestrator Renderer */}

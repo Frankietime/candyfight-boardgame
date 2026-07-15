@@ -26,6 +26,16 @@ export const resources = {
     resourceId: ResourceEnum.Candy,
     amount,
   }),
+
+  victoryPoints: (amount = 1): ResourceBag => ({
+    resourceId: ResourceEnum.VictoryPoints,
+    amount,
+  }),
+
+  workers: (amount = 1): ResourceBag => ({
+    resourceId: ResourceEnum.Workers,
+    amount,
+  }),
 };
 
 /**

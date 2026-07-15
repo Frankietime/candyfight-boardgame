@@ -17,8 +17,8 @@ export function useMatchQuery(matchID: string | undefined) {
     queryKey: ["match", matchID],
     queryFn: () => {
       if (isBotMatch(matchID)) {
-        const { botSeats, playerState } = useAppStore.getState();
-        return Promise.resolve(makeBotMatchData(botSeats ?? 4, playerState.name));
+        const { botSeats, botNames, playerState } = useAppStore.getState();
+        return Promise.resolve(makeBotMatchData(botSeats ?? 4, playerState.name, botNames));
       }
       return getMatch(matchID!);
     },

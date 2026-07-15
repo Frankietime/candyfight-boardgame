@@ -16,7 +16,7 @@ import { actionRegistry } from "../actions";
 import { LocationActionsEnum, CharacterEnum, ResourceEnum } from "../enums";
 import { Game } from "../Game";
 import { getInitialDistrictsState } from "../services/locationServices";
-import { INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "../constants";
+import { DEFAULT_MARKET_TIER, INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "../constants";
 import { DEFAULT_GAME_CONFIG, GameState, Card } from "../types";
 
 const card = (id: string): Card => ({ id, name: id, districtIds: ["LOC1"] });
@@ -77,7 +77,7 @@ describe("maintenancePhase with a short-decked player", () => {
                     "1": mkPlayer("1", Array.from({ length: 6 }, (_, i) => card(`b${i}`))),
                 },
                 districts: getInitialDistrictsState(),
-                cardMarket: [],
+                markets: { [DEFAULT_MARKET_TIER]: [] },
                 roundEndingCounter: 0,
                 gameEndingCounter: 0,
                 ranking: [],

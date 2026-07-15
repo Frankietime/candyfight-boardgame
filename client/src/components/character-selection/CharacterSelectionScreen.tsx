@@ -62,6 +62,8 @@ interface CharacterSelectionScreenProps {
     playersViewModel: PlayerViewModel[];
     matchData: LobbyAPI.Match;
     playerID: string | null;
+    /** Selection is sequential — only this seat may pick right now. */
+    currentPlayer: string;
     moves: any;
 }
 
@@ -69,23 +71,25 @@ export const CharacterSelectionScreen = memo(({
     playersViewModel,
     matchData,
     playerID,
+    currentPlayer,
     moves,
 }: CharacterSelectionScreenProps) => {
     const myPlayer = playersViewModel.find(p => p.id === playerID);
     const myCharacterId = myPlayer?.characterId;
+    const isMyTurn = playerID === currentPlayer;
 
     const [pendingId, setPendingId] = useState<CharacterEnum | null>(null);
 
     const onSelect = useCallback((characterId: CharacterEnum) => {
-        if (myCharacterId) return;
+        if (myCharacterId || !isMyTurn) return;
         setPendingId(prev => prev === characterId ? null : characterId);
-    }, [myCharacterId]);
+    }, [myCharacterId, isMyTurn]);
 
     const onConfirm = useCallback(() => {
-        if (!pendingId || myCharacterId) return;
+        if (!pendingId || myCharacterId || !isMyTurn) return;
         moves.selectCharacter(pendingId);
         setPendingId(null);
-    }, [pendingId, myCharacterId, moves]);
+    }, [pendingId, myCharacterId, isMyTurn, moves]);
 
     const takenMap: Record<string, string> = {};
     playersViewModel.forEach(p => {
@@ -95,9 +99,10 @@ export const CharacterSelectionScreen = memo(({
         }
     });
 
-    const waitingPlayers = playersViewModel
-        .filter(p => !p.characterId)
-        .map(p => matchData.players[parseInt(p.id)]?.name ?? `Player ${parseInt(p.id) + 1}`);
+    // Sequential picking: the footer names the seat currently choosing.
+    const currentPickerName =
+        matchData.players[parseInt(currentPlayer)]?.name ?? `Player ${parseInt(currentPlayer) + 1}`;
+    const anyoneLeft = playersViewModel.some(p => !p.characterId);
 
     return (
         <div
@@ -147,7 +152,7 @@ export const CharacterSelectionScreen = memo(({
                     const takenBy = takenMap[char.id];
                     const isTakenByMe = myCharacterId === char.id;
                     const isTakenByOther = !!takenBy && !isTakenByMe;
-                    const isAvailable = !takenBy && !myCharacterId;
+                    const isAvailable = !takenBy && !myCharacterId && isMyTurn;
                     const isPending = pendingId === char.id;
 
                     return (
@@ -166,7 +171,7 @@ export const CharacterSelectionScreen = memo(({
             </div>
 
             {/* Confirm button */}
-            {!myCharacterId && (
+            {!myCharacterId && isMyTurn && (
                 <ConfirmButton
                     pendingId={pendingId}
                     onConfirm={onConfirm}
@@ -188,8 +193,8 @@ export const CharacterSelectionScreen = memo(({
                     backgroundColor: "#fff",
                 }}
             >
-                {waitingPlayers.length > 0
-                    ? `Waiting for: ${waitingPlayers.join(", ")} …`
+                {anyoneLeft
+                    ? (isMyTurn ? "Your pick!" : `Picking now: ${currentPickerName} …`)
                     : "All players ready — starting game…"
                 }
             </div>

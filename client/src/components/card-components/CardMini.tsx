@@ -1,5 +1,7 @@
 import { Card } from "@candyfight/shared/types";
+import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { districtIcons } from "../ui/GameIcon";
+import { PuzzleRequirement } from "./PuzzleRequirement";
 
 const bg = '#e0d4fc';
 const border = '2px solid #000';
@@ -77,16 +79,27 @@ export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showB
                     {e.name}
                 </div>
             ))}
-            {!!(card.primaryResources?.length || card.primaryEffects?.length) && !!card.secondaryEffects?.length && (
+            {!!(card.primaryResources?.length || card.primaryEffects?.length) &&
+                !!(card.secondaryEffects?.length || card.secondaryResources?.length) && (
                 <div style={{ borderTop: "1px solid #ddd" }} />
             )}
+            {card.secondaryResources?.map((r, i) => (
+                <div key={`sr-${i}`} style={{ fontSize: "10px" }}>
+                    <div style={{ fontWeight: 900, fontSize: "9px", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Reveal</div>
+                    +{r.amount} {r.resourceId}
+                </div>
+            ))}
             {card.secondaryEffects?.map((e, i) => (
                 <div key={i} style={{ fontSize: "10px" }}>
                     <div style={{ fontWeight: 900, fontSize: "9px", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Reveal</div>
                     {e.name}
+                    {e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE && (
+                        <div style={{ marginTop: 2 }}><PuzzleRequirement iconSize={12} /></div>
+                    )}
                 </div>
             ))}
-            {!card.primaryResources?.length && !card.primaryEffects?.length && !card.secondaryEffects?.length && (
+            {!card.primaryResources?.length && !card.primaryEffects?.length &&
+                !card.secondaryEffects?.length && !card.secondaryResources?.length && (
                 <div style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>—</div>
             )}
         </div>

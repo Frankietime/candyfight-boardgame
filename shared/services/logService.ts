@@ -1,5 +1,5 @@
 import { GameState, LogEntry, ResourceBag } from '../types';
-import { ResourceEnum } from '../enums';
+import { resourceLabel } from './resourceServices';
 
 const MAX_LOG_ENTRIES = 150;
 
@@ -17,7 +17,6 @@ export const formatResources = (resources: ResourceBag[], negate = false): strin
         .filter(r => r.amount !== 0)
         .map(r => {
             const delta = negate ? -r.amount : r.amount;
-            const label = r.resourceId === ResourceEnum.Candy ? 'candy' : 'loot';
-            return `${delta > 0 ? '+' : ''}${delta} ${label}`;
+            return `${delta > 0 ? '+' : ''}${delta} ${resourceLabel(r.resourceId)}`;
         })
         .join(', ');

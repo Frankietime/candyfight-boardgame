@@ -34,9 +34,17 @@ export class CandyGreedyBot extends Bot {
         this.reducer = CreateGameReducer({ game });
     }
 
+    /** Moves that must feel instant — no "thinking" pause for the human. */
+    private static readonly UNDELAYED_MOVES = new Set(["selectCharacter", "reveal"]);
+
     async play(state: any, playerID: string) {
-        if (this.playDelayMs > 0) await sleep(this.playDelayMs);
-        return this.decide(state, playerID);
+        // Decide first (the local master is single-threaded, so the state
+        // can't change under us), then pause only for moves worth watching.
+        const result = await this.decide(state, playerID);
+        const moveType: string | undefined = result.action?.payload?.type;
+        const skipDelay = moveType === undefined || CandyGreedyBot.UNDELAYED_MOVES.has(moveType);
+        if (this.playDelayMs > 0 && !skipDelay) await sleep(this.playDelayMs);
+        return result;
     }
 
     private decide(state: any, playerID: string) {

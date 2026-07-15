@@ -1,88 +1,41 @@
 import { Card } from "../types";
-import { DistrictIconsEnum } from "../enums";
-import { getEnumStringKeys } from "../common-methods";
-import _ from "lodash";
-import { resources, actions } from "../actions/effect-factories";
+import { getBaseMod } from "../mods/baseMod";
+import { ModCard } from "../mods/types";
+import { instantiateModCard, SIGNET_MOD_CARD } from "../mods/instantiateCards";
+// NOTE: imports go straight to baseMod/instantiateCards (not the mods barrel)
+// so this module never pulls in validateMod → actions → core-actions.
+
+/**
+ * Legacy card factories — now a thin derivation of the base cartridge's
+ * decks (shared/mods/baseMod.ts is the single source of card content).
+ * Each call mints fresh instances with process-unique ids, preserving the
+ * original semantics for tests and the tutorial.
+ */
 
 let _cardInstanceCounter = 0;
 
-export const getInitialDeck = (): Card[] => {
-    return [
-        getSignetCard(),
-        ...getTierOneCards(),
-        ...getTierTwoCards(),
-    ]
-}
+const instantiate = (cards: ModCard[]): Card[] =>
+    cards.map(card => instantiateModCard(card, String(++_cardInstanceCounter)));
 
-export const getTierOneCards = () => {
-    return Object.values(DistrictIconsEnum).map<Card>(
-        (districtId) => ({
-            ...getDistrictCard([districtId]),
-            primaryEffects: [actions.addPresence()]
-        })
-    );
-}
+const baseDeck = () => getBaseMod().decks!.baseDeck!;
+const tierOneMarket = () => getBaseMod().decks!.marketTiers![0].cards;
 
-export const getTierTwoCards = (): Card[] => {
-    return [
-        {
-            ...getDistrictCard([DistrictIconsEnum.D1, DistrictIconsEnum.D3]),
-            secondaryEffects: [actions.addRepairToken()],
-        },
-        {
-            ...getDistrictCard([DistrictIconsEnum.D2, DistrictIconsEnum.D4]),
-            secondaryEffects: [actions.addRepairToken()],
-        },
-        ...getMiscelanousDeck()
-    ];
-}
+/** A player's full starting deck: signet + the base cartridge's deck. */
+export const getInitialDeck = (): Card[] => [
+    getSignetCard(),
+    ...instantiate(baseDeck()),
+];
 
-export const getMarketTierOneCards = () => {
-    const districtIds = Object.values(DistrictIconsEnum);
-    
-    const tierOneMarketCards = _.flatMap(districtIds, id1 =>
-        districtIds.map(id2 => [id1, id2])
-        .filter(s => {
-            const [a, b] = s;
-            return a !== b; // elimina "LOC1-LOC1"
-        }));
+/** The 4 single-district cards of the base deck. */
+export const getTierOneCards = (): Card[] =>
+    instantiate(baseDeck().filter(c => c.districtIds.length === 1));
 
-        const marketTierOne: Card[] = [];
-        [...new Set(tierOneMarketCards)].forEach(tuple => {
-            marketTierOne.push({
-                ...getDistrictCard(tuple),
-                primaryEffects: [actions.addPresence()],
-            });
-        })
-    return marketTierOne;
-}
+/** The reveal-carrying cards of the base deck (pairs + Puzzle). */
+export const getTierTwoCards = (): Card[] =>
+    instantiate(baseDeck().filter(c => c.districtIds.length > 1));
 
-const getMiscelanousDeck = (): Card[] => {
-    const allDistricts = [DistrictIconsEnum.D1, DistrictIconsEnum.D2, DistrictIconsEnum.D3, DistrictIconsEnum.D4];
-
-    return [
-        {
-            id: `MISC-STRANGE-${++_cardInstanceCounter}`,
-            name: "Strange Candy",
-            districtIds: allDistricts,
-            primaryResources: [resources.loot(1)],
-            secondaryEffects: [actions.strangeCandyPuzzle()]
-        },
-        {
-            id: `MISC-COOLDOWN-${++_cardInstanceCounter}`,
-            name: "Cooldown",
-            districtIds: [],
-            secondaryEffects: [actions.cooldown()]
-        },
-        {
-            id: `MISC-STRANGE-${++_cardInstanceCounter}`,
-            name: "Strange Candy",
-            districtIds: allDistricts,
-            primaryResources: [resources.loot(1)],
-            secondaryEffects: [actions.strangeCandyPuzzle()]
-        }
-    ];
-}
+/** The base game's tier-1 market: the 12 ordered district pairs. */
+export const getMarketTierOneCards = (): Card[] => instantiate(tierOneMarket());
 
 export const getDistrictCard = (districtIds: string[]): Card => {
     const districtId = districtIds.join("-");
@@ -91,18 +44,8 @@ export const getDistrictCard = (districtIds: string[]): Card => {
         id: `${districtId}-${++_cardInstanceCounter}`,
         districtIds,
         name: districtId,
-    }
-}
+    };
+};
 
-export const getSignetCard = (): Card => ({
-    id: `SIGNET-${++_cardInstanceCounter}`,
-    name: "Signet",
-    districtIds: [
-        DistrictIconsEnum.D1,
-        DistrictIconsEnum.D2,
-        DistrictIconsEnum.D3,
-        DistrictIconsEnum.D4,
-    ],
-    primaryEffects: [actions.signetTrigger()]
-});
-
+export const getSignetCard = (): Card =>
+    instantiateModCard(SIGNET_MOD_CARD, String(++_cardInstanceCounter));

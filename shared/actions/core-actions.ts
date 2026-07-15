@@ -6,8 +6,10 @@
  * all core actions are available.
  */
 
-import { LocationActionsEnum } from "../enums";
+import { LocationActionsEnum, ResourceEnum } from "../enums";
 import { isNullOrEmpty } from "../common-methods";
+import { isPuzzleSolved } from "../services/puzzleService";
+import { addResources } from "../services/resourceServices";
 import { actionRegistry, ActionDefinition, ActionHandler, ActionContext } from "./action-registry";
 import {
   DrawActionParams,
@@ -17,7 +19,8 @@ import {
   GetSwordMasterParams,
   BuyCardActionParams,
 } from "./action-params";
-import { MARKET_ROW_SIZE, MIN_COLLECTION_SIZE } from "../constants";
+import { MIN_COLLECTION_SIZE } from "../constants";
+import { marketPileFor, marketRowFor } from "../services/marketServices";
 import { Card, MetaGameState, PlayerGameState } from "../types";
 import { characterDefinitions } from "../characters/character-definitions";
 import { appendLog } from "../services/logService";
@@ -270,17 +273,20 @@ const buyCardDefinition: ActionDefinition<BuyCardActionParams> = {
 };
 
 const buyCardHandler: ActionHandler<BuyCardActionParams> = {
-  validate: (params, state) => {
-    const visibleCards = state.G.cardMarket.slice(0, MARKET_ROW_SIZE);
+  // The pile is the LOCATION's tier — different market locations sell from
+  // different tiers (context.location flows in from the placement pipeline).
+  validate: (params, state, player, context) => {
+    const visibleCards = marketRowFor(state.G, context?.location);
     if (visibleCards.length === 0) return "The market is empty";
     const isAvailable = visibleCards.some(c => c.id === params.targetCardId);
     if (!isAvailable) return `Card ${params.targetCardId} is not available in the market`;
     return null;
   },
-  execute: (params, state, player) => {
-    const index = state.G.cardMarket.findIndex(c => c.id === params.targetCardId);
+  execute: (params, state, player, context) => {
+    const pile = marketPileFor(state.G, context?.location);
+    const index = pile.findIndex(c => c.id === params.targetCardId);
     if (index !== -1) {
-      const [card] = state.G.cardMarket.splice(index, 1);
+      const [card] = pile.splice(index, 1);
       player.discardPile = [...player.discardPile, card];
       appendLog(state.G, {
         playerID: state.ctx.currentPlayer,
@@ -290,6 +296,35 @@ const buyCardHandler: ActionHandler<BuyCardActionParams> = {
         card,
       });
     }
+  },
+};
+
+// ============================================================================
+// STRANGE_CANDY_PUZZLE Action (reveal effect)
+// ============================================================================
+// Playing a Puzzle card ENABLES the challenge; the card itself never counts.
+// At reveal: the revealed hand must hold one card per district symbol plus
+// two more symbol cards ("? ?" wildcards) → +1 VP.
+
+const puzzleDefinition: ActionDefinition = {
+  id: LocationActionsEnum.STRANGE_CANDY_PUZZLE,
+  displayName: "Puzzle",
+  inputSpec: { inputType: 'none' },
+  tags: ['core', 'cards'],
+};
+
+const puzzleHandler: ActionHandler = {
+  execute: (params, state, player) => {
+    const solved = isPuzzleSolved(player.hand);
+    if (solved) {
+      addResources(player, [{ resourceId: ResourceEnum.VictoryPoints, amount: 1 }]);
+    }
+    appendLog(state.G, {
+      playerID: player.id,
+      phase: state.ctx.phase ?? '',
+      type: 'effect',
+      message: solved ? 'solved the Puzzle (+1 VP)' : 'Puzzle failed',
+    });
   },
 };
 
@@ -355,10 +390,7 @@ export function registerCoreActions(): void {
       }
     }
   );
-  actionRegistry.register(
-    stubDefinition(LocationActionsEnum.STRANGE_CANDY_PUZZLE, "Strange Candy Puzzle"),
-    stubHandler
-  );
+  actionRegistry.register(puzzleDefinition, puzzleHandler);
   actionRegistry.register(
     stubDefinition(LocationActionsEnum.ADD_REPAIR_TOKEN, "Add Repair Token"),
     stubHandler

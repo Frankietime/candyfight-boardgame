@@ -6,9 +6,34 @@ services:
     ports:
       - 4000:4000
     stop_signal: SIGINT
+    environment:
+      # Neon Postgres connection string for the mods store (optional —
+      # without it the server boots and /mods answers 503). Defaults to the
+      # local compose db below.
+      - DATABASE_URL=${DATABASE_URL:-postgresql://postgres:candyfight@db:5432/mods}
+    depends_on:
+      - db
+
   frontend:
     build:
       dockerfile: ./Dockerfile.client
     ports:
       - 5174:80
     restart: always
+
+  # Local persistent mods store for development. From the HOST (npm run dev):
+  #   docker compose up -d db
+  #   DATABASE_URL=postgresql://postgres:candyfight@localhost:5433/mods
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=candyfight
+      - POSTGRES_DB=mods
+    ports:
+      - 5433:5432
+    volumes:
+      - mods-db-data:/var/lib/postgresql/data
+
+volumes:
+  mods-db-data:

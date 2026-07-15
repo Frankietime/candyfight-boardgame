@@ -79,7 +79,7 @@ export const makeConfig = (overrides: Partial<GameConfig> = {}): GameConfig => (
 export const makeGameState = (overrides: Partial<GameState> = {}): GameState => ({
     players: { "0": makePlayer() },
     districts: [],
-    cardMarket: [],
+    markets: {},
     roundEndingCounter: 0,
     gameEndingCounter: 0,
     ranking: [],

@@ -9,6 +9,7 @@
 import { TutorEngine } from "./tutorEngine";
 import { TutorChapter } from "./types";
 import { createParams } from "../actions/action-params";
+import { marketPileFor } from "../services/marketServices";
 
 const HUMAN = "0";
 const TRASH_COUNT = 2;
@@ -35,7 +36,7 @@ export const simulateChapter = (chapter: TutorChapter): TutorEngine => {
                     .filter(c => c.id !== interaction.cardId)
                     .slice(0, TRASH_COUNT)
                     .map(c => c.id);
-                const targetCardId = engine.state.cardMarket[interaction.marketIndex]?.id ?? "";
+                const targetCardId = marketPileFor(engine.state)[interaction.marketIndex]?.id ?? "";
                 engine.placeWorker(HUMAN, interaction.districtIndex, interaction.locationIndex, interaction.cardId, {
                     costParams: createParams.trash(cardIds),
                     rewardParams: createParams.buyCard(targetCardId),

@@ -21,6 +21,7 @@ import { BoardDistrictsLayer } from "../board-component/BoardDistrictsLayer";
 import { PlayerAreaComponent } from "../player-area-component/PlayerAreaComponent";
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from "../board-component/hooks/useBoardScale";
 import { MARKET_ROW_SIZE } from "@candyfight/shared/constants";
+import { marketRowFor } from "@candyfight/shared/services/marketServices";
 import { useActionOrchestrator, ActionOrchestratorRenderer } from "../../actions/action-orchestrator";
 import { CombatPhaseDialog } from "../board-component/dialogs";
 import { TutorOverlay } from "./TutorOverlay";
@@ -128,7 +129,7 @@ export const TutorController = ({ chapter, playerNames, onExit }: TutorControlle
             const trashCostAction = location.cost.actions?.find(
                 a => a.actionId === LocationActionsEnum.TRASH || a.actionId === LocationActionsEnum.DISCARD
             );
-            const marketRow = engine.state.cardMarket.slice(0, MARKET_ROW_SIZE);
+            const marketRow = marketRowFor(engine.state, location);
 
             const marketTargetId = marketRow[interaction.marketIndex]?.id;
             actionOrchestrator.requestActionInput(trashCostAction!.actionId, {
@@ -229,7 +230,9 @@ export const TutorController = ({ chapter, playerNames, onExit }: TutorControlle
                             selectedCard={selectedCard}
                             onLocationSelect={onLocationSelect}
                             isLocationDisabled={isLocationDisabled}
-                            marketCards={snapshot.cardMarket.slice(0, MARKET_ROW_SIZE)}
+                            marketRows={Object.fromEntries(
+                                Object.entries(snapshot.markets).map(([tierId, pile]) => [tierId, pile.slice(0, MARKET_ROW_SIZE)])
+                            )}
                         />
 
                         {/* Card-selection prompts for trash cost / market buy */}

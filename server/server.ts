@@ -2,6 +2,7 @@ import { Server, Origins } from 'boardgame.io/server';
 import { Game } from '@candyfight/shared/Game';
 import KoaCors from '@koa/cors';
 import type { StorageAPI } from 'boardgame.io';
+import { registerModRoutes } from './mods/routes';
 
 const allowed = new Set([
   '*',
@@ -54,6 +55,9 @@ server.app.use(async (ctx, next) => {
   }
   await next();
 });
+
+// Mod cartridges CRUD (503 when DATABASE_URL is not configured).
+registerModRoutes(server.router);
 
 server.router.delete('/admin/matches/:matchID', async (ctx) => {
   const { matchID } = ctx.params;

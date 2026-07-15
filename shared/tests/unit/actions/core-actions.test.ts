@@ -3,6 +3,7 @@ import { actionRegistry } from "../../../actions/action-registry";
 // Side-effect import: registers all core actions on the singleton.
 import "../../../actions/core-actions";
 import { CharacterEnum, DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../../../enums";
+import { DEFAULT_MARKET_TIER } from "../../../constants";
 import {
     makeCard,
     makeDistrict,
@@ -177,26 +178,59 @@ describe("GET_SWORD_MASTER action", () => {
 
 describe("BUY_CARD action", () => {
     it("rejects an empty market", () => {
-        const state = makeMetaState({ G: makeGameState({ cardMarket: [] }) });
+        const state = makeMetaState({ G: makeGameState({ markets: { [DEFAULT_MARKET_TIER]: [] } }) });
         const result = actionRegistry.execute(LocationActionsEnum.BUY_CARD, { actionType: "buyCard", targetCardId: "x" } as any, state, makePlayer());
         expect(result.error).toContain("empty");
     });
 
     it("rejects a card not in the visible market row", () => {
         const market = [makeCard({ id: "a" }), makeCard({ id: "b" })];
-        const state = makeMetaState({ G: makeGameState({ cardMarket: market }) });
+        const state = makeMetaState({ G: makeGameState({ markets: { [DEFAULT_MARKET_TIER]: market } }) });
         const result = actionRegistry.execute(LocationActionsEnum.BUY_CARD, { actionType: "buyCard", targetCardId: "zzz" } as any, state, makePlayer());
         expect(result.error).toContain("not available");
     });
 
     it("removes the bought card from the market into the discard pile", () => {
         const target = makeCard({ id: "buy-me", name: "Buy Me" });
-        const state = makeMetaState({ G: makeGameState({ cardMarket: [target, makeCard()] }) });
+        const state = makeMetaState({ G: makeGameState({ markets: { [DEFAULT_MARKET_TIER]: [target, makeCard()] } }) });
         const player = makePlayer({ discardPile: [] });
         const result = actionRegistry.execute(LocationActionsEnum.BUY_CARD, { actionType: "buyCard", targetCardId: "buy-me" } as any, state, player);
         expect(result.success).toBe(true);
-        expect(state.G.cardMarket.find(c => c.id === "buy-me")).toBeUndefined();
+        expect(state.G.markets[DEFAULT_MARKET_TIER].find(c => c.id === "buy-me")).toBeUndefined();
         expect(player.discardPile.map(c => c.id)).toContain("buy-me");
+    });
+
+    it("buys from the LOCATION's tier and leaves other tiers untouched", () => {
+        const t1Card = makeCard({ id: "t1-a" });
+        const t2Card = makeCard({ id: "t2-a" });
+        const state = makeMetaState({
+            G: makeGameState({ markets: { tier1: [t1Card], tier2: [t2Card] } }),
+        });
+        const player = makePlayer({ discardPile: [] });
+        const location = makeLocation({ marketTierId: "tier2" });
+
+        const result = actionRegistry.execute(
+            LocationActionsEnum.BUY_CARD,
+            { actionType: "buyCard", targetCardId: "t2-a" } as any,
+            state, player, { location }
+        );
+        expect(result.success).toBe(true);
+        expect(state.G.markets.tier2).toHaveLength(0);
+        expect(state.G.markets.tier1).toHaveLength(1);
+        expect(player.discardPile.map(c => c.id)).toContain("t2-a");
+    });
+
+    it("rejects a target card that lives in another tier", () => {
+        const state = makeMetaState({
+            G: makeGameState({ markets: { tier1: [makeCard({ id: "t1-a" })], tier2: [makeCard({ id: "t2-a" })] } }),
+        });
+        const location = makeLocation({ marketTierId: "tier2" });
+        const result = actionRegistry.execute(
+            LocationActionsEnum.BUY_CARD,
+            { actionType: "buyCard", targetCardId: "t1-a" } as any,
+            makeMetaState({ G: state.G }), makePlayer(), { location }
+        );
+        expect(result.error).toContain("not available");
     });
 });
 

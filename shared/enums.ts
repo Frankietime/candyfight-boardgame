@@ -8,6 +8,13 @@ export enum DistrictIconsEnum {
 export enum ResourceEnum {
     Candy = "candy",
     Loot = "loot",
+    /** Maps to PlayerGameState.victoryPoints. */
+    VictoryPoints = "victoryPoints",
+    /**
+     * Permanent worker stat (maxNumberOfWorkers). Dual current/max semantics —
+     * NEVER index the player with this id; go through resourceServices.
+     */
+    Workers = "workers",
 }
 
 export enum LocationActionsEnum {

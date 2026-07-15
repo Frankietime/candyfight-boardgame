@@ -24,12 +24,16 @@ export const makeBots = (numPlayers: number): Record<string, typeof CandyGreedyB
     );
 
 /** Synthetic LobbyAPI.Match so board components render without a server match. */
-export const makeBotMatchData = (numPlayers: number, humanName: string): LobbyAPI.Match => ({
+export const makeBotMatchData = (
+    numPlayers: number,
+    humanName: string,
+    botNames: string[] = []
+): LobbyAPI.Match => ({
     matchID: BOT_MATCH_ID,
     gameName: "project-district",
     players: Array.from({ length: numPlayers }, (_, i) => ({
         id: i,
-        name: i === 0 ? humanName : `🤖 Bot ${i}`,
+        name: i === 0 ? humanName : `🤖 ${botNames[i - 1] ?? `Bot ${i}`}`,
     })),
     createdAt: Date.now(),
     updatedAt: Date.now(),

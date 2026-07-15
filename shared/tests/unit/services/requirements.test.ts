@@ -62,6 +62,22 @@ describe("canPayLocationCosts", () => {
         expect(canPayLocationCosts(thin, loc, selectedCard)).toBe(false);
     });
 
+    it("gates victory-point costs on the player's VP balance", () => {
+        const loc = makeLocation({
+            cost: { districtIconIds: [], resources: [{ resourceId: ResourceEnum.VictoryPoints, amount: 2 }] },
+        });
+        expect(canPayLocationCosts(makePlayer({ victoryPoints: 2 }), loc)).toBe(true);
+        expect(canPayLocationCosts(makePlayer({ victoryPoints: 1 }), loc)).toBe(false);
+    });
+
+    it("gates worker costs so at least 1 permanent worker remains", () => {
+        const loc = makeLocation({
+            cost: { districtIconIds: [], resources: [{ resourceId: ResourceEnum.Workers, amount: 1 }] },
+        });
+        expect(canPayLocationCosts(makePlayer({ maxNumberOfWorkers: 2 }), loc)).toBe(true);
+        expect(canPayLocationCosts(makePlayer({ maxNumberOfWorkers: 1 }), loc)).toBe(false);
+    });
+
     it("treats non-cards-in-hand requirement types as satisfied", () => {
         const loc = makeLocation({
             cost: {

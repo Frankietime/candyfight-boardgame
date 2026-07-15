@@ -4,6 +4,7 @@ import { placeWorker } from "../../../services/moves/workerPlacementService";
 import "../../../actions/core-actions";
 import { discardCost } from "../../../services/actions/requirements";
 import { LocationActionsEnum, DistrictIconsEnum, ResourceEnum } from "../../../enums";
+import { DEFAULT_MARKET_TIER } from "../../../constants";
 import {
     makeCard,
     makeDistrict,
@@ -109,7 +110,7 @@ describe("placeWorker — reward actions via move params", () => {
             G: makeGameState({
                 players: { "0": player },
                 districts: [makeDistrict({ id: DistrictIconsEnum.D3 })],
-                cardMarket: [buyTarget, makeCard()],
+                markets: { [DEFAULT_MARKET_TIER]: [buyTarget, makeCard()] },
             }),
         });
 
@@ -122,7 +123,62 @@ describe("placeWorker — reward actions via move params", () => {
         });
 
         expect(player.discardPile.map(c => c.id)).toContain("buy");
-        expect(state.G.cardMarket.find(c => c.id === "buy")).toBeUndefined();
+        expect(state.G.markets[DEFAULT_MARKET_TIER].find(c => c.id === "buy")).toBeUndefined();
+    });
+});
+
+describe("placeWorker — victory points and workers as cost/reward", () => {
+    const runPlacement = (locationOverrides: Partial<Parameters<typeof makeLocation>[0]>, playerOverrides = {}) => {
+        const card = makeCard({ id: "p", districtIds: [DistrictIconsEnum.D3] });
+        const location = makeLocation({
+            districtId: DistrictIconsEnum.D3,
+            cost: { districtIconIds: [DistrictIconsEnum.D3] },
+            reward: {},
+            ...locationOverrides,
+        });
+        const player = makePlayer({ id: "0", hand: [card], ...playerOverrides });
+        const state = makeMetaState({
+            G: makeGameState({ players: { "0": player }, districts: [makeDistrict({ id: DistrictIconsEnum.D3 })] }),
+        });
+        placeWorker({ mgState: state, player, location, card });
+        return { player, state };
+    };
+
+    it("pays a victory-point cost and logs it", () => {
+        const { player, state } = runPlacement(
+            { cost: { districtIconIds: [DistrictIconsEnum.D3], resources: [{ resourceId: ResourceEnum.VictoryPoints, amount: 1 }] } },
+            { victoryPoints: 2 }
+        );
+        expect(player.victoryPoints).toBe(1);
+        expect(state.G.log.some(e => e.message.includes("-1 VP"))).toBe(true);
+    });
+
+    it("collects a victory-point reward", () => {
+        const { player } = runPlacement(
+            { reward: { resources: [{ resourceId: ResourceEnum.VictoryPoints, amount: 2 }] } },
+            { victoryPoints: 0 }
+        );
+        expect(player.victoryPoints).toBe(2);
+    });
+
+    it("collects a worker reward usable in the same round (max AND current rise)", () => {
+        const { player } = runPlacement(
+            { reward: { resources: [{ resourceId: ResourceEnum.Workers, amount: 1 }] } },
+            { currentNumberOfWorkers: 2, maxNumberOfWorkers: 2 }
+        );
+        // playCard spent 1 worker (2→1), reward adds 1 back (1→2); max 2→3
+        expect(player.maxNumberOfWorkers).toBe(3);
+        expect(player.currentNumberOfWorkers).toBe(2);
+    });
+
+    it("pays a worker cost AFTER the placed worker was spent (order: playCard then payCosts)", () => {
+        const { player } = runPlacement(
+            { cost: { districtIconIds: [DistrictIconsEnum.D3], resources: [{ resourceId: ResourceEnum.Workers, amount: 1 }] } },
+            { currentNumberOfWorkers: 1, maxNumberOfWorkers: 2 }
+        );
+        // playCard: current 1→0; workers cost: max 2→1, current clamped to min(0, 1) = 0
+        expect(player.maxNumberOfWorkers).toBe(1);
+        expect(player.currentNumberOfWorkers).toBe(0);
     });
 });
 

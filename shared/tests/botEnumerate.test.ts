@@ -11,6 +11,7 @@ import { Client } from "boardgame.io/client";
 import { createTestGame } from "./helpers/createTestGame";
 import { enumerate, locationNeedsInput, DRAW_CAP } from "../ai/botEnumerate";
 import { CharacterEnum } from "../enums";
+import { DEFAULT_MARKET_TIER } from "../constants";
 import type { GameState } from "../types";
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -77,6 +78,19 @@ describe("enumerate — characterSelectionPhase", () => {
 
         const moves = enumerate(G(client), CTX(client), "0");
         expect(moves).toEqual([]);
+    });
+
+    it("holds every other seat until seat 0 (the human) has picked", () => {
+        const client = makeClient();
+
+        // Before seat 0 picks: bots have no moves.
+        expect(enumerate(G(client), CTX(client), "1")).toEqual([]);
+
+        // After seat 0 picks: bots may choose among the remaining characters.
+        client.updatePlayerID("0");
+        client.moves.selectCharacter(CharacterEnum.ChillDudes);
+        const moves = enumerate(G(client), CTX(client), "1");
+        expect(moves).toHaveLength(Object.values(CharacterEnum).length - 1);
     });
 });
 
@@ -155,7 +169,7 @@ describe("enumerate — mainPhase (Stage A)", () => {
         const p = g.players[seat];
         // Grow the collection past the trash minimum and stock the market.
         p.deck = Array.from({ length: 4 }, (_, i) => ({ ...p.hand[0], id: `deck-${i}` }));
-        g.cardMarket = Array.from({ length: 3 }, (_, i) => ({ ...p.hand[0], id: `market-${i}` }));
+        g.markets[DEFAULT_MARKET_TIER] = Array.from({ length: 3 }, (_, i) => ({ ...p.hand[0], id: `market-${i}` }));
 
         const moves = enumerate(g, CTX(client), seat);
         // ECO Market (1,0): cost trash(2) + reward BUY_CARD.
