@@ -137,9 +137,7 @@ const playCard = (
 
     player.currentNumberOfWorkers -= 1;
     player.hasPlayedCard = true;
-    // Copy (not the discard instance) stamped with where it was played, so
-    // reveal effects can target that district.
-    player.cardsInPlay?.push({ ...card, playedDistrictId: location.districtId });
+    player.cardsInPlay?.push(card);
 
     const resourceStr = card.primaryResources?.length
         ? ` (${formatResources(card.primaryResources)})`

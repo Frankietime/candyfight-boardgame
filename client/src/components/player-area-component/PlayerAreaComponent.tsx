@@ -12,6 +12,10 @@ import { CardComponent } from "../card-components/CardComponent";
 import { CardMini } from "../card-components/CardMini";
 import { CharacterEnum } from "@candyfight/shared/enums";
 import { anchors } from "@candyfight/shared/tutorial/types";
+import { revealEffectOf } from "@candyfight/shared/mods/revealEffects";
+import { isPuzzleSolved } from "@candyfight/shared/services/puzzleService";
+import { eligibleFightDistricts, RevealMoveParams } from "@candyfight/shared/services/moves/phaseService";
+import { PuzzleRequirement } from "../card-components/PuzzleRequirement";
 import { claimFlashSlot } from "../ui/flashQueue";
 import { useT } from "../../i18n/useT";
 import chilldudes from "../../assets/characters/character-chilldudes.png";
@@ -241,7 +245,21 @@ export const PlayerAreaComponent = memo(({
 }: PlayerAreaComponentProps) => {
     const onSelectCard = useCallback((card: Card) => moves.selectCard(card), [moves]);
     const onPass = useCallback(() => moves.pass(), [moves]);
-    const onReveal = useCallback(() => moves.reveal(), [moves]);
+
+    // Revealing with reveal-effect cards in hand opens the resolution modal.
+    const [revealModalOpen, setRevealModalOpen] = useState(false);
+    const onReveal = useCallback(() => {
+        const hasRevealEffects = (player.hand ?? []).some(c => revealEffectOf(c) !== "none");
+        if (hasRevealEffects) {
+            setRevealModalOpen(true);
+            return;
+        }
+        moves.reveal();
+    }, [moves, player.hand]);
+    const onRevealResolved = useCallback((revealParams: RevealMoveParams) => {
+        moves.reveal(revealParams);
+        setRevealModalOpen(false);
+    }, [moves]);
 
     // Enemies in RING order starting after my seat, so slot 0 is whoever
     // plays right after me — the seating that makes turns orbit
@@ -537,6 +555,16 @@ export const PlayerAreaComponent = memo(({
             <div className="hand-preview-centered">
                 <CardComponent card={hoveredCard} x={0} y={0} w={210} h={314} show={true} />
             </div>
+        )}
+
+        {/* Reveal resolution — fight target / puzzle solving / info rows */}
+        {revealModalOpen && (
+            <RevealResolutionModal
+                G={G}
+                player={player}
+                onConfirm={onRevealResolved}
+                onCancel={() => setRevealModalOpen(false)}
+            />
         )}
 
         {/* Player detail modal — rendered in document.body to escape board transform */}
@@ -995,6 +1023,215 @@ const PortraitInfoIcon = () => (
         ℹ
     </div>
 );
+
+// ─── Reveal resolution modal ──────────────────────────────────────────────────
+
+/**
+ * Resolves the reveal effects of the revealed hand before the move fires:
+ * · resource reveals (+1 candy…) are informational — applied automatically;
+ * · "+1 Fight" picks a district AMONG THOSE WITH THE PLAYER'S AGENTS;
+ * · the Puzzle expands into a hand-card selection that must complete the
+ *   challenge (4 distinct symbols + 2 "? ?" wildcards) to score its VP.
+ */
+const RevealResolutionModal = ({ G, player, onConfirm, onCancel }: {
+    G: GameState;
+    player: PlayerGameState;
+    onConfirm: (revealParams: RevealMoveParams) => void;
+    onCancel: () => void;
+}) => {
+    const t = useT();
+    const hand = player.hand ?? [];
+    const resourceCards = hand.filter(c => (c.secondaryResources?.length ?? 0) > 0);
+    const fightCard = hand.find(c => revealEffectOf(c) === "fight");
+    const puzzleCard = hand.find(c => revealEffectOf(c) === "puzzle");
+    const eligible = useMemo(() => eligibleFightDistricts(G, player), [G, player]);
+
+    const [fightDistrict, setFightDistrict] = useState<string | null>(
+        eligible.length === 1 ? eligible[0] : null
+    );
+    const [puzzleOpen, setPuzzleOpen] = useState(false);
+    const [puzzleSelection, setPuzzleSelection] = useState<Set<string>>(new Set());
+
+    const puzzleCandidates = puzzleCard ? hand.filter(c => c.id !== puzzleCard.id) : [];
+    const selectedCards = puzzleCandidates.filter(c => puzzleSelection.has(c.id));
+    const puzzleComplete = puzzleCard ? isPuzzleSolved(selectedCards) : false;
+
+    const needsFightPick = !!fightCard && eligible.length > 0;
+    const canConfirm = !needsFightPick || fightDistrict !== null;
+
+    const togglePuzzleCard = (cardId: string) =>
+        setPuzzleSelection(current => {
+            const next = new Set(current);
+            if (next.has(cardId)) next.delete(cardId);
+            else next.add(cardId);
+            return next;
+        });
+
+    const confirm = () => {
+        if (!canConfirm) return;
+        onConfirm({
+            ...(fightCard && fightDistrict ? { fightDistricts: { [fightCard.id]: fightDistrict } } : {}),
+            ...(puzzleCard && puzzleComplete
+                ? { puzzleSelections: { [puzzleCard.id]: selectedCards.map(c => c.id) } }
+                : {}),
+        });
+    };
+
+    const sectionStyle: React.CSSProperties = {
+        border: "2px solid #000", padding: "10px 12px", backgroundColor: "#fafafa",
+        display: "flex", flexDirection: "column", gap: 8,
+    };
+    const sectionTitleStyle: React.CSSProperties = {
+        fontSize: 11, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em",
+    };
+
+    return (
+        <div
+            onClick={onCancel}
+            style={{
+                position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.55)",
+                display: "flex", alignItems: "center", justifyContent: "center", zIndex: 120,
+            }}
+        >
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    backgroundColor: "#fff", border: "2px solid #000", boxShadow: "6px 6px 0 #000",
+                    padding: 20, fontFamily: nb.font, display: "flex", flexDirection: "column",
+                    gap: 14, width: "min(560px, 92%)", maxHeight: "88%", overflowY: "auto",
+                }}
+            >
+                <div style={{ fontSize: 13, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    👁 {t("game.revealTitle")}
+                </div>
+
+                {/* Automatic resource reveals — informational */}
+                {resourceCards.map(card => (
+                    <div key={card.id} style={{ ...sectionStyle, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: 12, fontWeight: 800 }}>
+                            {card.secondaryResources!.map(r => `+${r.amount} ${r.resourceId}`).join(", ")}
+                        </span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#777" }}>
+                            {t("game.revealAuto")}
+                        </span>
+                    </div>
+                ))}
+
+                {/* +1 Fight — only districts holding the player's agents */}
+                {fightCard && (
+                    <div style={sectionStyle}>
+                        <div style={sectionTitleStyle}>⚔ {t("game.fightDistrictTitle")}</div>
+                        {eligible.length === 0 ? (
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#991b1b" }}>
+                                {t("game.fightNoAgents")}
+                            </div>
+                        ) : (
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                {G.districts.filter(d => eligible.includes(d.id)).map(district => {
+                                    const active = fightDistrict === district.id;
+                                    return (
+                                        <button
+                                            key={district.id}
+                                            onClick={() => setFightDistrict(district.id)}
+                                            style={{
+                                                display: "flex", alignItems: "center", gap: 8,
+                                                border: "2px solid #000",
+                                                boxShadow: active ? "none" : "3px 3px 0 #000",
+                                                transform: active ? "translate(3px, 3px)" : undefined,
+                                                backgroundColor: active ? "#40e0d0" : "#fff",
+                                                padding: "8px 12px", cursor: "pointer",
+                                                fontFamily: nb.font, fontSize: 12, fontWeight: 800,
+                                            }}
+                                        >
+                                            <DistrictIcon districtId={district.id} size="md" />
+                                            {district.name}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Puzzle — expand and select the contributing cards */}
+                {puzzleCard && (
+                    <div style={sectionStyle}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <div style={sectionTitleStyle}>🧩 Puzzle</div>
+                            <PuzzleRequirement iconSize={16} />
+                        </div>
+                        {!puzzleOpen ? (
+                            <button
+                                onClick={() => setPuzzleOpen(true)}
+                                style={{
+                                    border: "2px solid #000", boxShadow: "3px 3px 0 #000",
+                                    backgroundColor: "#fef08a", padding: "8px 12px", cursor: "pointer",
+                                    fontFamily: nb.font, fontSize: 12, fontWeight: 800,
+                                }}
+                            >
+                                {t("game.puzzleResolve")}
+                            </button>
+                        ) : (
+                            <>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {puzzleCandidates.map(card => {
+                                        const selected = puzzleSelection.has(card.id);
+                                        return (
+                                            <div
+                                                key={card.id}
+                                                onClick={() => togglePuzzleCard(card.id)}
+                                                style={{
+                                                    cursor: "pointer",
+                                                    outline: selected ? "3px solid #40e0d0" : "3px solid transparent",
+                                                    filter: selected ? "none" : "grayscale(0.4)",
+                                                }}
+                                            >
+                                                <CardMini card={card} width={64} height={96} iconSize={11} showBody={false} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div style={{
+                                    fontSize: 11, fontWeight: 900,
+                                    color: puzzleComplete ? "#166534" : "#991b1b",
+                                }}>
+                                    {puzzleComplete ? `✔ ${t("game.puzzleComplete")}` : `✗ ${t("game.puzzleIncomplete")}`}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+                    <button
+                        onClick={onCancel}
+                        style={{
+                            border: "2px solid #000", boxShadow: "3px 3px 0 #000", backgroundColor: "#fff",
+                            padding: "8px 16px", cursor: "pointer", fontFamily: nb.font, fontSize: 12, fontWeight: 800,
+                        }}
+                    >
+                        {t("game.cancel")}
+                    </button>
+                    <button
+                        onClick={confirm}
+                        disabled={!canConfirm}
+                        style={{
+                            border: "2px solid #000", boxShadow: canConfirm ? "3px 3px 0 #000" : "none",
+                            backgroundColor: canConfirm ? "#000" : "#ccc",
+                            color: canConfirm ? "#fff" : "#888",
+                            padding: "8px 20px", cursor: canConfirm ? "pointer" : "not-allowed",
+                            fontFamily: nb.font, fontSize: 12, fontWeight: 900,
+                            textTransform: "uppercase", letterSpacing: "0.05em",
+                        }}
+                    >
+                        👁 {t("game.revealConfirm")}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ─── Player Detail Modal ──────────────────────────────────────────────────────
 

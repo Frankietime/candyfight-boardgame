@@ -121,6 +121,7 @@ export const CardEditorDialog = ({
                   return (
                     <button
                       key={id}
+                      title={id}
                       onClick={() => toggleDistrict(id)}
                       style={{
                         border: nb.border,

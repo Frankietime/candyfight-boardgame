@@ -22,6 +22,8 @@ import { synthesizeMoveParams } from "./paramSynthesis";
 // Importing the actions barrel auto-registers the core actions, so
 // `requiresInput` reflects the real inputSpecs.
 import { actionRegistry } from "../actions";
+import { revealEffectOf } from "../mods/revealEffects";
+import { eligibleFightDistricts } from "../services/moves/phaseService";
 
 export type BotMove = { move: string; args: any[] };
 
@@ -130,8 +132,22 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
     } else {
         // reveal: only on a turn without a placement — still guarantees progress
         // (every turn starts with hasPlayedCard reset, so reveal is always
-        // reachable and the phase can always end).
-        moves.push({ move: "reveal", args: [] });
+        // reachable and the phase can always end). A "+1 Fight" card in hand
+        // needs a district choice — presence may only go where the bot has an
+        // agent: emit one reveal variant per ELIGIBLE district and let the
+        // greedy scorer pick. (Puzzle auto-attempts in the handler.)
+        const fightCard = player.hand.find(c => revealEffectOf(c) === "fight");
+        const eligible = fightCard ? eligibleFightDistricts(G, player) : [];
+        if (fightCard && eligible.length > 0) {
+            eligible.forEach(districtId => {
+                moves.push({
+                    move: "reveal",
+                    args: [{ fightDistricts: { [fightCard.id]: districtId } }],
+                });
+            });
+        } else {
+            moves.push({ move: "reveal", args: [] });
+        }
     }
 
     // Note: `selectCard` is intentionally omitted. It only sets a UI highlight;

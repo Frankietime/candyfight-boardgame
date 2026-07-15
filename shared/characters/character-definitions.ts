@@ -53,7 +53,7 @@ export const characterDefinitions: Record<CharacterEnum, CharacterDefinition> = 
         id: CharacterEnum.Kawaiisis,
         name: "Kawaiisis",
         description: "Don't let the cute exterior fool you.",
-        signetAbilityDescription: "Gain 2 candy + 1 extra presence in current district",
+        signetAbilityDescription: "Fight! + 2 candy",
         executeSignetAbility: (state, player, context) => {
             player[ResourceEnum.Candy] += 2;
             actionRegistry.execute(

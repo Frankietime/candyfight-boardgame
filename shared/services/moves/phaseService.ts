@@ -53,14 +53,37 @@ export const revealPlayer = (player: PlayerGameState): void => {
     player.hasRevealed = true;
 };
 
+/** Player choices collected in the reveal-resolution modal. */
+export type RevealMoveParams = {
+    /** card instance id → district id where its "+1 Fight" presence goes */
+    fightDistricts?: Record<string, string>;
+    /** puzzle card id → hand card ids the player selected to solve it */
+    puzzleSelections?: Record<string, string[]>;
+};
+
 /**
- * Fires the reveal (secondary) effects of every card the player played this
- * round, in play order: secondaryResources are added directly; each
- * secondaryEffect runs through the action registry. "+1 Fight" targets the
- * district where its card was played (playedDistrictId stamped by playCard).
+ * Districts eligible for a "+1 Fight" reveal: only where the player has an
+ * agent placed this round (a location they claimed).
  */
-export const executeRevealEffects = (mgState: MetaGameState, player: PlayerGameState): void => {
-    (player.cardsInPlay ?? []).forEach(card => {
+export const eligibleFightDistricts = (G: GameState, player: PlayerGameState): string[] =>
+    G.districts
+        .filter(d => d.locations.some(l => l.takenByPlayerID === player.id))
+        .map(d => d.id as string);
+
+/**
+ * Fires the reveal (secondary) effects of the player's REVEALED HAND — the
+ * cards they kept and show when revealing. secondaryResources are added
+ * directly; each secondaryEffect runs through the action registry.
+ * "+1 Fight" goes to the district the player chose (revealParams), falling
+ * back to the card's first symbol. The Puzzle card enables its challenge but
+ * never counts toward it (excludeCardId).
+ */
+export const executeRevealEffects = (
+    mgState: MetaGameState,
+    player: PlayerGameState,
+    revealParams?: RevealMoveParams
+): void => {
+    [...player.hand].forEach(card => {
         if (card.secondaryResources?.length) {
             addResources(player, card.secondaryResources);
             appendLog(mgState.G, {
@@ -72,10 +95,33 @@ export const executeRevealEffects = (mgState: MetaGameState, player: PlayerGameS
             });
         }
         card.secondaryEffects?.forEach(effect => {
-            const params =
-                effect.actionId === LocationActionsEnum.ADD_PRESENCE_TOKEN
-                    ? { ...(effect.params ?? {}), districtId: (effect.params as any)?.districtId ?? card.playedDistrictId }
-                    : (effect.params ?? {});
+            let params = effect.params ?? {};
+            if (effect.actionId === LocationActionsEnum.ADD_PRESENCE_TOKEN) {
+                // Presence may only go where the player has an agent; an
+                // invalid/missing pick falls back to the first eligible
+                // district. No agents anywhere → the effect fizzles.
+                const eligible = eligibleFightDistricts(mgState.G, player);
+                const picked = revealParams?.fightDistricts?.[card.id];
+                const districtId = picked && eligible.includes(picked) ? picked : eligible[0];
+                if (!districtId) {
+                    appendLog(mgState.G, {
+                        playerID: player.id,
+                        phase: mgState.ctx.phase ?? '',
+                        type: 'effect',
+                        message: `${card.name}: +1 Fight fizzles — no agents on the board`,
+                        card,
+                    });
+                    return;
+                }
+                params = { ...params, districtId };
+            }
+            if (effect.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE) {
+                params = {
+                    ...params,
+                    excludeCardId: card.id,
+                    selectedCardIds: revealParams?.puzzleSelections?.[card.id],
+                };
+            }
             actionRegistry.execute(effect.actionId, params, mgState, player, {});
             appendLog(mgState.G, {
                 playerID: player.id,

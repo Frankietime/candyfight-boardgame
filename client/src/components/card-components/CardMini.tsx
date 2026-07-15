@@ -1,11 +1,8 @@
 import { Card } from "@candyfight/shared/types";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { districtIcons } from "../ui/GameIcon";
+import { cardCanvasSmall } from "../icon-components/constants";
 import { PuzzleRequirement } from "./PuzzleRequirement";
-
-const bg = '#e0d4fc';
-const border = '2px solid #000';
-const font = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
 
 export interface CardMiniProps {
     card: Card;
@@ -19,90 +16,68 @@ export interface CardMiniProps {
     showBody?: boolean;
 }
 
-export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showBody = true }: CardMiniProps) => (
-    <div
-        style={{
-            width,
-            height,
-            backgroundColor: "#fff",
-            border,
-            fontFamily: font,
-            display: "flex",
-            flexDirection: "column",
-            flexShrink: 0,
-            overflow: "hidden",
-        }}
-    >
-        {/* Header — district icons or name */}
-        <div
-            style={{
-                backgroundColor: bg,
-                borderBottom: border,
-                padding: "6px 8px",
-                flexShrink: 0,
-                display: "flex",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 4,
-                minHeight: 32,
-            }}
-        >
-            {card.districtIds?.length > 0 ? (
-                card.districtIds.map(id => (
-                    <img key={id} src={districtIcons[id]} style={{ width: iconSize, height: iconSize }} />
-                ))
-            ) : (
-                <span style={{ fontSize: "10px", fontWeight: 900 }}>{card.name}</span>
-            )}
-        </div>
+/**
+ * Compact card — SAME canvas asset + zone system as CardComponent (.card /
+ * .card-canvas / .card-zone are percentage-positioned, so they scale to any
+ * width/height). Used by the market popover, log hovers, played-card minis,
+ * the player detail modal and the Mod Lab.
+ */
+export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showBody = true }: CardMiniProps) => {
+    const playText = [
+        ...(card.primaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
+        ...(card.primaryEffects?.map(e => e.name) ?? []),
+    ].join(", ");
+    // The Puzzle prints only its icon combination, never its name.
+    const revealText = [
+        ...(card.secondaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
+        ...(card.secondaryEffects
+            ?.filter(e => e.actionId !== LocationActionsEnum.STRANGE_CANDY_PUZZLE)
+            .map(e => e.name) ?? []),
+    ].join(", ");
+    const hasPuzzle = !!card.secondaryEffects?.some(
+        e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE
+    );
 
-        <div style={{ borderBottom: "1px solid #000" }} />
+    return (
+        <div style={{ width, height, position: "relative", flexShrink: 0 }}>
+            <div className="card" style={{ fontSize: Math.max(6, Math.round(9 * (width / 105))) }}>
+                <img className="card-canvas" src={cardCanvasSmall} alt="" draggable={false} />
 
-        {/* Body — blank in miniature mode (big "S" marks the Signet) */}
-        {!showBody ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {card.name?.toLowerCase() === "signet" && (
-                    <span style={{ fontSize: 72, fontWeight: 900, lineHeight: 1 }}>S</span>
-                )}
-            </div>
-        ) : (
-        <div style={{ flex: 1, padding: "6px 8px", display: "flex", flexDirection: "column", gap: 6, overflowY: "auto" }}>
-            {card.primaryResources?.map((r, i) => (
-                <div key={i} style={{ fontSize: "10px" }}>
-                    <div style={{ fontWeight: 900, fontSize: "9px", color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>Play</div>
-                    +{r.amount} {r.resourceId}
-                </div>
-            ))}
-            {card.primaryEffects?.map((e, i) => (
-                <div key={i} style={{ fontSize: "10px" }}>
-                    <div style={{ fontWeight: 900, fontSize: "9px", color: "#555", textTransform: "uppercase", letterSpacing: "0.06em" }}>Play</div>
-                    {e.name}
-                </div>
-            ))}
-            {!!(card.primaryResources?.length || card.primaryEffects?.length) &&
-                !!(card.secondaryEffects?.length || card.secondaryResources?.length) && (
-                <div style={{ borderTop: "1px solid #ddd" }} />
-            )}
-            {card.secondaryResources?.map((r, i) => (
-                <div key={`sr-${i}`} style={{ fontSize: "10px" }}>
-                    <div style={{ fontWeight: 900, fontSize: "9px", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Reveal</div>
-                    +{r.amount} {r.resourceId}
-                </div>
-            ))}
-            {card.secondaryEffects?.map((e, i) => (
-                <div key={i} style={{ fontSize: "10px" }}>
-                    <div style={{ fontWeight: 900, fontSize: "9px", color: "#888", textTransform: "uppercase", letterSpacing: "0.06em" }}>Reveal</div>
-                    {e.name}
-                    {e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE && (
-                        <div style={{ marginTop: 2 }}><PuzzleRequirement iconSize={12} /></div>
+                {/* Header — district icons or name */}
+                <div className="card-zone card-name">
+                    {card.districtIds?.length > 0 ? (
+                        card.districtIds.map(id => (
+                            <img key={id} src={districtIcons[id]} style={{ width: iconSize, height: iconSize, display: "inline-block", margin: "0 1px" }} />
+                        ))
+                    ) : (
+                        <div className="non-location-title">{card.name}</div>
                     )}
                 </div>
-            ))}
-            {!card.primaryResources?.length && !card.primaryEffects?.length &&
-                !card.secondaryEffects?.length && !card.secondaryResources?.length && (
-                <div style={{ fontSize: "10px", color: "#aaa", fontStyle: "italic" }}>—</div>
-            )}
+
+                {!showBody ? (
+                    card.name?.toLowerCase() === "signet" && (
+                        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ fontSize: "5em", fontWeight: 900, lineHeight: 1 }}>S</span>
+                        </div>
+                    )
+                ) : (
+                    <>
+                        {playText && (
+                            <div className="card-zone card-zone-primary">
+                                <div className="play-effect">{playText}</div>
+                            </div>
+                        )}
+                        {(revealText || hasPuzzle) && (
+                            <div className="card-zone card-zone-secondary">
+                                <div className="reveal-effect">
+                                    {revealText}
+                                    {hasPuzzle && <div><PuzzleRequirement /></div>}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
         </div>
-        )}
-    </div>
-);
+    );
+};

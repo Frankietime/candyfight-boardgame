@@ -92,7 +92,7 @@ const es: Messages = {
         play: "Play",
         reveal: "Reveal",
         revealNone: "Ninguno",
-        revealFight: "+1 Fight (presencia donde se jugó)",
+        revealFight: "+1 Fight (elegís el distrito al revelar)",
         revealCandy: "+1 Candy",
         revealPuzzle: "Puzzle (4 símbolos + ? ? → +1 VP)",
         revealSingleCopy: "Las cartas con reveal siempre son copia única",
@@ -107,6 +107,17 @@ const es: Messages = {
     characterModal: {
         signetTitle: "Habilidad de Signet",
     },
+    game: {
+        revealTitle: "Resolución del Reveal",
+        revealAuto: "se aplica automáticamente",
+        fightDistrictTitle: "¿Dónde va el +1 Fight?",
+        fightNoAgents: "Sin agentes en el tablero — el +1 Fight no se aplica",
+        puzzleResolve: "Resolver Puzzle",
+        puzzleComplete: "Puzzle completo (+1 VP al revelar)",
+        puzzleIncomplete: "Elegí 1 carta por símbolo + 2 comodines",
+        revealConfirm: "Revelar",
+        cancel: "Cancelar",
+    },
     character: {
         chilldudes: {
             name: "Chill Dudes",
@@ -116,7 +127,7 @@ const es: Messages = {
         kawaiisis: {
             name: "Kawaiisis",
             description: "No dejes que el exterior tierno te engañe.",
-            signet: "Gana 2 candy + 1 presencia extra en el distrito actual",
+            signet: "Fight! + 2 candy",
         },
         streetwizards: {
             name: "Street Wizards",
@@ -275,7 +286,7 @@ const en: Messages = {
         play: "Play",
         reveal: "Reveal",
         revealNone: "None",
-        revealFight: "+1 Fight (presence where it was played)",
+        revealFight: "+1 Fight (pick the district when revealing)",
         revealCandy: "+1 Candy",
         revealPuzzle: "Puzzle (4 symbols + ? ? → +1 VP)",
         revealSingleCopy: "Reveal-carrying cards are always a single copy",
@@ -290,6 +301,17 @@ const en: Messages = {
     characterModal: {
         signetTitle: "Signet Ability",
     },
+    game: {
+        revealTitle: "Reveal Resolution",
+        revealAuto: "applied automatically",
+        fightDistrictTitle: "Where does the +1 Fight go?",
+        fightNoAgents: "No agents on the board — the +1 Fight fizzles",
+        puzzleResolve: "Solve the Puzzle",
+        puzzleComplete: "Puzzle complete (+1 VP on reveal)",
+        puzzleIncomplete: "Pick 1 card per symbol + 2 wildcards",
+        revealConfirm: "Reveal",
+        cancel: "Cancel",
+    },
     character: {
         chilldudes: {
             name: "Chill Dudes",
@@ -299,7 +321,7 @@ const en: Messages = {
         kawaiisis: {
             name: "Kawaiisis",
             description: "Don't let the cute exterior fool you.",
-            signet: "Gain 2 candy + 1 extra presence in current district",
+            signet: "Fight! + 2 candy",
         },
         streetwizards: {
             name: "Street Wizards",

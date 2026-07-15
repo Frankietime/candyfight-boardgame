@@ -21,7 +21,8 @@ import {
     executeRevealEffects,
     resetTurnState,
     resolveCombat,
-    revealPlayer
+    revealPlayer,
+    RevealMoveParams
 } from "./services/moves/phaseService";
 import { playerView } from "./services/playerViewService";
 import { getCurrentLocation, getCurrentPlayer } from "./services/moves/helper";
@@ -221,7 +222,7 @@ export const Game: GameInterface<GameState> = {
                     undoable: true
                 },
                 reveal: {
-                    move: (mgState: MetaGameState) => {
+                    move: (mgState: MetaGameState, revealParams?: RevealMoveParams) => {
                         // One action XOR reveal per turn: a player who placed a
                         // worker this turn must pass — they cannot also reveal.
                         if (getCurrentPlayer(mgState).hasPlayedCard) return INVALID_MOVE;
@@ -232,9 +233,10 @@ export const Game: GameInterface<GameState> = {
                             type: 'move',
                             message: 'revealed',
                         });
-                        // Reveal fires the secondary effects of this round's
-                        // played cards (+1 Fight / +1 Candy / Puzzle).
-                        executeRevealEffects(mgState, getCurrentPlayer(mgState));
+                        // The revealed hand fires its secondary effects
+                        // (+1 Fight — district chosen in revealParams — /
+                        // +1 Candy / Puzzle).
+                        executeRevealEffects(mgState, getCurrentPlayer(mgState), revealParams);
                         mgState.events?.endTurn?.();
                     }
                 },

@@ -254,15 +254,8 @@ export type Card = {
 
   /** Complex action effects executed via registry when card is played */
   primaryEffects?: RewardAction[];
-  /** Complex action effects executed at reveal (see executeRevealEffects) */
+  /** Complex action effects fired from the revealed hand (executeRevealEffects) */
   secondaryEffects?: RewardAction[];
-
-  /**
-   * Runtime-only: district where this card was played this round. Stamped on
-   * the cardsInPlay COPY at playCard time (never on the discard instance) so
-   * reveal effects like "+1 Fight" know their target district.
-   */
-  playedDistrictId?: string;
 }
 
 // Utils

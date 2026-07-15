@@ -3,6 +3,7 @@ import { Card } from "@candyfight/shared/types";
 import { LocationActionsEnum } from "@candyfight/shared/enums";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { PuzzleRequirement } from "./PuzzleRequirement";
+import { AutoFitZone } from "./AutoFitZone";
 import { cardCanvasSmall } from "../icon-components/constants";
 
 export type CardComponentProps = {
@@ -30,9 +31,10 @@ export const CardComponent = memo(({
     selectionColor,
     isDisabled,
 }: CardComponentProps) => {
-    // Memoize district icons
+    // Memoize district icons — em-sized so the header AutoFitZone can shrink
+    // them to fit (the Signet and any 4-icon card overflow at fixed px).
     const districtIcons = useMemo(() =>
-        card?.districtIds?.map(did => <DistrictIconComponent key={did} districtId={did} />),
+        card?.districtIds?.map(did => <DistrictIconComponent key={did} districtId={did} size="2.4em" />),
         [card?.districtIds]
     );
 
@@ -42,9 +44,12 @@ export const CardComponent = memo(({
         [card?.primaryEffects]
     );
 
-    // Memoize secondary effects text
+    // Memoize secondary effects text. The Puzzle prints only its icon
+    // combination (PuzzleRequirement below), never its name.
     const secondaryEffectsText = useMemo(() =>
-        card?.secondaryEffects?.map(e => e.name).join(", "),
+        card?.secondaryEffects
+            ?.filter(e => e.actionId !== LocationActionsEnum.STRANGE_CANDY_PUZZLE)
+            .map(e => e.name).join(", "),
         [card?.secondaryEffects]
     );
 
@@ -76,26 +81,24 @@ export const CardComponent = memo(({
                 are overprinted on its dither band and two effect boxes. */}
             <div className={cardClassName}>
                 <img className="card-canvas" src={cardCanvasSmall} alt="" draggable={false} />
-                <div className="card-zone card-name">
+                <AutoFitZone className="card-zone card-name">
                     {card.districtIds?.length > 0
                         ? districtIcons
                         : <div className="non-location-title">{card.name}</div>
                     }
-                </div>
+                </AutoFitZone>
                 {((card.primaryEffects?.length ?? 0) > 0 || (card.primaryResources?.length ?? 0) > 0) && (
-                    <div className="card-zone card-zone-primary">
-                        <div className="play">Play</div>
+                    <AutoFitZone className="card-zone card-zone-primary">
                         <div className="play-effect">
                             {[
                                 ...(card.primaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
                                 ...(primaryEffectsText ? [primaryEffectsText] : []),
                             ].join(", ")}
                         </div>
-                    </div>
+                    </AutoFitZone>
                 )}
                 {((card.secondaryEffects?.length ?? 0) > 0 || (card.secondaryResources?.length ?? 0) > 0) && (
-                    <div className="card-zone card-zone-secondary">
-                        <div className="reveal">Reveal</div>
+                    <AutoFitZone className="card-zone card-zone-secondary">
                         <div className="reveal-effect">
                             {[
                                 ...(card.secondaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
@@ -105,7 +108,7 @@ export const CardComponent = memo(({
                                 <div style={{ marginTop: 2 }}><PuzzleRequirement /></div>
                             )}
                         </div>
-                    </div>
+                    </AutoFitZone>
                 )}
             </div>
         </div>

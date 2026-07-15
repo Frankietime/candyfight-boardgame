@@ -94,6 +94,62 @@ describe("enumerate — characterSelectionPhase", () => {
     });
 });
 
+// ── mainPhase: reveal variants ───────────────────────────────────────────────
+
+describe("enumerate — reveal with a +1 Fight card in hand", () => {
+    const withFightCard = (g: GameState, seat: string) => {
+        const hasFight = g.players[seat].hand.some(
+            c => c.secondaryEffects?.[0]?.actionId === "addPresenceToken"
+        );
+        if (!hasFight) {
+            g.players[seat].hand.push({
+                ...g.players[seat].hand[0],
+                id: "fight-bearer",
+                secondaryEffects: [{ actionId: "addPresenceToken" as never, name: "+1 Fight" }],
+            });
+        }
+    };
+
+    it("emits one reveal variant per district where the bot HAS AN AGENT", () => {
+        const client = reachMainPhase();
+        const seat = CTX(client).currentPlayer;
+        const g: GameState = structuredClone(G(client));
+        withFightCard(g, seat);
+        // Agents in two districts.
+        g.districts[0].locations[0].takenByPlayerID = seat;
+        g.districts[2].locations[0].takenByPlayerID = seat;
+
+        const moves = enumerate(g, CTX(client), seat);
+        const reveals = moves.filter(m => m.move === "reveal");
+        expect(reveals).toHaveLength(2);
+        const districts = reveals.map(m => Object.values(m.args[0].fightDistricts)[0]);
+        expect(new Set(districts)).toEqual(new Set([g.districts[0].id, g.districts[2].id]));
+    });
+
+    it("emits a single plain reveal when the bot has no agents on the board", () => {
+        const client = reachMainPhase();
+        const seat = CTX(client).currentPlayer;
+        const g: GameState = structuredClone(G(client));
+        withFightCard(g, seat);
+
+        const moves = enumerate(g, CTX(client), seat);
+        const reveals = moves.filter(m => m.move === "reveal");
+        expect(reveals).toHaveLength(1);
+        expect(reveals[0].args).toEqual([]);
+    });
+
+    it("emits a single plain reveal without fight cards in hand", () => {
+        const client = reachMainPhase();
+        const seat = CTX(client).currentPlayer;
+        const g: GameState = structuredClone(G(client));
+        g.players[seat].hand = g.players[seat].hand.map(c => ({ ...c, secondaryEffects: undefined, secondaryResources: undefined }));
+        const moves = enumerate(g, CTX(client), seat);
+        const reveals = moves.filter(m => m.move === "reveal");
+        expect(reveals).toHaveLength(1);
+        expect(reveals[0].args).toEqual([]);
+    });
+});
+
 // ── mainPhase ────────────────────────────────────────────────────────────────
 
 describe("enumerate — mainPhase (Stage A)", () => {

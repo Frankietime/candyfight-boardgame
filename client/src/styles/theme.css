@@ -294,6 +294,7 @@
   justify-content: center;
   text-align: center;
   overflow: hidden;
+  line-height: 1.3; /* breathing room when the text wraps to 2+ lines */
 }
 
 .card:hover {
@@ -318,20 +319,17 @@
     drop-shadow(0 0 3px var(--color-selection));
 }
 
-/* Header — dither band above the first box */
+/* Header — dither band above the first box. Icons stay on ONE row: no wrap,
+   so overflow is horizontal and AutoFitZone shrinks them until the row fits
+   (Signet and 4-icon cards). */
 .card-name {
   left: 13%;
   top: 9%;
   width: 74%;
   height: 14.5%;
   flex-direction: row;
-  flex-wrap: wrap;
   gap: 2px;
   font-weight: 600;
-}
-
-.card-name img {
-  max-height: 100%;
 }
 
 /* Card name prints over the black dither, so it carries its own contrast */
@@ -358,16 +356,12 @@
   width: 69.8%;
   height: 18.7%;
   padding: 2px 4px;
-  font-size: 0.85em; /* reveal text runs longer than play — shrink to fit */
 }
 
-.card .play,
-.card .reveal {
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.78em;
-  letter-spacing: 0.06em;
-  opacity: 0.65;
+/* On the inner element, not the zone: AutoFitZone drives the zone's own
+   font-size inline (shrinks it until the content fits the box). */
+.card-zone-secondary .reveal-effect {
+  font-size: 0.85em; /* reveal text runs longer than play — shrink to fit */
 }
 
 /* ===== BoardComponent Styles ===== */

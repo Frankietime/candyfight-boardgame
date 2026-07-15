@@ -315,7 +315,19 @@ const puzzleDefinition: ActionDefinition = {
 
 const puzzleHandler: ActionHandler = {
   execute: (params, state, player) => {
-    const solved = isPuzzleSolved(player.hand);
+    // The enabling Puzzle card never counts toward its own challenge.
+    const { excludeCardId, selectedCardIds } =
+      (params as { excludeCardId?: string; selectedCardIds?: string[] } | undefined) ?? {};
+    const candidates = player.hand.filter(c => c.id !== excludeCardId);
+
+    // Explicit selection (reveal-resolution modal): only the chosen cards may
+    // contribute, and every chosen card must actually be in the hand.
+    // No selection (bots / auto-attempt): try the whole remaining hand.
+    const contributing = selectedCardIds
+      ? candidates.filter(c => selectedCardIds.includes(c.id))
+      : candidates;
+    const validSelection = !selectedCardIds || selectedCardIds.length === contributing.length;
+    const solved = validSelection && isPuzzleSolved(contributing);
     if (solved) {
       addResources(player, [{ resourceId: ResourceEnum.VictoryPoints, amount: 1 }]);
     }
