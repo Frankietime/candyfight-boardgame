@@ -8,7 +8,6 @@ import {
 } from '@candyfight/shared/mods';
 import { DEFAULT_PUZZLE_REQUIREMENT } from '@candyfight/shared/services/puzzleService';
 import { CardMini } from '../card-components/CardMini';
-import { PuzzleRequirement } from '../card-components/PuzzleRequirement';
 import { districtIcons } from '../ui/GameIcon';
 import { useT } from '../../i18n/useT';
 import { nb, BrutalButton, inputStyle, sectionTitle, fieldLabel, ModalOverlay } from '../ui/nb';
@@ -67,6 +66,23 @@ export const CardEditorDialog = ({
     setDistrictIds(current =>
       current.includes(id) ? current.filter(d => d !== id) : [...current, id]
     );
+
+  const addPuzzleSymbol = (symbol: DistrictIconsEnum) =>
+    setPuzzleSymbolCounts(current => ({
+      ...current,
+      [symbol]: Math.min(PUZZLE_COUNT_MAX, (current[symbol] ?? 0) + 1),
+    }));
+
+  const removePuzzleSymbol = (symbol: DistrictIconsEnum) =>
+    setPuzzleSymbolCounts(current => {
+      const next = { ...current };
+      const remaining = (next[symbol] ?? 0) - 1;
+      if (remaining <= 0) delete next[symbol]; else next[symbol] = remaining;
+      return next;
+    });
+
+  const addPuzzleWildcard = () => setPuzzleWildcards(w => Math.min(PUZZLE_COUNT_MAX, w + 1));
+  const removePuzzleWildcard = () => setPuzzleWildcards(w => Math.max(0, w - 1));
 
   const revealSecondary = (): Pick<ModCard, 'secondaryResources' | 'secondaryEffects'> => {
     if (revealMode === 'resources') {
@@ -200,33 +216,67 @@ export const CardEditorDialog = ({
                 )}
 
                 {revealMode === 'puzzle' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {Object.values(DistrictIconsEnum).map(symbol => (
-                      <div key={symbol} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src={districtIcons[symbol]} style={{ width: 20, height: 20 }} />
-                        <input
-                          type="number" min={0} max={PUZZLE_COUNT_MAX}
-                          value={puzzleSymbolCounts[symbol] ?? 0}
-                          onChange={(e) => {
-                            const v = Math.min(PUZZLE_COUNT_MAX, Math.max(0, parseInt(e.target.value) || 0));
-                            setPuzzleSymbolCounts(current => ({ ...current, [symbol]: v }));
-                          }}
-                          style={{ ...inputStyle, width: '64px', textAlign: 'center' }}
-                        />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#777', marginBottom: '6px' }}>
+                        {t('modlab.puzzleAddHint')}
                       </div>
-                    ))}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontWeight: 900, fontSize: '0.95em', width: 20, textAlign: 'center' }}>??</span>
-                      <input
-                        type="number" min={0} max={PUZZLE_COUNT_MAX}
-                        value={puzzleWildcards}
-                        onChange={(e) => setPuzzleWildcards(Math.min(PUZZLE_COUNT_MAX, Math.max(0, parseInt(e.target.value) || 0)))}
-                        style={{ ...inputStyle, width: '64px', textAlign: 'center' }}
-                      />
-                      <span style={{ fontSize: '11px', color: '#777' }}>{t('modlab.puzzleWildcards')}</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {Object.values(DistrictIconsEnum).map(symbol => (
+                          <button
+                            key={symbol}
+                            title={symbol}
+                            onClick={() => addPuzzleSymbol(symbol)}
+                            style={{ border: nb.border, boxShadow: nb.shadowSm, backgroundColor: '#fff', padding: '6px', cursor: 'pointer' }}
+                          >
+                            <img src={districtIcons[symbol]} style={{ width: 22, height: 22, display: 'block' }} />
+                          </button>
+                        ))}
+                        <button
+                          title={t('modlab.puzzleWildcards')}
+                          onClick={addPuzzleWildcard}
+                          style={{
+                            border: nb.border, boxShadow: nb.shadowSm, backgroundColor: '#fff', padding: '6px',
+                            cursor: 'pointer', width: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 900, fontSize: '1em',
+                          }}
+                        >
+                          ?
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ padding: '10px', border: nb.border, backgroundColor: '#fff', display: 'flex', justifyContent: 'center' }}>
-                      <PuzzleRequirement iconSize={20} requirement={{ symbolCounts: puzzleSymbolCounts, wildcards: puzzleWildcards }} />
+
+                    {/* Assembled requirement — same row layout as the card header's
+                        icons; click an icon (or "?") to remove that one instance. */}
+                    <div style={{
+                      padding: '10px', border: nb.border, backgroundColor: '#fff', minHeight: 40,
+                      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px',
+                    }}>
+                      {Object.values(DistrictIconsEnum).flatMap(symbol =>
+                        Array.from({ length: puzzleSymbolCounts[symbol] ?? 0 }).map((_, i) => (
+                          <span
+                            key={`${symbol}-${i}`}
+                            className="puzzle-icon-slot"
+                            title={t('modlab.clickToRemove')}
+                            onClick={() => removePuzzleSymbol(symbol)}
+                          >
+                            <img src={districtIcons[symbol]} style={{ width: 22, height: 22, display: 'block' }} />
+                          </span>
+                        ))
+                      )}
+                      {Array.from({ length: puzzleWildcards }).map((_, i) => (
+                        <span
+                          key={`wc-${i}`}
+                          className="puzzle-icon-slot"
+                          title={t('modlab.clickToRemove')}
+                          onClick={removePuzzleWildcard}
+                        >
+                          <span style={{ fontWeight: 900, fontSize: '1.1em' }}>?</span>
+                        </span>
+                      ))}
+                      {Object.values(puzzleSymbolCounts).every(n => !n) && puzzleWildcards === 0 && (
+                        <span style={{ fontSize: '11px', color: '#999' }}>{t('modlab.puzzleEmpty')}</span>
+                      )}
                     </div>
                   </div>
                 )}

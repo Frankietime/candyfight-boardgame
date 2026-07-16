@@ -388,6 +388,51 @@
   border-color: var(--color-selection);
 }
 
+/* Mod Lab — Puzzle requirement editor: an assembled icon slot, sized to
+   match the "add" buttons above it. Hover previews the removal (click). */
+.puzzle-icon-slot {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  cursor: pointer;
+}
+
+.puzzle-icon-slot::before,
+.puzzle-icon-slot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+.puzzle-icon-slot::before {
+  background-color: #dc2626;
+}
+
+.puzzle-icon-slot::after {
+  content: "✕";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 900;
+  font-size: 18px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+}
+
+.puzzle-icon-slot:hover::before {
+  opacity: 0.3;
+}
+
+.puzzle-icon-slot:hover::after {
+  opacity: 1;
+}
+
 .pass-btn.disabled {
   opacity: 0.3;
   cursor: not-allowed;
