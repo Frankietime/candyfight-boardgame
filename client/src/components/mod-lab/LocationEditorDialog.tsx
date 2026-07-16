@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { District, Location } from '@candyfight/shared/types';
 import { DistrictIconsEnum, LocationActionsEnum } from '@candyfight/shared/enums';
 import { ModDistrict, ModLocation, ModMarketTier } from '@candyfight/shared/mods';
+import { DEFAULT_MARKET_TIER } from '@candyfight/shared/constants';
 import { LocationComponent } from '../location-component/LocationComponent';
 import { useT } from '../../i18n/useT';
-import { nb, BrutalButton, inputStyle, sectionTitle } from '../ui/nb';
+import { nb, BrutalButton, inputStyle, sectionTitle, fieldLabel, ModalOverlay } from '../ui/nb';
 import { EffectEntry, EffectListEditor, fromEntries, toEntries } from './EffectListEditor';
 
 const NAME_MAX_LENGTH = 40;
@@ -21,15 +22,23 @@ export const LocationEditorDialog = ({
   district,
   location,
   marketTiers,
+  defaultTierId,
   onApply,
   onCancel,
+  onEditTierDeck,
 }: {
   district: ModDistrict;
   location: ModLocation;
   /** The mod's market tiers — shown as the tier slot when the reward sells cards. */
   marketTiers: ModMarketTier[];
+  /** This location's round-robin default tier (same computation as gameplay). */
+  defaultTierId?: string;
   onApply: (edited: ModLocation) => void;
   onCancel: () => void;
+  /** "✏️ Editar Mazo" next to the tier select: applies this location's edits
+   *  (so the chosen tier isn't lost) and jumps to that tier's card list in
+   *  the mod's MAZOS view. */
+  onEditTierDeck?: (tierId: string, edited: ModLocation) => void;
 }) => {
   const t = useT();
   const [name, setName] = useState(location.name);
@@ -38,7 +47,7 @@ export const LocationEditorDialog = ({
   const [costEntries, setCostEntries] = useState<EffectEntry[]>(() => toEntries(location.cost));
   const [rewardEntries, setRewardEntries] = useState<EffectEntry[]>(() => toEntries(location.reward));
   const [marketTierId, setMarketTierId] = useState<string>(
-    location.marketTierId ?? marketTiers[0]?.id ?? 'tier1'
+    location.marketTierId ?? defaultTierId ?? marketTiers[0]?.id ?? DEFAULT_MARKET_TIER
   );
 
   const sellsCards = rewardEntries.some(
@@ -81,22 +90,7 @@ export const LocationEditorDialog = ({
   };
 
   return (
-    <div
-      onClick={onCancel}
-      style={{
-        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, fontFamily: nb.font,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#fff', border: nb.border, boxShadow: nb.shadowMd,
-          padding: '24px', width: 'min(860px, 94vw)', maxHeight: '90vh', overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', gap: '18px',
-        }}
-      >
+    <ModalOverlay onCancel={onCancel} zIndex={1000} maxWidth="min(860px, 94vw)">
         <h2 style={{ ...sectionTitle, fontSize: '13px', margin: 0 }}>
           📍 {district.name} — {location.name}
         </h2>
@@ -136,7 +130,7 @@ export const LocationEditorDialog = ({
           {/* Form */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+              <div style={fieldLabel}>
                 {t('modlab.locationName')}
               </div>
               <input
@@ -147,14 +141,18 @@ export const LocationEditorDialog = ({
               />
             </div>
 
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+            <label
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, cursor: 'not-allowed', opacity: 0.5 }}
+              title={t('modlab.restrictedAreaUnsupported')}
+            >
               <input
                 type="checkbox"
                 checked={isRestrictedArea}
+                disabled
                 onChange={(e) => setIsRestrictedArea(e.target.checked)}
-                style={{ width: 16, height: 16 }}
+                style={{ width: 16, height: 16, cursor: 'not-allowed' }}
               />
-              🚫 {t('modlab.restrictedArea')}
+              🚫 {t('modlab.restrictedArea')} ({t('modlab.notSupportedYet')})
             </label>
 
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', color: '#991b1b' }}>
@@ -183,18 +181,28 @@ export const LocationEditorDialog = ({
             {/* Market tier slot — only when the reward sells cards */}
             {sellsCards && (
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+                <div style={fieldLabel}>
                   🛒 {t('modlab.marketTier')}
                 </div>
-                <select
-                  value={marketTierId}
-                  onChange={(e) => setMarketTierId(e.target.value)}
-                  style={{ ...inputStyle, cursor: 'pointer' }}
-                >
-                  {marketTiers.map(tier => (
-                    <option key={tier.id} value={tier.id}>{tier.id} — {tier.name}</option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <select
+                    value={marketTierId}
+                    onChange={(e) => setMarketTierId(e.target.value)}
+                    style={{ ...inputStyle, flex: 1, cursor: 'pointer' }}
+                  >
+                    {marketTiers.map(tier => (
+                      <option key={tier.id} value={tier.id}>{tier.id} — {tier.name}</option>
+                    ))}
+                  </select>
+                  {onEditTierDeck && (
+                    <BrutalButton
+                      onClick={() => onEditTierDeck(marketTierId, edited())}
+                      style={{ backgroundColor: '#000', color: '#fff', padding: '8px 12px', fontSize: '11px', whiteSpace: 'nowrap' }}
+                    >
+                      ✏️ {t('modlab.editDeckSet')}
+                    </BrutalButton>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -208,7 +216,6 @@ export const LocationEditorDialog = ({
             ✔ {t('modlab.apply')}
           </BrutalButton>
         </div>
-      </div>
-    </div>
+    </ModalOverlay>
   );
 };

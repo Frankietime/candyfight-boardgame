@@ -1,13 +1,15 @@
 /**
  * Reveal (secondary) effects — fired from the player's REVEALED HAND:
- * +1 Fight (presence in the district the player chose), +1 Candy,
- * Puzzle (+1 VP when the rest of the revealed hand qualifies).
+ * a free-form bag of resources/actions (same shape as Play), plus the
+ * special-cased Puzzle challenge (+1 VP when the rest of the revealed hand
+ * qualifies against its configured icon/wildcard requirement).
  */
 import { describe, it, expect } from "vitest";
 import "../actions/core-actions";
 import { executeRevealEffects } from "../services/moves/phaseService";
-import { buildRevealSecondary, revealEffectOf } from "../mods/revealEffects";
-import { DistrictIconsEnum, ResourceEnum } from "../enums";
+import { getPuzzleRequirement, hasAnyReveal, hasFightReveal, hasPuzzleReveal, RevealSecondary } from "../mods/revealEffects";
+import { DEFAULT_PUZZLE_REQUIREMENT } from "../services/puzzleService";
+import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../enums";
 import {
     makeCard,
     makeDistrict,
@@ -19,7 +21,17 @@ import {
 
 const { D1, D2, D3, D4 } = DistrictIconsEnum;
 
-const revealCard = (secondary: ReturnType<typeof buildRevealSecondary>, districtIds: DistrictIconsEnum[] = [D1, D3]) =>
+const fightSecondary = (): RevealSecondary => ({
+    secondaryEffects: [{ actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "Fight!" }],
+});
+const candySecondary = (): RevealSecondary => ({
+    secondaryResources: [{ resourceId: ResourceEnum.Candy, amount: 1 }],
+});
+const puzzleSecondary = (requirement = DEFAULT_PUZZLE_REQUIREMENT): RevealSecondary => ({
+    secondaryEffects: [{ actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE, name: "Puzzle", params: requirement }],
+});
+
+const revealCard = (secondary: RevealSecondary, districtIds: DistrictIconsEnum[] = [D1, D3]) =>
     ({ ...makeCard({ districtIds }), ...secondary });
 
 /** Board where the player has agents in the districts of `agentsIn`. */
@@ -43,15 +55,15 @@ const setup = (player = makePlayer({ id: "0" }), agentsIn: DistrictIconsEnum[] =
 
 describe("executeRevealEffects (revealed hand)", () => {
     it("+1 Candy in the revealed hand adds one candy and logs it", () => {
-        const player = makePlayer({ id: "0", candy: 2, hand: [revealCard(buildRevealSecondary("candy"))] });
+        const player = makePlayer({ id: "0", candy: 2, hand: [revealCard(candySecondary())] });
         const { state } = setup(player);
         executeRevealEffects(state, player);
         expect(player.candy).toBe(3);
         expect(state.G.log.some(e => e.message.includes("+1 candy") && e.message.includes("reveal"))).toBe(true);
     });
 
-    it("+1 Fight goes to the CHOSEN district when the player has an agent there", () => {
-        const fightCard = revealCard(buildRevealSecondary("fight"), [D1, D3]);
+    it("Fight! goes to the CHOSEN district when the player has an agent there", () => {
+        const fightCard = revealCard(fightSecondary(), [D1, D3]);
         const player = makePlayer({ id: "0", hand: [fightCard] });
         const { state } = setup(player, [D1, D3]);
 
@@ -61,8 +73,8 @@ describe("executeRevealEffects (revealed hand)", () => {
         expect(state.G.districts[0].presence["0"]).toBeUndefined();
     });
 
-    it("+1 Fight rejects a district without the player's agent (falls back to an eligible one)", () => {
-        const fightCard = revealCard(buildRevealSecondary("fight"), [D1, D3]);
+    it("Fight! rejects a district without the player's agent (falls back to an eligible one)", () => {
+        const fightCard = revealCard(fightSecondary(), [D1, D3]);
         const player = makePlayer({ id: "0", hand: [fightCard] });
         const { state } = setup(player, [D1]); // agent only in D1
 
@@ -72,8 +84,8 @@ describe("executeRevealEffects (revealed hand)", () => {
         expect(state.G.districts[1].presence["0"]).toBeUndefined();
     });
 
-    it("+1 Fight fizzles when the player has no agents anywhere", () => {
-        const fightCard = revealCard(buildRevealSecondary("fight"), [D1, D3]);
+    it("Fight! fizzles when the player has no agents anywhere", () => {
+        const fightCard = revealCard(fightSecondary(), [D1, D3]);
         const player = makePlayer({ id: "0", hand: [fightCard] });
         const { state } = setup(player, []);
 
@@ -85,7 +97,7 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 
     it("Puzzle grants +1 VP when the REST of the revealed hand qualifies (auto-attempt)", () => {
-        const puzzle = revealCard(buildRevealSecondary("puzzle"), [D1, D2, D3, D4]);
+        const puzzle = revealCard(puzzleSecondary(), [D1, D2, D3, D4]);
         const symbols = [D1, D2, D3, D4, D1, D2].map(d => makeCard({ districtIds: [d] }));
         const player = makePlayer({ id: "0", victoryPoints: 0, hand: [puzzle, ...symbols] });
         const { state } = setup(player);
@@ -95,7 +107,7 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 
     it("Puzzle honors an explicit valid selection", () => {
-        const puzzle = revealCard(buildRevealSecondary("puzzle"), [D1, D2, D3, D4]);
+        const puzzle = revealCard(puzzleSecondary(), [D1, D2, D3, D4]);
         const symbols = [D1, D2, D3, D4, D1, D2].map(d => makeCard({ districtIds: [d] }));
         const player = makePlayer({ id: "0", victoryPoints: 0, hand: [puzzle, ...symbols] });
         const { state } = setup(player);
@@ -106,7 +118,7 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 
     it("Puzzle fails on an explicit INSUFFICIENT selection even if the hand could solve it", () => {
-        const puzzle = revealCard(buildRevealSecondary("puzzle"), [D1, D2, D3, D4]);
+        const puzzle = revealCard(puzzleSecondary(), [D1, D2, D3, D4]);
         const symbols = [D1, D2, D3, D4, D1, D2].map(d => makeCard({ districtIds: [d] }));
         const player = makePlayer({ id: "0", victoryPoints: 0, hand: [puzzle, ...symbols] });
         const { state } = setup(player);
@@ -118,7 +130,7 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 
     it("Puzzle rejects selections naming cards outside the hand", () => {
-        const puzzle = revealCard(buildRevealSecondary("puzzle"), [D1, D2, D3, D4]);
+        const puzzle = revealCard(puzzleSecondary(), [D1, D2, D3, D4]);
         const symbols = [D1, D2, D3, D4, D1, D2].map(d => makeCard({ districtIds: [d] }));
         const player = makePlayer({ id: "0", victoryPoints: 0, hand: [puzzle, ...symbols] });
         const { state } = setup(player);
@@ -129,9 +141,7 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 
     it("the Puzzle card itself does NOT count toward its own challenge", () => {
-        // Hand: puzzle (all 4 symbols) + D2, D3, D4 + 2 extra = without the
-        // puzzle card D1 is missing → must FAIL.
-        const puzzle = revealCard(buildRevealSecondary("puzzle"), [D1, D2, D3, D4]);
+        const puzzle = revealCard(puzzleSecondary(), [D1, D2, D3, D4]);
         const others = [D2, D3, D4, D2, D3].map(d => makeCard({ districtIds: [d] }));
         const player = makePlayer({ id: "0", victoryPoints: 0, hand: [puzzle, ...others] });
         const { state } = setup(player);
@@ -140,12 +150,24 @@ describe("executeRevealEffects (revealed hand)", () => {
         expect(state.G.log.some(e => e.message.includes("Puzzle failed"))).toBe(true);
     });
 
+    it("honors a CONFIGURED puzzle requirement different from the default", () => {
+        // Only 2×D1 required, 1 wildcard — solvable with far fewer cards than the default.
+        const puzzle = revealCard(puzzleSecondary({ symbolCounts: { [D1]: 2 }, wildcards: 1 }), [D2]);
+        const player = makePlayer({
+            id: "0", victoryPoints: 0,
+            hand: [puzzle, makeCard({ districtIds: [D1] }), makeCard({ districtIds: [D1] }), makeCard({ districtIds: [D3] })],
+        });
+        const { state } = setup(player);
+        executeRevealEffects(state, player);
+        expect(player.victoryPoints).toBe(1);
+    });
+
     it("cards PLAYED this round do not fire (only the revealed hand does)", () => {
         const player = makePlayer({
             id: "0",
             candy: 2,
             hand: [],
-            cardsInPlay: [revealCard(buildRevealSecondary("candy"))],
+            cardsInPlay: [revealCard(candySecondary())],
         });
         const { state } = setup(player);
         executeRevealEffects(state, player);
@@ -162,23 +184,32 @@ describe("executeRevealEffects (revealed hand)", () => {
     });
 });
 
-describe("curated reveal catalog", () => {
-    it("round-trips build → classify for every id", () => {
-        expect(revealEffectOf(buildRevealSecondary("fight"))).toBe("fight");
-        expect(revealEffectOf(buildRevealSecondary("candy"))).toBe("candy");
-        expect(revealEffectOf(buildRevealSecondary("puzzle"))).toBe("puzzle");
-        expect(revealEffectOf(buildRevealSecondary("none"))).toBe("none");
+describe("reveal payload predicates", () => {
+    it("hasFightReveal / hasPuzzleReveal / hasAnyReveal classify by actionId, not by name", () => {
+        expect(hasFightReveal(fightSecondary())).toBe(true);
+        expect(hasPuzzleReveal(fightSecondary())).toBe(false);
+        expect(hasAnyReveal(fightSecondary())).toBe(true);
+
+        expect(hasFightReveal(puzzleSecondary())).toBe(false);
+        expect(hasPuzzleReveal(puzzleSecondary())).toBe(true);
+
+        expect(hasAnyReveal(candySecondary())).toBe(true);
+        expect(hasAnyReveal({})).toBe(false);
     });
 
-    it("flags anything outside the catalog as invalid", () => {
-        expect(revealEffectOf({ secondaryResources: [{ resourceId: ResourceEnum.Loot, amount: 1 }] })).toBe("invalid");
-        expect(revealEffectOf({ secondaryResources: [{ resourceId: ResourceEnum.Candy, amount: 2 }] })).toBe("invalid");
-        expect(revealEffectOf({
-            secondaryEffects: [{ actionId: "cooldown" as never, name: "Cooldown" }],
-        })).toBe("invalid");
-        expect(revealEffectOf({
-            secondaryResources: [{ resourceId: ResourceEnum.Candy, amount: 1 }],
-            secondaryEffects: [{ actionId: "addPresenceToken" as never, name: "x" }],
-        })).toBe("invalid");
+    it("a card can carry BOTH a Fight action and a plain resource at once (free-form reveal)", () => {
+        const both: RevealSecondary = {
+            secondaryResources: [{ resourceId: ResourceEnum.Loot, amount: 1 }],
+            secondaryEffects: [{ actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "Fight!" }],
+        };
+        expect(hasFightReveal(both)).toBe(true);
+        expect(hasAnyReveal(both)).toBe(true);
+    });
+
+    it("getPuzzleRequirement returns the card's own params, defaulting to the classic shape", () => {
+        expect(getPuzzleRequirement(fightSecondary())).toBeUndefined();
+        expect(getPuzzleRequirement(puzzleSecondary())).toEqual(DEFAULT_PUZZLE_REQUIREMENT);
+        const custom = { symbolCounts: { [D1]: 3 }, wildcards: 0 };
+        expect(getPuzzleRequirement(puzzleSecondary(custom))).toEqual(custom);
     });
 });

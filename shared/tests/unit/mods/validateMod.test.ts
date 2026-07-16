@@ -145,21 +145,51 @@ describe("validateModDefinition — decks (phase 2)", () => {
         if (!result.ok) expect(result.errors.join("\n")).toContain("must not require user input");
     });
 
-    it("rejects reveal payloads outside the curated catalog", () => {
+    it("accepts free-form reveal payloads — a card may carry any resource/action combo, even duplicating another card's reveal type", () => {
         const result = withBaseDeck(mod => {
             mod.decks!.baseDeck![0].secondaryResources = [{ resourceId: ResourceEnum.Loot, amount: 2 }];
+            // bd-pair-24 already carries the candy reveal — this is a second, DIFFERENT reveal, now allowed.
         });
-        expect(result.ok).toBe(false);
-        if (!result.ok) expect(result.errors.join("\n")).toContain("curated");
+        expect(result.ok).toBe(true);
     });
 
-    it("rejects a second card with the same reveal type in the base deck", () => {
+    it("rejects an unknown resourceId in the reveal bag", () => {
         const result = withBaseDeck(mod => {
-            mod.decks!.baseDeck![0].secondaryResources = [{ resourceId: ResourceEnum.Candy, amount: 1 }];
-            // bd-pair-24 already carries the candy reveal.
+            mod.decks!.baseDeck![0].secondaryResources = [{ resourceId: "gold" as ResourceEnum, amount: 1 }];
         });
         expect(result.ok).toBe(false);
-        if (!result.ok) expect(result.errors.join("\n")).toContain("at most one card");
+        if (!result.ok) expect(result.errors.join("\n")).toContain("resourceId must be one of");
+    });
+
+    it("rejects a second card carrying the Puzzle reveal in the base deck", () => {
+        const result = withBaseDeck(mod => {
+            mod.decks!.baseDeck![0].secondaryEffects = [
+                { actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE, name: "Puzzle" },
+            ];
+            // bd-puzzle already carries the Puzzle reveal.
+        });
+        expect(result.ok).toBe(false);
+        if (!result.ok) expect(result.errors.join("\n")).toContain("at most one card may carry the Puzzle reveal");
+    });
+
+    it("rejects a malformed Puzzle requirement (bad symbol key / negative wildcards)", () => {
+        const badSymbol = withBaseDeck(mod => {
+            const puzzle = mod.decks!.baseDeck!.find(c => c.id === "bd-puzzle")!;
+            puzzle.secondaryEffects = [
+                { actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE, name: "Puzzle", params: { symbolCounts: { NOTREAL: 1 } } as never },
+            ];
+        });
+        expect(badSymbol.ok).toBe(false);
+        if (!badSymbol.ok) expect(badSymbol.errors.join("\n")).toContain("is not a valid district symbol");
+
+        const badWildcards = withBaseDeck(mod => {
+            const puzzle = mod.decks!.baseDeck!.find(c => c.id === "bd-puzzle")!;
+            puzzle.secondaryEffects = [
+                { actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE, name: "Puzzle", params: { wildcards: -1 } as never },
+            ];
+        });
+        expect(badWildcards.ok).toBe(false);
+        if (!badWildcards.ok) expect(badWildcards.errors.join("\n")).toContain("wildcards must be an integer");
     });
 
     it("rejects reveal effects on market cards", () => {

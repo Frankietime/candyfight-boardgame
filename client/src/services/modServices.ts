@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ModDefinition } from '@candyfight/shared/mods';
-import { BACKEND_URL } from '../config';
+import { storageRequest, StorageUnavailableError } from './storageRequest';
 
 /**
  * REST client + react-query hooks for the mods API (server /mods routes).
@@ -19,26 +19,7 @@ export interface ModRecord extends ModMetadata {
   payload: ModDefinition;
 }
 
-export class ModsUnavailableError extends Error {
-  constructor() {
-    super('mods storage not configured');
-    this.name = 'ModsUnavailableError';
-  }
-}
-
-const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const response = await fetch(`${BACKEND_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  });
-  if (response.status === 503) throw new ModsUnavailableError();
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error(body.error ?? `mods API error (${response.status})`);
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-};
+const request = <T>(path: string, init?: RequestInit) => storageRequest<T>('mods', path, init);
 
 export const fetchModsList = (): Promise<{ mods: ModMetadata[] }> => request('/mods');
 export const fetchMod = (id: string): Promise<ModRecord> => request(`/mods/${id}`);
@@ -50,12 +31,12 @@ export const useModsList = () => {
     queryKey: MODS_KEY,
     queryFn: fetchModsList,
     retry: (failureCount, error) =>
-      error instanceof ModsUnavailableError ? false : failureCount < 2,
+      error instanceof StorageUnavailableError ? false : failureCount < 2,
   });
   return {
     ...query,
     mods: query.data?.mods ?? [],
-    modsUnavailable: query.error instanceof ModsUnavailableError,
+    modsUnavailable: query.error instanceof StorageUnavailableError,
   };
 };
 

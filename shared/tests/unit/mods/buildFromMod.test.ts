@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
     buildDistrictsFromMod,
+    defaultMarketTierIds,
     DISTRICT_POSITIONS,
     getBaseMod,
     resolveModConfig,
@@ -73,6 +74,43 @@ describe("buildDistrictsFromMod", () => {
         expect(built[2].locations[0].cost.resources).toEqual([{ resourceId: ResourceEnum.Candy, amount: 2 }]);
         expect(built[2].locations[0].reward.resources).toEqual([{ resourceId: ResourceEnum.Loot, amount: 3 }]);
         expect(built[2].id).toBe(DistrictIconsEnum.D3);
+    });
+});
+
+describe("defaultMarketTierIds — round-robin across market locations", () => {
+    it("with a single tier, every market location defaults to it (base mod)", () => {
+        const mod = getBaseMod();
+        const defaults = defaultMarketTierIds(mod);
+        expect(new Set(defaults.values())).toEqual(new Set(["tier1"]));
+        // Base mod has 2 market locations (CONURBA Market, ECO Market).
+        expect(defaults.size).toBe(2);
+    });
+
+    it("with two tiers, the first market location gets tier1 and the second tier2, in board order", () => {
+        const mod = getBaseMod();
+        mod.decks!.marketTiers!.push({ id: "tier2", name: "Tier 2", cards: mod.decks!.marketTiers![0].cards });
+        const defaults = defaultMarketTierIds(mod);
+
+        // CONURBA Market: district 0 (D1), location 1.
+        expect(defaults.get("0:1")).toBe("tier1");
+        // ECO Market: district 1 (D2), location 0.
+        expect(defaults.get("1:0")).toBe("tier2");
+    });
+
+    it("built districts stamp marketTierId per the round-robin default when unset", () => {
+        const mod = getBaseMod();
+        mod.decks!.marketTiers!.push({ id: "tier2", name: "Tier 2", cards: mod.decks!.marketTiers![0].cards });
+        const built = buildDistrictsFromMod(mod);
+        expect(built[0].locations[1].marketTierId).toBe("tier1"); // CONURBA Market
+        expect(built[1].locations[0].marketTierId).toBe("tier2"); // ECO Market
+    });
+
+    it("an explicit marketTierId on a location always wins over the round-robin default", () => {
+        const mod = getBaseMod();
+        mod.decks!.marketTiers!.push({ id: "tier2", name: "Tier 2", cards: mod.decks!.marketTiers![0].cards });
+        mod.districts[0].locations[1].marketTierId = "tier2"; // force CONURBA Market onto tier2
+        const built = buildDistrictsFromMod(mod);
+        expect(built[0].locations[1].marketTierId).toBe("tier2");
     });
 });
 

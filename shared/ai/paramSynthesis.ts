@@ -29,12 +29,18 @@ export const cardValue = (card: Card): number =>
  * Synthesize the `moveParams` needed to place `playedCard` at `location`,
  * or null when the location's input requirements cannot be satisfied
  * (not enough spare cards, empty market, unsupported action type).
+ *
+ * `precomputed` lets a caller that evaluates every hand card against the
+ * same location (e.g. botEnumerate's per-location loop) hoist the
+ * location-only work — the hand sort and the market row — out of the
+ * per-card call instead of redoing it for every card.
  */
 export function synthesizeMoveParams(
     G: GameState,
     player: PlayerGameState,
     location: Location,
-    playedCard: Card
+    playedCard: Card,
+    precomputed?: { sortedHand?: Card[]; marketRow?: Card[] }
 ): WorkerMoveParams | null {
     const result: WorkerMoveParams = {};
 
@@ -49,9 +55,9 @@ export function synthesizeMoveParams(
     if (inputCosts.length === 1) {
         const action = inputCosts[0];
         const count: number = action.params?.selectionNumber ?? 1;
-        const spare = player.hand
-            .filter(c => c.id !== playedCard.id)
-            .sort((a, b) => cardValue(a) - cardValue(b));
+        const sortedHand = precomputed?.sortedHand
+            ?? [...player.hand].sort((a, b) => cardValue(a) - cardValue(b));
+        const spare = sortedHand.filter(c => c.id !== playedCard.id);
         if (spare.length < count) return null;
         const cardIds = spare.slice(0, count).map(c => c.id);
 
@@ -82,7 +88,7 @@ export function synthesizeMoveParams(
         const action = inputRewards[0];
         if (action.actionId !== LocationActionsEnum.BUY_CARD) return null;
 
-        const row = marketRowFor(G, location);
+        const row = precomputed?.marketRow ?? marketRowFor(G, location);
         if (row.length === 0) return null;
         const best = [...row].sort((a, b) => cardValue(b) - cardValue(a))[0];
         result.rewardParams = createParams.buyCard(best.id);

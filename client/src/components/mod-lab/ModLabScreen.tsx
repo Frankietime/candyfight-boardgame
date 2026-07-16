@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getBaseMod, ModDefinition } from '@candyfight/shared/mods';
 import { useAppStore } from '../../store';
 import { useT } from '../../i18n/useT';
@@ -20,7 +20,7 @@ import { ModBoardEditor } from './ModBoardEditor';
  */
 export const ModLabScreen = () => {
   const t = useT();
-  const { setScreen, activeMod, setActiveMod } = useAppStore();
+  const { setScreen, activeMod, setActiveMod, modLabTargetId, setModLabTargetId } = useAppStore();
   const { mods, modsUnavailable, isLoading } = useModsList();
   const createMod = useCreateMod();
   const updateMod = useUpdateMod();
@@ -61,6 +61,19 @@ export const ModLabScreen = () => {
     const record = await fetchMod(mod.id);
     setEditingMod(withRowIdentity(record));
   });
+
+  // Deep link back from the Deck Lab's "← Volver" (when it was reached via
+  // this mod's MAZOS section): open straight into editing this mod again.
+  useEffect(() => {
+    if (!modLabTargetId) return;
+    const id = modLabTargetId;
+    setModLabTargetId(null);
+    run(async () => {
+      const record = await fetchMod(id);
+      setEditingMod(withRowIdentity(record));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modLabTargetId]);
 
   const onDuplicate = (mod: ModMetadata) => run(async () => {
     const record = await fetchMod(mod.id);

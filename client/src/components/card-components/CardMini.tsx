@@ -1,5 +1,5 @@
 import { Card } from "@candyfight/shared/types";
-import { LocationActionsEnum } from "@candyfight/shared/enums";
+import { getCardEffectText } from "@candyfight/shared/services/cardServices";
 import { districtIcons } from "../ui/GameIcon";
 import { cardCanvasSmall } from "../icon-components/constants";
 import { PuzzleRequirement } from "./PuzzleRequirement";
@@ -23,20 +23,7 @@ export interface CardMiniProps {
  * the player detail modal and the Mod Lab.
  */
 export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showBody = true }: CardMiniProps) => {
-    const playText = [
-        ...(card.primaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
-        ...(card.primaryEffects?.map(e => e.name) ?? []),
-    ].join(", ");
-    // The Puzzle prints only its icon combination, never its name.
-    const revealText = [
-        ...(card.secondaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
-        ...(card.secondaryEffects
-            ?.filter(e => e.actionId !== LocationActionsEnum.STRANGE_CANDY_PUZZLE)
-            .map(e => e.name) ?? []),
-    ].join(", ");
-    const hasPuzzle = !!card.secondaryEffects?.some(
-        e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE
-    );
+    const { playText, revealText, hasPuzzle, puzzleRequirement } = getCardEffectText(card);
 
     return (
         <div style={{ width, height, position: "relative", flexShrink: 0 }}>
@@ -71,7 +58,7 @@ export const CardMini = ({ card, width = 105, height = 157, iconSize = 16, showB
                             <div className="card-zone card-zone-secondary">
                                 <div className="reveal-effect">
                                     {revealText}
-                                    {hasPuzzle && <div><PuzzleRequirement /></div>}
+                                    {hasPuzzle && <div><PuzzleRequirement requirement={puzzleRequirement} /></div>}
                                 </div>
                             </div>
                         )}

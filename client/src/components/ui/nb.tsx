@@ -59,6 +59,52 @@ export const sectionTitle: React.CSSProperties = {
   marginBottom: '12px',
 };
 
+/** Small uppercase label above a form field (Mod Lab / Deck Lab dialogs). */
+export const fieldLabel: React.CSSProperties = {
+  fontSize: '11px',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.08em',
+  marginBottom: '6px',
+};
+
+/**
+ * Fixed-backdrop modal shell used by the Mod Lab / Deck Lab dialogs:
+ * dark overlay closes on click, the framed content box stops propagation.
+ */
+export const ModalOverlay = ({
+  onCancel,
+  zIndex,
+  maxWidth,
+  children,
+}: {
+  onCancel: () => void;
+  zIndex: number;
+  /** e.g. 'min(720px, 94vw)' */
+  maxWidth: string;
+  children: React.ReactNode;
+}) => (
+  <div
+    onClick={onCancel}
+    style={{
+      position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex, fontFamily: nb.font,
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        backgroundColor: '#fff', border: nb.border, boxShadow: nb.shadowMd,
+        padding: '24px', width: maxWidth, maxHeight: '90vh', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '16px',
+      }}
+    >
+      {children}
+    </div>
+  </div>
+);
+
 export const BrutalButton = ({
   onClick,
   disabled,

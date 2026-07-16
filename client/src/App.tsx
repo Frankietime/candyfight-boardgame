@@ -3,6 +3,7 @@ import { LobbyComponent } from "./components/lobby-component/LobbyComponent";
 import { BoardComponent } from "./components/board-component/BoardComponent";
 import { TutorialMode } from "./components/tutorial/TutorialMode";
 import { ModLabScreen } from "./components/mod-lab/ModLabScreen";
+import { DeckLabScreen } from "./components/deck-lab/DeckLabScreen";
 import { useAppStore } from "./store";
 import { useMemo } from "react";
 import { Local, SocketIO } from "boardgame.io/multiplayer";
@@ -66,6 +67,10 @@ export default function App() {
 
   if (!isGameInCourse() && screen === "modLab") {
     return <ModLabScreen />;
+  }
+
+  if (!isGameInCourse() && screen === "deckLab") {
+    return <DeckLabScreen />;
   }
 
   return (

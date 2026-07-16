@@ -6,9 +6,9 @@ import { Win95Window } from '../ui/Win95Window';
 import { nb } from '../ui/nb';
 
 /**
- * Left home window: the game menu — RULES / TUTORIAL / MOD LAB, with the
- * ES/EN toggle in the window's title bar. (Cartridge loading lives in the
- * match-config panel inside Open Matches.)
+ * Left home window: the game menu — RULES / TUTORIAL / MOD LAB / DECK LAB,
+ * with the ES/EN toggle in the window's title bar. (Cartridge loading lives
+ * in the match-config panel inside Open Matches.)
  */
 export const GameMenuWindow = () => {
   const t = useT();
@@ -18,6 +18,7 @@ export const GameMenuWindow = () => {
     { icon: '📖', label: t('menu.rules'), onClick: () => window.open('/docs', '_blank', 'noopener,noreferrer') },
     { icon: '🍬', label: t('menu.tutorial'), onClick: () => setTutorialOpen(true) },
     { icon: '🧪', label: t('menu.modLab'), onClick: () => setScreen('modLab') },
+    { icon: '🎴', label: t('menu.deckLab'), onClick: () => setScreen('deckLab') },
   ];
 
   return (

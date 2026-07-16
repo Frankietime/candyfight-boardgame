@@ -8,7 +8,7 @@
 
 import { LocationActionsEnum, ResourceEnum } from "../enums";
 import { isNullOrEmpty } from "../common-methods";
-import { isPuzzleSolved } from "../services/puzzleService";
+import { isPuzzleSolved, PuzzleRequirementSpec } from "../services/puzzleService";
 import { addResources } from "../services/resourceServices";
 import { actionRegistry, ActionDefinition, ActionHandler, ActionContext } from "./action-registry";
 import {
@@ -204,7 +204,7 @@ const trashHandler: ActionHandler<TrashActionParams> = {
 
 const addPresenceTokenDefinition: ActionDefinition<AddPresenceTokenParams> = {
   id: LocationActionsEnum.ADD_PRESENCE_TOKEN,
-  displayName: "Add Presence Token",
+  displayName: "Fight!",
   inputSpec: { inputType: 'none' }, // Uses context location
   tags: ['core', 'presence'],
 };
@@ -315,9 +315,13 @@ const puzzleDefinition: ActionDefinition = {
 
 const puzzleHandler: ActionHandler = {
   execute: (params, state, player) => {
-    // The enabling Puzzle card never counts toward its own challenge.
-    const { excludeCardId, selectedCardIds } =
-      (params as { excludeCardId?: string; selectedCardIds?: string[] } | undefined) ?? {};
+    // The enabling Puzzle card never counts toward its own challenge. The
+    // required icon combination is author-configured on the action's params
+    // (falls back to the classic 4-symbols + 2-wildcards shape).
+    const { excludeCardId, selectedCardIds, symbolCounts, wildcards } =
+      (params as { excludeCardId?: string; selectedCardIds?: string[] } & Partial<PuzzleRequirementSpec> | undefined) ?? {};
+    const requirement: PuzzleRequirementSpec | undefined =
+      symbolCounts !== undefined && wildcards !== undefined ? { symbolCounts, wildcards } : undefined;
     const candidates = player.hand.filter(c => c.id !== excludeCardId);
 
     // Explicit selection (reveal-resolution modal): only the chosen cards may
@@ -327,7 +331,7 @@ const puzzleHandler: ActionHandler = {
       ? candidates.filter(c => selectedCardIds.includes(c.id))
       : candidates;
     const validSelection = !selectedCardIds || selectedCardIds.length === contributing.length;
-    const solved = validSelection && isPuzzleSolved(contributing);
+    const solved = validSelection && isPuzzleSolved(contributing, requirement);
     if (solved) {
       addResources(player, [{ resourceId: ResourceEnum.VictoryPoints, amount: 1 }]);
     }

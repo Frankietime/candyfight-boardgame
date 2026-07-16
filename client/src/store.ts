@@ -4,7 +4,7 @@ import { getRandomPlayerName } from "@candyfight/shared/services/moves/playerSer
 import { DEFAULT_LOCALE, Locale } from "@candyfight/shared/i18n";
 import { ModDefinition, validateModDefinition } from "@candyfight/shared/mods";
 
-export type Screen = "home" | "modLab";
+export type Screen = "home" | "modLab" | "deckLab";
 
 // The loaded cartridge survives a page reload.
 const ACTIVE_MOD_STORAGE_KEY = "candyfight.activeMod";
@@ -37,9 +37,31 @@ type AppState = {
   botNames: string[];
   setBotNames: (names: string[]) => void;
 
-  // Home navigation: home (two windows) or the Mod Lab
+  // Home navigation: home (two windows), the Mod Lab, or the Deck Lab
   screen: Screen;
   setScreen: (screen: Screen) => void;
+
+  // Deep-link into the Deck Lab: when set, DeckLabScreen opens straight into
+  // editing this deck set (e.g. the "Edit Deck Set" shortcut from inside the
+  // Mod Lab's MAZOS section), then clears itself.
+  deckLabTargetId: string | null;
+  setDeckLabTargetId: (id: string | null) => void;
+
+  // Where the Deck Set editor's "Volver" should go: null = the Deck Lab's
+  // own table (default); otherwise the id of the mod to jump back into
+  // (set alongside deckLabTargetId when the trip started from the Mod Lab).
+  deckLabReturnModId: string | null;
+  setDeckLabReturnModId: (id: string | null) => void;
+
+  // Deep-link into the Mod Lab: when set, ModLabScreen opens straight into
+  // editing this mod (mirrors deckLabTargetId), then clears itself.
+  modLabTargetId: string | null;
+  setModLabTargetId: (id: string | null) => void;
+
+  // Which ModBoardEditor tab to land on when returning via modLabTargetId
+  // (e.g. back to MAZOS after editing a deck set) — consumed once on mount.
+  modLabReturnView: "board" | "decks" | null;
+  setModLabReturnView: (view: "board" | "decks" | null) => void;
 
   // Loaded cartridge — null means the built-in Base mod
   activeMod: ModDefinition | null;
@@ -66,6 +88,18 @@ export const useAppStore = create<AppState>((set) => ({
 
   screen: "home",
   setScreen: (screen) => set({ screen }),
+
+  deckLabTargetId: null,
+  setDeckLabTargetId: (deckLabTargetId) => set({ deckLabTargetId }),
+
+  deckLabReturnModId: null,
+  setDeckLabReturnModId: (deckLabReturnModId) => set({ deckLabReturnModId }),
+
+  modLabTargetId: null,
+  setModLabTargetId: (modLabTargetId) => set({ modLabTargetId }),
+
+  modLabReturnView: null,
+  setModLabReturnView: (modLabReturnView) => set({ modLabReturnView }),
 
   activeMod: readStoredActiveMod(),
   setActiveMod: (activeMod) => {

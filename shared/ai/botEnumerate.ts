@@ -18,11 +18,12 @@ import { CharacterEnum } from "../enums";
 import { getPlayersList } from "../services/moves/playerServices";
 import { isWorkerPlacementValid } from "../game-helper";
 import { validatePlacementActions } from "../services/moves/workerPlacementService";
-import { synthesizeMoveParams } from "./paramSynthesis";
+import { synthesizeMoveParams, cardValue } from "./paramSynthesis";
+import { marketRowFor } from "../services/marketServices";
 // Importing the actions barrel auto-registers the core actions, so
 // `requiresInput` reflects the real inputSpecs.
 import { actionRegistry } from "../actions";
-import { revealEffectOf } from "../mods/revealEffects";
+import { hasFightReveal } from "../mods/revealEffects";
 import { eligibleFightDistricts } from "../services/moves/phaseService";
 
 export type BotMove = { move: string; args: any[] };
@@ -100,6 +101,10 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
                 // Depends only on the location — hoisted out of the per-card
                 // loop so it isn't recomputed once per hand card.
                 const needsInput = locationNeedsInput(location);
+                const sortedHand = needsInput
+                    ? [...player.hand].sort((a, b) => cardValue(a) - cardValue(b))
+                    : undefined;
+                const marketRow = needsInput ? marketRowFor(G, location) : undefined;
                 for (const card of player.hand) {
                     if (!isWorkerPlacementValid(player, location, card)) continue;
 
@@ -108,7 +113,7 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
                         continue;
                     }
 
-                    const moveParams = synthesizeMoveParams(G, player, location, card);
+                    const moveParams = synthesizeMoveParams(G, player, location, card, { sortedHand, marketRow });
                     if (!moveParams) continue;
                     if (validatePlacementActions(mgState, player, location, card, moveParams) !== null) continue;
                     moves.push({ move: "placeWorker", args: [d, l, card, moveParams] });
@@ -136,7 +141,7 @@ function enumerateMainPhase(G: GameState, ctx: Ctx): BotMove[] {
         // needs a district choice — presence may only go where the bot has an
         // agent: emit one reveal variant per ELIGIBLE district and let the
         // greedy scorer pick. (Puzzle auto-attempts in the handler.)
-        const fightCard = player.hand.find(c => revealEffectOf(c) === "fight");
+        const fightCard = player.hand.find(hasFightReveal);
         const eligible = fightCard ? eligibleFightDistricts(G, player) : [];
         if (fightCard && eligible.length > 0) {
             eligible.forEach(districtId => {

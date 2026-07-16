@@ -12,8 +12,8 @@ import { CardComponent } from "../card-components/CardComponent";
 import { CardMini } from "../card-components/CardMini";
 import { CharacterEnum } from "@candyfight/shared/enums";
 import { anchors } from "@candyfight/shared/tutorial/types";
-import { revealEffectOf } from "@candyfight/shared/mods/revealEffects";
-import { isPuzzleSolved } from "@candyfight/shared/services/puzzleService";
+import { getPuzzleRequirement, hasAnyReveal, hasFightReveal, hasPuzzleReveal } from "@candyfight/shared/mods/revealEffects";
+import { getPuzzleProgress } from "@candyfight/shared/services/puzzleService";
 import { eligibleFightDistricts, RevealMoveParams } from "@candyfight/shared/services/moves/phaseService";
 import { PuzzleRequirement } from "../card-components/PuzzleRequirement";
 import { claimFlashSlot } from "../ui/flashQueue";
@@ -249,7 +249,7 @@ export const PlayerAreaComponent = memo(({
     // Revealing with reveal-effect cards in hand opens the resolution modal.
     const [revealModalOpen, setRevealModalOpen] = useState(false);
     const onReveal = useCallback(() => {
-        const hasRevealEffects = (player.hand ?? []).some(c => revealEffectOf(c) !== "none");
+        const hasRevealEffects = (player.hand ?? []).some(hasAnyReveal);
         if (hasRevealEffects) {
             setRevealModalOpen(true);
             return;
@@ -1042,8 +1042,9 @@ const RevealResolutionModal = ({ G, player, onConfirm, onCancel }: {
     const t = useT();
     const hand = player.hand ?? [];
     const resourceCards = hand.filter(c => (c.secondaryResources?.length ?? 0) > 0);
-    const fightCard = hand.find(c => revealEffectOf(c) === "fight");
-    const puzzleCard = hand.find(c => revealEffectOf(c) === "puzzle");
+    const fightCard = hand.find(hasFightReveal);
+    const puzzleCard = hand.find(hasPuzzleReveal);
+    const puzzleRequirement = puzzleCard ? getPuzzleRequirement(puzzleCard) : undefined;
     const eligible = useMemo(() => eligibleFightDistricts(G, player), [G, player]);
 
     const [fightDistrict, setFightDistrict] = useState<string | null>(
@@ -1054,7 +1055,10 @@ const RevealResolutionModal = ({ G, player, onConfirm, onCancel }: {
 
     const puzzleCandidates = puzzleCard ? hand.filter(c => c.id !== puzzleCard.id) : [];
     const selectedCards = puzzleCandidates.filter(c => puzzleSelection.has(c.id));
-    const puzzleComplete = puzzleCard ? isPuzzleSolved(selectedCards) : false;
+    // Icon-level progress: crosses out each required symbol + wildcard slot
+    // live as the player selects cards (a multi-symbol card fills BOTH slots).
+    const puzzleProgress = puzzleCard ? getPuzzleProgress(selectedCards, puzzleRequirement) : undefined;
+    const puzzleComplete = puzzleProgress?.solved ?? false;
 
     const needsFightPick = !!fightCard && eligible.length > 0;
     const canConfirm = !needsFightPick || fightDistrict !== null;
@@ -1071,7 +1075,11 @@ const RevealResolutionModal = ({ G, player, onConfirm, onCancel }: {
         if (!canConfirm) return;
         onConfirm({
             ...(fightCard && fightDistrict ? { fightDistricts: { [fightCard.id]: fightDistrict } } : {}),
-            ...(puzzleCard && puzzleComplete
+            // Always send the player's actual (possibly incomplete) selection —
+            // omitting it here would make the engine fall back to its bot-only
+            // "auto-attempt with the whole hand" path, silently solving the
+            // puzzle with cards the player never picked.
+            ...(puzzleCard
                 ? { puzzleSelections: { [puzzleCard.id]: selectedCards.map(c => c.id) } }
                 : {}),
         });
@@ -1158,7 +1166,7 @@ const RevealResolutionModal = ({ G, player, onConfirm, onCancel }: {
                     <div style={sectionStyle}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
                             <div style={sectionTitleStyle}>🧩 Puzzle</div>
-                            <PuzzleRequirement iconSize={16} />
+                            <PuzzleRequirement iconSize={16} requirement={puzzleRequirement} progress={puzzleProgress} />
                         </div>
                         {!puzzleOpen ? (
                             <button

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import _ from 'lodash';
 import mapBg from '../../assets/board/board-background.png';
-import { ModDefinition, ModDistrict, ModLocation, DISTRICT_POSITIONS } from '@candyfight/shared/mods';
+import { ModDefinition, ModDistrict, ModLocation, DISTRICT_POSITIONS, defaultMarketTierIds } from '@candyfight/shared/mods';
 import { DistrictIconsEnum, LocationActionsEnum } from '@candyfight/shared/enums';
+import { DEFAULT_MARKET_TIER } from '@candyfight/shared/constants';
 import { DeckEditor } from './DeckEditor';
+import { DeckSetLoader } from './DeckSetLoader';
 import { District, Location } from '@candyfight/shared/types';
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from '../board-component/hooks/useBoardScale';
 import { locsXPos, locsYPos } from '../board-component/constants';
@@ -12,6 +14,7 @@ import { DistrictIcon } from '../ui/GameIcon';
 import { useT } from '../../i18n/useT';
 import { nb, BrutalButton, inputStyle } from '../ui/nb';
 import { LocationEditorDialog } from './LocationEditorDialog';
+import { useAppStore } from '../../store';
 
 /**
  * The board AS the editor: the mod's districts rendered on the real board
@@ -33,18 +36,32 @@ export const ModBoardEditor = ({
   const { scale, outerRef } = useBoardScale();
   const [draft, setDraft] = useState<ModDefinition>(() => _.cloneDeep(mod));
   const [editing, setEditing] = useState<{ districtIndex: number; locationIndex: number } | null>(null);
-  const [view, setView] = useState<'board' | 'decks'>('board');
+  // Consumes a pending "land on this tab" hint left by the Deck Lab's Volver
+  // (returning from the "✏️ Editar Mazo" trip) — runs once, since this
+  // component remounts fresh per mod (key={mod.id} in ModLabScreen).
+  const [view, setView] = useState<'board' | 'decks'>(() => {
+    const pending = useAppStore.getState().modLabReturnView;
+    if (pending) useAppStore.getState().setModLabReturnView(null);
+    return pending ?? 'board';
+  });
+  // Tier to scroll into view when landing on MAZOS from the location dialog's
+  // "✏️ Editar Mazo" shortcut.
+  const [highlightTierId, setHighlightTierId] = useState<string | null>(null);
+
+  // Round-robin default tier per market location — single source shared with
+  // buildDistrictsFromMod, so what the editor shows matches what plays.
+  const marketDefaults = useMemo(() => defaultMarketTierIds(draft), [draft]);
 
   // Tiers referenced by BUY_CARD locations can't be deleted in the deck view.
   const usedTierIds = useMemo(() => {
     const used = new Set<string>();
-    draft.districts.forEach(d => d.locations.forEach(loc => {
+    draft.districts.forEach((d, districtIndex) => d.locations.forEach((loc, locationIndex) => {
       if (loc.reward.actions?.some(a => a.actionId === LocationActionsEnum.BUY_CARD)) {
-        used.add(loc.marketTierId ?? draft.decks?.marketTiers?.[0]?.id ?? 'tier1');
+        used.add(loc.marketTierId ?? marketDefaults.get(`${districtIndex}:${locationIndex}`) ?? DEFAULT_MARKET_TIER);
       }
     }));
     return used;
-  }, [draft]);
+  }, [draft, marketDefaults]);
 
   // After a successful save the parent hands back the persisted mod — resync
   // the draft so the dirty flag clears (the state initializer only runs once).
@@ -56,25 +73,48 @@ export const ModBoardEditor = ({
 
   const onApplyLocation = (edited: ModLocation) => {
     if (!editing) return;
-    setDraft(current => {
-      const next = _.cloneDeep(current);
-      next.districts[editing.districtIndex].locations[editing.locationIndex] = edited;
-      return next;
-    });
+    setDraft(current => ({
+      ...current,
+      districts: current.districts.map((d, i) =>
+        i === editing.districtIndex
+          ? { ...d, locations: d.locations.map((l, j) => j === editing.locationIndex ? edited : l) }
+          : d
+      ),
+    }));
     setEditing(null);
   };
 
   const onDistrictRename = (districtIndex: number, name: string) => {
-    setDraft(current => {
-      const next = _.cloneDeep(current);
-      next.districts[districtIndex].name = name;
-      return next;
-    });
+    setDraft(current => ({
+      ...current,
+      districts: current.districts.map((d, i) => i === districtIndex ? { ...d, name } : d),
+    }));
   };
 
   const onBackGuarded = () => {
     if (isDirty && !window.confirm(t('modlab.discardUnsaved'))) return;
     onBack();
+  };
+
+  // "✏️ Edit Deck Set" shortcut from the MAZOS view: leaves the mod editor
+  // for the Deck Lab, opened straight into that deck set — same dirty guard
+  // as the back button, since it's an equivalent navigation-away. Remembers
+  // this mod so the Deck Lab's "Volver" can jump straight back into it
+  // (MAZOS tab) instead of landing on the Deck Lab's own table.
+  const onEditDeckSet = (deckSetId: string) => {
+    if (isDirty && !window.confirm(t('modlab.discardUnsaved'))) return;
+    useAppStore.getState().setDeckLabReturnModId(mod.id);
+    useAppStore.getState().setDeckLabTargetId(deckSetId);
+    useAppStore.getState().setScreen('deckLab');
+  };
+
+  // "✏️ Editar Mazo" shortcut from the location dialog's market-tier select:
+  // apply the location's pending edits (so the chosen tier isn't lost), then
+  // jump straight to that tier's card list in the MAZOS view.
+  const onEditTierDeck = (tierId: string, editedLocation: ModLocation) => {
+    onApplyLocation(editedLocation);
+    setHighlightTierId(tierId);
+    setView('decks');
   };
 
   return (
@@ -166,10 +206,18 @@ export const ModBoardEditor = ({
       {/* Deck editor */}
       {view === 'decks' && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
+          <DeckSetLoader
+            currentDecks={draft.decks ?? {}}
+            lastSavedDecks={mod.decks}
+            onLoad={(decks) => setDraft(current => ({ ...current, decks: _.cloneDeep(decks) }))}
+            onEditDeckSet={onEditDeckSet}
+          />
           <DeckEditor
             decks={draft.decks ?? {}}
             usedTierIds={usedTierIds}
-            onChange={(decks) => setDraft(current => ({ ..._.cloneDeep(current), decks }))}
+            highlightTierId={highlightTierId}
+            onHighlightConsumed={() => setHighlightTierId(null)}
+            onChange={(decks) => setDraft(current => ({ ...current, decks }))}
           />
         </div>
       )}
@@ -180,8 +228,10 @@ export const ModBoardEditor = ({
           district={draft.districts[editing.districtIndex]}
           location={draft.districts[editing.districtIndex].locations[editing.locationIndex]}
           marketTiers={draft.decks?.marketTiers ?? []}
+          defaultTierId={marketDefaults.get(`${editing.districtIndex}:${editing.locationIndex}`)}
           onApply={onApplyLocation}
           onCancel={() => setEditing(null)}
+          onEditTierDeck={onEditTierDeck}
         />
       )}
     </div>

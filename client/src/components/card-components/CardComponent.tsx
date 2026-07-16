@@ -1,6 +1,6 @@
 import { memo, useMemo } from "react";
 import { Card } from "@candyfight/shared/types";
-import { LocationActionsEnum } from "@candyfight/shared/enums";
+import { getCardEffectText } from "@candyfight/shared/services/cardServices";
 import { DistrictIconComponent } from "../icon-components/DistrictIconComponent";
 import { PuzzleRequirement } from "./PuzzleRequirement";
 import { AutoFitZone } from "./AutoFitZone";
@@ -38,20 +38,9 @@ export const CardComponent = memo(({
         [card?.districtIds]
     );
 
-    // Memoize primary effects text
-    const primaryEffectsText = useMemo(() =>
-        card?.primaryEffects?.map(e => e.name).join(", "),
-        [card?.primaryEffects]
-    );
-
-    // Memoize secondary effects text. The Puzzle prints only its icon
-    // combination (PuzzleRequirement below), never its name.
-    const secondaryEffectsText = useMemo(() =>
-        card?.secondaryEffects
-            ?.filter(e => e.actionId !== LocationActionsEnum.STRANGE_CANDY_PUZZLE)
-            .map(e => e.name).join(", "),
-        [card?.secondaryEffects]
-    );
+    // Memoize the printed effect text — shared with CardMini so the two
+    // renderers can't drift on what a card's reward text says.
+    const effectText = useMemo(() => card && getCardEffectText(card), [card]);
 
     // Memoize class name computation
     const cardClassName = useMemo(() => {
@@ -89,23 +78,15 @@ export const CardComponent = memo(({
                 </AutoFitZone>
                 {((card.primaryEffects?.length ?? 0) > 0 || (card.primaryResources?.length ?? 0) > 0) && (
                     <AutoFitZone className="card-zone card-zone-primary">
-                        <div className="play-effect">
-                            {[
-                                ...(card.primaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
-                                ...(primaryEffectsText ? [primaryEffectsText] : []),
-                            ].join(", ")}
-                        </div>
+                        <div className="play-effect">{effectText?.playText}</div>
                     </AutoFitZone>
                 )}
                 {((card.secondaryEffects?.length ?? 0) > 0 || (card.secondaryResources?.length ?? 0) > 0) && (
                     <AutoFitZone className="card-zone card-zone-secondary">
                         <div className="reveal-effect">
-                            {[
-                                ...(card.secondaryResources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
-                                ...(secondaryEffectsText ? [secondaryEffectsText] : []),
-                            ].join(", ")}
-                            {card.secondaryEffects?.some(e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE) && (
-                                <div style={{ marginTop: 2 }}><PuzzleRequirement /></div>
+                            {effectText?.revealText}
+                            {effectText?.hasPuzzle && (
+                                <div style={{ marginTop: 2 }}><PuzzleRequirement requirement={effectText.puzzleRequirement} /></div>
                             )}
                         </div>
                     </AutoFitZone>

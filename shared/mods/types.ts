@@ -84,3 +84,17 @@ export interface ModDecks {
 
 // PHASE 3 placeholder — shape to be designed with the signet system.
 export type ModSignet = unknown;
+
+/**
+ * A reusable "deck set" — a mazo base + market tiers, saved independently of
+ * any single mod. A Mod Lab mod's MAZOS section can load one of these to
+ * replace its own decks; the mod still stores its own (possibly since-edited)
+ * copy — loading is a one-time copy, not a live reference.
+ */
+export interface DeckSetDefinition {
+    id: string;
+    name: string;
+    description: string;
+    schemaVersion: number;
+    decks: ModDecks;
+}

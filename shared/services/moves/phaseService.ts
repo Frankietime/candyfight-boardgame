@@ -108,7 +108,7 @@ export const executeRevealEffects = (
                         playerID: player.id,
                         phase: mgState.ctx.phase ?? '',
                         type: 'effect',
-                        message: `${card.name}: +1 Fight fizzles — no agents on the board`,
+                        message: `${card.name}: Fight! fizzles — no agents on the board`,
                         card,
                     });
                     return;

@@ -1,74 +1,32 @@
-import { LocationActionsEnum, ResourceEnum } from "../enums";
+import { LocationActionsEnum } from "../enums";
 import { ModCard } from "./types";
+import { DEFAULT_PUZZLE_REQUIREMENT, PuzzleRequirementSpec } from "../services/puzzleService";
 
 /**
- * Curated reveal (secondary) effects — the ONLY reveal options cards may
- * carry for now. Single source of truth for the base mod content, the mod
- * validator and the Mod Lab card editor:
- *
- * - fight  → +1 presence in the district where the card was played
- * - candy  → +1 candy
- * - puzzle → the played card enables the Puzzle challenge: at reveal, the
- *            REVEALED HAND must hold one card for each of the 4 district
- *            symbols plus 2 more symbol cards ("? ?" wildcards) → +1 VP
- *
- * The schema stays generic (secondaryResources/secondaryEffects) so this
- * catalog can grow later without a migration.
+ * Reveal (secondary) effects — fired from the player's REVEALED HAND.
+ * A card's reveal is a free-form bag of resources/actions (same shape and
+ * same authoring freedom as its Play/primary effects), with one special
+ * case: a card may additionally carry the Puzzle challenge, whose required
+ * icon combination (symbols + wildcards) is author-configurable and stored
+ * as that action's `params`.
  */
-export type RevealEffectId = "fight" | "candy" | "puzzle";
-
-export const REVEAL_EFFECT_IDS: readonly RevealEffectId[] = ["fight", "candy", "puzzle"];
-
 export type RevealSecondary = Pick<ModCard, "secondaryResources" | "secondaryEffects">;
 
-/** Canonical serialized shape for each curated reveal (or none). */
-export const buildRevealSecondary = (id: RevealEffectId | "none"): RevealSecondary => {
-    switch (id) {
-        case "fight":
-            return {
-                secondaryEffects: [
-                    { actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "+1 Fight" },
-                ],
-            };
-        case "candy":
-            return {
-                secondaryResources: [{ resourceId: ResourceEnum.Candy, amount: 1 }],
-            };
-        case "puzzle":
-            return {
-                secondaryEffects: [
-                    { actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE, name: "Puzzle" },
-                ],
-            };
-        case "none":
-            return {};
-    }
-};
+/** Whether a card's reveal payload includes a "Fight!" (ADD_PRESENCE_TOKEN) action. */
+export const hasFightReveal = (card: RevealSecondary): boolean =>
+    !!card.secondaryEffects?.some(e => e.actionId === LocationActionsEnum.ADD_PRESENCE_TOKEN);
 
-/**
- * Classify a card's secondary payload against the curated catalog.
- * Matches on actionIds/resource bags (never on `name`, which is display text).
- * 'invalid' = any secondary content outside the catalog.
- */
-export const revealEffectOf = (card: RevealSecondary): RevealEffectId | "none" | "invalid" => {
-    const resources = card.secondaryResources ?? [];
-    const effects = card.secondaryEffects ?? [];
+/** Whether a card's reveal payload includes the Puzzle challenge. */
+export const hasPuzzleReveal = (card: RevealSecondary): boolean =>
+    !!card.secondaryEffects?.some(e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE);
 
-    if (resources.length === 0 && effects.length === 0) return "none";
+/** Whether a card carries ANY reveal payload at all (resources or effects). */
+export const hasAnyReveal = (card: RevealSecondary): boolean =>
+    (card.secondaryResources?.length ?? 0) > 0 || (card.secondaryEffects?.length ?? 0) > 0;
 
-    if (
-        resources.length === 1 &&
-        resources[0].resourceId === ResourceEnum.Candy &&
-        resources[0].amount === 1 &&
-        effects.length === 0
-    ) {
-        return "candy";
-    }
-
-    if (resources.length === 0 && effects.length === 1) {
-        if (effects[0].actionId === LocationActionsEnum.ADD_PRESENCE_TOKEN) return "fight";
-        if (effects[0].actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE) return "puzzle";
-    }
-
-    return "invalid";
+/** The configured icon/wildcard requirement for a card's Puzzle reveal (if any). */
+export const getPuzzleRequirement = (card: RevealSecondary): PuzzleRequirementSpec | undefined => {
+    const puzzleAction = card.secondaryEffects?.find(e => e.actionId === LocationActionsEnum.STRANGE_CANDY_PUZZLE);
+    if (!puzzleAction) return undefined;
+    return (puzzleAction.params as PuzzleRequirementSpec | undefined) ?? DEFAULT_PUZZLE_REQUIREMENT;
 };

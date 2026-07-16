@@ -12,6 +12,13 @@ describe("resource factories", () => {
         expect(resources.loot(3).amount).toBe(3);
         expect(resources.candy(2).amount).toBe(2);
     });
+
+    it("default victoryPoints/workers to amount 1 and respect an explicit amount", () => {
+        expect(resources.victoryPoints()).toEqual({ resourceId: ResourceEnum.VictoryPoints, amount: 1 });
+        expect(resources.workers()).toEqual({ resourceId: ResourceEnum.Workers, amount: 1 });
+        expect(resources.victoryPoints(2).amount).toBe(2);
+        expect(resources.workers(3).amount).toBe(3);
+    });
 });
 
 describe("action factories", () => {

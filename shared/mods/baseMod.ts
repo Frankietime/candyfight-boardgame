@@ -2,7 +2,7 @@ import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../enums";
 import { DEFAULT_MARKET_TIER } from "../constants";
 import { discardCost, trashCost } from "../services/actions/requirements";
 import { BASE_MOD_ID, MOD_SCHEMA_VERSION, ModCard, ModDefinition, ModLocation } from "./types";
-import { buildRevealSecondary } from "./revealEffects";
+import { DEFAULT_PUZZLE_REQUIREMENT } from "../services/puzzleService";
 
 /** The High Council location shared by every district in the base game. */
 const highCouncil = (): ModLocation => ({
@@ -11,16 +11,20 @@ const highCouncil = (): ModLocation => ({
     reward: {
         actions: [
             { actionId: LocationActionsEnum.ADVANCE_TRACKER, name: "+Tracker" },
-            { actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "FIGHT!" },
+            { actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "Fight!" },
         ],
     },
 });
 
+// No explicit marketTierId: leaving it unset lets the round-robin default
+// (defaultMarketTierIds in buildFromMod.ts) assign tiers automatically —
+// with the base mod's single tier that's always "tier1", and it lets a
+// freshly-added second tier auto-distribute across market locations without
+// the author having to touch every location manually.
 const market = (name: string): ModLocation => ({
     name,
     cost: { actions: [trashCost(2)] },
     reward: { actions: [{ actionId: LocationActionsEnum.BUY_CARD, name: "buy card" }] },
-    marketTierId: DEFAULT_MARKET_TIER,
 });
 
 // ---------------------------------------------------------------------------
@@ -48,20 +52,24 @@ const getBaseDeck = (): ModCard[] => [
         id: "bd-pair-13",
         name: `${DistrictIconsEnum.D1}-${DistrictIconsEnum.D3}`,
         districtIds: [DistrictIconsEnum.D1, DistrictIconsEnum.D3],
-        ...buildRevealSecondary("fight"),
+        secondaryEffects: [{ actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "Fight!" }],
     },
     {
         id: "bd-pair-24",
         name: `${DistrictIconsEnum.D2}-${DistrictIconsEnum.D4}`,
         districtIds: [DistrictIconsEnum.D2, DistrictIconsEnum.D4],
-        ...buildRevealSecondary("candy"),
+        secondaryResources: [{ resourceId: ResourceEnum.Candy, amount: 1 }],
     },
     {
         id: "bd-puzzle",
         name: "Puzzle",
         districtIds: [...ALL_DISTRICTS],
         primaryResources: [{ resourceId: ResourceEnum.Loot, amount: 1 }],
-        ...buildRevealSecondary("puzzle"),
+        secondaryEffects: [{
+            actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE,
+            name: "Puzzle",
+            params: DEFAULT_PUZZLE_REQUIREMENT,
+        }],
     },
 ];
 

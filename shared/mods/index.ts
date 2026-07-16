@@ -8,3 +8,4 @@ export * from "./validateMod";
 export * from "./buildFromMod";
 export * from "./revealEffects";
 export * from "./instantiateCards";
+export * from "./validateDeckSet";

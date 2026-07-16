@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import _ from 'lodash';
-import { ModCard, ModDecks, ModMarketTier, revealEffectOf } from '@candyfight/shared/mods';
+import { hasPuzzleReveal, ModCard, ModDecks, ModMarketTier } from '@candyfight/shared/mods';
 import { DistrictIconsEnum } from '@candyfight/shared/enums';
 import { CardMini } from '../card-components/CardMini';
 import { useT } from '../../i18n/useT';
@@ -23,15 +23,29 @@ const newCard = (): ModCard => ({
 export const DeckEditor = ({
   decks,
   usedTierIds,
+  highlightTierId,
+  onHighlightConsumed,
   onChange,
 }: {
   decks: ModDecks;
   /** Tier ids referenced by board locations — cannot be deleted. */
   usedTierIds: Set<string>;
+  /** Scrolls that tier's section into view and briefly highlights it (e.g.
+   *  landing here via the location dialog's "✏️ Editar Mazo" shortcut). */
+  highlightTierId?: string | null;
+  onHighlightConsumed?: () => void;
   onChange: (decks: ModDecks) => void;
 }) => {
   const t = useT();
   const [editing, setEditing] = useState<{ tierId: string | null; index: number; card: ModCard } | null>(null);
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    if (!highlightTierId) return;
+    sectionRefs.current[highlightTierId]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => onHighlightConsumed?.(), 1800);
+    return () => clearTimeout(timer);
+  }, [highlightTierId, onHighlightConsumed]);
 
   const baseDeck = decks.baseDeck ?? [];
   const tiers = decks.marketTiers ?? [];
@@ -100,6 +114,8 @@ export const DeckEditor = ({
       {tiers.map(tier => (
         <DeckSection
           key={tier.id}
+          sectionRef={(el) => { sectionRefs.current[tier.id] = el; }}
+          highlighted={tier.id === highlightTierId}
           title={`🛒 ${tier.id}`}
           renameValue={tier.name}
           onRename={(name) => renameTier(tier.id, name)}
@@ -119,6 +135,7 @@ export const DeckEditor = ({
 
       {editing && (
         <CardEditorDialog
+          key={`${editing.tierId ?? 'base'}-${editing.index}-${editing.card.id}`}
           card={editing.card}
           allowReveal={editing.tierId === null}
           onApply={onApplyCard}
@@ -129,10 +146,15 @@ export const DeckEditor = ({
   );
 };
 
-const REVEAL_BADGES: Record<string, string> = {
-  fight: '👁 +1 Fight',
-  candy: '👁 +1 Candy',
-  puzzle: '👁 Puzzle',
+/** Short reveal summary for a card row — free-form now, built from whatever
+ *  the card's secondaryResources/secondaryEffects actually carry. */
+const describeReveal = (card: ModCard): string => {
+  if (hasPuzzleReveal(card)) return '👁 Puzzle';
+  const parts = [
+    ...(card.secondaryResources ?? []).map(r => `+${r.amount} ${r.resourceId}`),
+    ...(card.secondaryEffects ?? []).map(e => e.name),
+  ];
+  return parts.length ? `👁 ${parts.join(', ')}` : '';
 };
 
 const DeckSection = ({
@@ -147,6 +169,8 @@ const DeckSection = ({
   onRemove,
   onAdd,
   addLabel,
+  sectionRef,
+  highlighted,
 }: {
   title: string;
   subtitle?: string;
@@ -159,8 +183,18 @@ const DeckSection = ({
   onRemove: (index: number) => void;
   onAdd: () => void;
   addLabel: string;
+  sectionRef?: (el: HTMLDivElement | null) => void;
+  highlighted?: boolean;
 }) => (
-  <div style={{ backgroundColor: '#fff', border: nb.border, boxShadow: nb.shadowMd, padding: '16px' }}>
+  <div
+    ref={sectionRef}
+    style={{
+      backgroundColor: '#fff', border: nb.border, boxShadow: nb.shadowMd, padding: '16px',
+      outline: highlighted ? '3px solid #40e0d0' : 'none',
+      outlineOffset: highlighted ? '2px' : undefined,
+      transition: 'outline-color 0.3s',
+    }}
+  >
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
       <h3 style={{ ...sectionTitle, margin: 0, whiteSpace: 'nowrap' }}>{title}</h3>
       {onRename !== undefined && (
@@ -187,9 +221,12 @@ const DeckSection = ({
 
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
       {cards.map((card, index) => {
-        const reveal = revealEffectOf(card);
         return (
-          <div key={card.id} style={{ border: nb.border, padding: '8px', backgroundColor: '#fafafa', width: 150 }}>
+          <div
+            key={card.id}
+            onClick={() => onEdit(index)}
+            style={{ border: nb.border, padding: '8px', backgroundColor: '#fafafa', width: 150, cursor: 'pointer' }}
+          >
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
               <CardMini card={{ ...card, id: card.id } as never} width={92} height={138} iconSize={13} />
             </div>
@@ -198,13 +235,14 @@ const DeckSection = ({
             </div>
             <div style={{ fontSize: '10px', color: '#666', textAlign: 'center', minHeight: 14 }}>
               {(card.copies ?? 1) > 1 ? `×${card.copies}` : ''}
-              {reveal !== 'none' && reveal !== 'invalid' ? ` ${REVEAL_BADGES[reveal]}` : ''}
+              {describeReveal(card) ? ` ${describeReveal(card)}` : ''}
             </div>
-            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: 6 }}>
-              <BrutalButton onClick={() => onEdit(index)} style={{ backgroundColor: '#000', color: '#fff', padding: '3px 9px', fontSize: '11px' }}>
-                ✏️
-              </BrutalButton>
-              <BrutalButton onClick={() => onRemove(index)} disabled={cards.length <= 1} style={{ backgroundColor: '#fecaca', padding: '3px 9px', fontSize: '11px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+              <BrutalButton
+                onClick={() => onRemove(index)}
+                disabled={cards.length <= 1}
+                style={{ backgroundColor: '#fecaca', padding: '3px 9px', fontSize: '11px' }}
+              >
                 ✕
               </BrutalButton>
             </div>

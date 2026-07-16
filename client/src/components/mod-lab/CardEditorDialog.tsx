@@ -1,25 +1,29 @@
 import { useState } from 'react';
-import { DistrictIconsEnum } from '@candyfight/shared/enums';
+import { DistrictIconsEnum, LocationActionsEnum } from '@candyfight/shared/enums';
 import {
-  buildRevealSecondary,
+  getPuzzleRequirement,
+  hasAnyReveal,
+  hasPuzzleReveal,
   ModCard,
-  REVEAL_EFFECT_IDS,
-  revealEffectOf,
-  RevealEffectId,
 } from '@candyfight/shared/mods';
+import { DEFAULT_PUZZLE_REQUIREMENT } from '@candyfight/shared/services/puzzleService';
 import { CardMini } from '../card-components/CardMini';
+import { PuzzleRequirement } from '../card-components/PuzzleRequirement';
 import { districtIcons } from '../ui/GameIcon';
 import { useT } from '../../i18n/useT';
-import { nb, BrutalButton, inputStyle, sectionTitle } from '../ui/nb';
+import { nb, BrutalButton, inputStyle, sectionTitle, fieldLabel, ModalOverlay } from '../ui/nb';
 import { EffectEntry, EffectListEditor, fromEntries, toEntries } from './EffectListEditor';
 
 const NAME_MAX_LENGTH = 40;
 const COPIES_MAX = 10;
+const PUZZLE_COUNT_MAX = 9;
+
+type RevealMode = 'none' | 'resources' | 'puzzle';
 
 /**
  * Card editor: name, district symbols, Play effects (input-free registry
- * actions + resources) and — for base-deck cards only — the curated Reveal
- * picker (+1 Fight / +1 Candy / Puzzle). Live CardMini preview.
+ * actions + resources) and — for base-deck cards only — Reveal, structured
+ * identically to Play (Ninguno / Resources / Puzzle). Live CardMini preview.
  */
 export const CardEditorDialog = ({
   card,
@@ -41,10 +45,22 @@ export const CardEditorDialog = ({
   const [playEntries, setPlayEntries] = useState<EffectEntry[]>(() =>
     toEntries({ resources: card.primaryResources, actions: card.primaryEffects })
   );
-  const initialReveal = revealEffectOf(card);
-  const [reveal, setReveal] = useState<RevealEffectId | 'none'>(
-    initialReveal === 'invalid' ? 'none' : initialReveal
+
+  const [revealMode, setRevealMode] = useState<RevealMode>(() =>
+    hasPuzzleReveal(card) ? 'puzzle' : hasAnyReveal(card) ? 'resources' : 'none'
   );
+  const [revealEntries, setRevealEntries] = useState<EffectEntry[]>(() =>
+    toEntries({
+      resources: card.secondaryResources,
+      actions: card.secondaryEffects?.filter(e => e.actionId !== LocationActionsEnum.STRANGE_CANDY_PUZZLE),
+    })
+  );
+  const initialPuzzleRequirement = getPuzzleRequirement(card) ?? DEFAULT_PUZZLE_REQUIREMENT;
+  const [puzzleSymbolCounts, setPuzzleSymbolCounts] = useState<Partial<Record<DistrictIconsEnum, number>>>(
+    initialPuzzleRequirement.symbolCounts
+  );
+  const [puzzleWildcards, setPuzzleWildcards] = useState(initialPuzzleRequirement.wildcards);
+
   const [copies, setCopies] = useState(card.copies ?? 1);
 
   const toggleDistrict = (id: DistrictIconsEnum) =>
@@ -52,7 +68,25 @@ export const CardEditorDialog = ({
       current.includes(id) ? current.filter(d => d !== id) : [...current, id]
     );
 
-  const effectiveCopies = reveal !== 'none' ? 1 : copies;
+  const revealSecondary = (): Pick<ModCard, 'secondaryResources' | 'secondaryEffects'> => {
+    if (revealMode === 'resources') {
+      const bag = fromEntries(revealEntries, false);
+      return {
+        ...(bag.resources?.length ? { secondaryResources: bag.resources } : {}),
+        ...(bag.actions?.length ? { secondaryEffects: bag.actions } : {}),
+      };
+    }
+    if (revealMode === 'puzzle') {
+      return {
+        secondaryEffects: [{
+          actionId: LocationActionsEnum.STRANGE_CANDY_PUZZLE,
+          name: 'Puzzle',
+          params: { symbolCounts: puzzleSymbolCounts, wildcards: puzzleWildcards },
+        }],
+      };
+    }
+    return {};
+  };
 
   const edited = (): ModCard => {
     const play = fromEntries(playEntries, false);
@@ -62,37 +96,15 @@ export const CardEditorDialog = ({
       districtIds: [...districtIds],
       ...(play.resources?.length ? { primaryResources: play.resources } : {}),
       ...(play.actions?.length ? { primaryEffects: play.actions } : {}),
-      ...buildRevealSecondary(allowReveal ? reveal : 'none'),
-      ...(effectiveCopies > 1 ? { copies: effectiveCopies } : {}),
+      ...(allowReveal ? revealSecondary() : {}),
+      ...(copies > 1 ? { copies } : {}),
     };
   };
 
   const preview = edited();
 
-  const revealLabel: Record<RevealEffectId | 'none', string> = {
-    none: t('modlab.revealNone'),
-    fight: t('modlab.revealFight'),
-    candy: t('modlab.revealCandy'),
-    puzzle: t('modlab.revealPuzzle'),
-  };
-
   return (
-    <div
-      onClick={onCancel}
-      style={{
-        position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1100, fontFamily: nb.font,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#fff', border: nb.border, boxShadow: nb.shadowMd,
-          padding: '24px', width: 'min(720px, 94vw)', maxHeight: '90vh', overflowY: 'auto',
-          display: 'flex', flexDirection: 'column', gap: '16px',
-        }}
-      >
+    <ModalOverlay onCancel={onCancel} zIndex={1100} maxWidth="min(720px, 94vw)">
         <h2 style={{ ...sectionTitle, fontSize: '13px', margin: 0 }}>🃏 {name || card.name}</h2>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '24px', alignItems: 'start' }}>
@@ -104,7 +116,7 @@ export const CardEditorDialog = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: 0 }}>
             {/* Name */}
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+              <div style={fieldLabel}>
                 {t('modlab.cardName')}
               </div>
               <input value={name} maxLength={NAME_MAX_LENGTH} onChange={(e) => setName(e.target.value)} style={inputStyle} />
@@ -112,7 +124,7 @@ export const CardEditorDialog = ({
 
             {/* District symbols */}
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+              <div style={fieldLabel}>
                 {t('modlab.symbols')}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -142,14 +154,12 @@ export const CardEditorDialog = ({
 
             {/* Copies */}
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+              <div style={fieldLabel}>
                 {t('modlab.copies')}
               </div>
               <input
                 type="number" min={1} max={COPIES_MAX}
-                value={effectiveCopies}
-                disabled={reveal !== 'none'}
-                title={reveal !== 'none' ? t('modlab.revealSingleCopy') : undefined}
+                value={copies}
                 onChange={(e) => setCopies(Math.min(COPIES_MAX, Math.max(1, parseInt(e.target.value) || 1)))}
                 style={{ ...inputStyle, width: '72px', textAlign: 'center' }}
               />
@@ -164,20 +174,62 @@ export const CardEditorDialog = ({
               onChange={setPlayEntries}
             />
 
-            {/* Curated Reveal picker (base deck only) */}
+            {/* Reveal — same structure as Play, plus the Puzzle option */}
             {allowReveal && (
               <div style={{ border: nb.border, padding: '12px', backgroundColor: '#fafafa' }}>
                 <div style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '10px' }}>
                   👁 {t('modlab.reveal')}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {(['none', ...REVEAL_EFFECT_IDS] as (RevealEffectId | 'none')[]).map(id => (
-                    <label key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-                      <input type="radio" name="reveal" checked={reveal === id} onChange={() => setReveal(id)} />
-                      {revealLabel[id]}
+                <div style={{ display: 'flex', gap: '14px', marginBottom: '10px' }}>
+                  {(['none', 'resources', 'puzzle'] as RevealMode[]).map(mode => (
+                    <label key={mode} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                      <input type="radio" name="revealMode" checked={revealMode === mode} onChange={() => setRevealMode(mode)} />
+                      {mode === 'none' ? t('modlab.revealNone') : mode === 'resources' ? t('modlab.revealResources') : t('modlab.revealPuzzle')}
                     </label>
                   ))}
                 </div>
+
+                {revealMode === 'resources' && (
+                  <EffectListEditor
+                    title={`▶ ${t('modlab.revealResources')}`}
+                    isCost={false}
+                    variant="cardPlay"
+                    entries={revealEntries}
+                    onChange={setRevealEntries}
+                  />
+                )}
+
+                {revealMode === 'puzzle' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {Object.values(DistrictIconsEnum).map(symbol => (
+                      <div key={symbol} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img src={districtIcons[symbol]} style={{ width: 20, height: 20 }} />
+                        <input
+                          type="number" min={0} max={PUZZLE_COUNT_MAX}
+                          value={puzzleSymbolCounts[symbol] ?? 0}
+                          onChange={(e) => {
+                            const v = Math.min(PUZZLE_COUNT_MAX, Math.max(0, parseInt(e.target.value) || 0));
+                            setPuzzleSymbolCounts(current => ({ ...current, [symbol]: v }));
+                          }}
+                          style={{ ...inputStyle, width: '64px', textAlign: 'center' }}
+                        />
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '0.95em', width: 20, textAlign: 'center' }}>??</span>
+                      <input
+                        type="number" min={0} max={PUZZLE_COUNT_MAX}
+                        value={puzzleWildcards}
+                        onChange={(e) => setPuzzleWildcards(Math.min(PUZZLE_COUNT_MAX, Math.max(0, parseInt(e.target.value) || 0)))}
+                        style={{ ...inputStyle, width: '64px', textAlign: 'center' }}
+                      />
+                      <span style={{ fontSize: '11px', color: '#777' }}>{t('modlab.puzzleWildcards')}</span>
+                    </div>
+                    <div style={{ padding: '10px', border: nb.border, backgroundColor: '#fff', display: 'flex', justifyContent: 'center' }}>
+                      <PuzzleRequirement iconSize={20} requirement={{ symbolCounts: puzzleSymbolCounts, wildcards: puzzleWildcards }} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -191,7 +243,6 @@ export const CardEditorDialog = ({
             ✔ {t('modlab.apply')}
           </BrutalButton>
         </div>
-      </div>
-    </div>
+    </ModalOverlay>
   );
 };
