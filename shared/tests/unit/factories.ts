@@ -17,6 +17,7 @@ import {
     DEFAULT_GAME_CONFIG,
 } from "../../types";
 import { DistrictIconsEnum, ResourceEnum } from "../../enums";
+import { getBaseMod } from "../../mods/baseMod";
 
 /** Deterministic, dependency-free RNG stand-in: identity shuffle. */
 export const identityRandom = {
@@ -80,6 +81,7 @@ export const makeGameState = (overrides: Partial<GameState> = {}): GameState => 
     players: { "0": makePlayer() },
     districts: [],
     markets: {},
+    characters: getBaseMod().characters!,
     roundEndingCounter: 0,
     gameEndingCounter: 0,
     ranking: [],

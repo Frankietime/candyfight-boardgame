@@ -4,7 +4,7 @@ import { getRandomPlayerName } from "@candyfight/shared/services/moves/playerSer
 import { DEFAULT_LOCALE, Locale } from "@candyfight/shared/i18n";
 import { ModDefinition, validateModDefinition } from "@candyfight/shared/mods";
 
-export type Screen = "home" | "modLab" | "deckLab";
+export type Screen = "home" | "modLab" | "deckLab" | "signetLab";
 
 // The loaded cartridge survives a page reload.
 const ACTIVE_MOD_STORAGE_KEY = "candyfight.activeMod";
@@ -60,8 +60,19 @@ type AppState = {
 
   // Which ModBoardEditor tab to land on when returning via modLabTargetId
   // (e.g. back to MAZOS after editing a deck set) — consumed once on mount.
-  modLabReturnView: "board" | "decks" | null;
-  setModLabReturnView: (view: "board" | "decks" | null) => void;
+  modLabReturnView: "board" | "decks" | "characters" | null;
+  setModLabReturnView: (view: "board" | "decks" | "characters" | null) => void;
+
+  // Deep-link into the Signet Lab: when set, SignetLabScreen opens straight
+  // into editing this signet set (mirrors deckLabTargetId), then clears itself.
+  signetLabTargetId: string | null;
+  setSignetLabTargetId: (id: string | null) => void;
+
+  // Where the Signet Set editor's "Volver" should go: null = the Signet
+  // Lab's own table (default); otherwise the id of the mod to jump back into
+  // (mirrors deckLabReturnModId).
+  signetLabReturnModId: string | null;
+  setSignetLabReturnModId: (id: string | null) => void;
 
   // Loaded cartridge — null means the built-in Base mod
   activeMod: ModDefinition | null;
@@ -100,6 +111,12 @@ export const useAppStore = create<AppState>((set) => ({
 
   modLabReturnView: null,
   setModLabReturnView: (modLabReturnView) => set({ modLabReturnView }),
+
+  signetLabTargetId: null,
+  setSignetLabTargetId: (signetLabTargetId) => set({ signetLabTargetId }),
+
+  signetLabReturnModId: null,
+  setSignetLabReturnModId: (signetLabReturnModId) => set({ signetLabReturnModId }),
 
   activeMod: readStoredActiveMod(),
   setActiveMod: (activeMod) => {

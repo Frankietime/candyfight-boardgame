@@ -9,3 +9,5 @@ export * from "./buildFromMod";
 export * from "./revealEffects";
 export * from "./instantiateCards";
 export * from "./validateDeckSet";
+export * from "./characters";
+export * from "./validateSignetSet";

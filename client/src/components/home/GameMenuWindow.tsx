@@ -19,6 +19,7 @@ export const GameMenuWindow = () => {
     { icon: '🍬', label: t('menu.tutorial'), onClick: () => setTutorialOpen(true) },
     { icon: '🧪', label: t('menu.modLab'), onClick: () => setScreen('modLab') },
     { icon: '🎴', label: t('menu.deckLab'), onClick: () => setScreen('deckLab') },
+    { icon: '🎭', label: t('menu.signetLab'), onClick: () => setScreen('signetLab') },
   ];
 
   return (

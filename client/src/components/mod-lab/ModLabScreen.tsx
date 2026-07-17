@@ -38,8 +38,8 @@ export const ModLabScreen = () => {
     }
   };
 
-  // Legacy (phase-1) mods have no decks — attach the base cartridge's decks
-  // BEFORE the editor sees the mod, so the dirty flag starts clean.
+  // Legacy (phase-1/2) mods have no decks/characters — attach the base
+  // cartridge's BEFORE the editor sees the mod, so the dirty flag starts clean.
   const withRowIdentity = (record: { id: string; name: string; description: string; payload: ModDefinition }): ModDefinition =>
     ({
       ...record.payload,
@@ -47,6 +47,7 @@ export const ModLabScreen = () => {
       name: record.name,
       description: record.description,
       decks: record.payload.decks ?? getBaseMod().decks,
+      characters: record.payload.characters ?? getBaseMod().characters,
     });
 
   const onNewMod = () => run(async () => {

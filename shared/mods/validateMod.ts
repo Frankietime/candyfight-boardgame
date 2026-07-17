@@ -2,6 +2,7 @@ import { DistrictIconsEnum } from "../enums";
 import { MOD_SCHEMA_VERSION, ModDefinition } from "./types";
 import { isRecord, isValidAmount, isValidName, NAME_MAX_LENGTH, validateEffectBag } from "./validateEffects";
 import { collectTierIds, validateDecksPayload } from "./validateDecks";
+import { validateCharactersPayload } from "./validateCharacters";
 
 export type ModValidationResult =
     | { ok: true; mod: ModDefinition }
@@ -39,11 +40,7 @@ export const validateModDefinition = (payload: unknown): ModValidationResult => 
     validateGameConfig(payload.gameConfig, errors);
     validateDistricts(payload.districts, errors, tierIds);
     validateDecksPayload(payload.decks, errors);
-
-    // Phase-3 payloads: accepted but only shape-checked shallowly.
-    if (payload.signets !== undefined && !Array.isArray(payload.signets)) {
-        errors.push("signets must be an array");
-    }
+    validateCharactersPayload(payload.characters, errors);
 
     return errors.length > 0
         ? { ok: false, errors }

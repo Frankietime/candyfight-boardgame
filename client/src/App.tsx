@@ -4,6 +4,7 @@ import { BoardComponent } from "./components/board-component/BoardComponent";
 import { TutorialMode } from "./components/tutorial/TutorialMode";
 import { ModLabScreen } from "./components/mod-lab/ModLabScreen";
 import { DeckLabScreen } from "./components/deck-lab/DeckLabScreen";
+import { SignetLabScreen } from "./components/signet-lab/SignetLabScreen";
 import { useAppStore } from "./store";
 import { useMemo } from "react";
 import { Local, SocketIO } from "boardgame.io/multiplayer";
@@ -71,6 +72,10 @@ export default function App() {
 
   if (!isGameInCourse() && screen === "deckLab") {
     return <DeckLabScreen />;
+  }
+
+  if (!isGameInCourse() && screen === "signetLab") {
+    return <SignetLabScreen />;
   }
 
   return (

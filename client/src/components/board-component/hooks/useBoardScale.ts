@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 /** Base dimensions for the game board */
 export const BOARD_DIMENSIONS = {
@@ -12,8 +12,8 @@ const MIN_SCALE = 0.5;
 export interface UseBoardScaleResult {
   /** Current scale factor */
   scale: number;
-  /** Ref to attach to the outer container element */
-  outerRef: React.RefObject<HTMLDivElement>;
+  /** Callback ref to attach to the outer container element */
+  outerRef: (el: HTMLDivElement | null) => void;
   /** Board base width */
   baseWidth: number;
   /** Board base height */
@@ -23,13 +23,22 @@ export interface UseBoardScaleResult {
 /**
  * Custom hook for responsive board scaling.
  * Scales the board to fit the available viewport (both up and down).
+ *
+ * A callback ref (not a plain useRef + one-shot useLayoutEffect): callers
+ * that conditionally render the container (e.g. the Mod Lab's TABLERO/MAZOS
+ * tabs) unmount and remount the DOM node on every tab switch. A one-shot
+ * effect would only ever observe the FIRST node — once that node detaches,
+ * its clientWidth/clientHeight collapse to 0, freezing `scale` at MIN_SCALE
+ * forever. The callback ref re-runs setup on every attach, so a fresh node
+ * always gets a fresh measurement + ResizeObserver.
  */
 export function useBoardScale(): UseBoardScaleResult {
-  const outerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  useLayoutEffect(() => {
-    const el = outerRef.current;
+  const outerRef = useCallback((el: HTMLDivElement | null) => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
     if (!el) return;
 
     const update = () => {
@@ -45,7 +54,7 @@ export function useBoardScale(): UseBoardScaleResult {
     ro.observe(el);
     window.addEventListener("resize", update);
 
-    return () => {
+    cleanupRef.current = () => {
       ro.disconnect();
       window.removeEventListener("resize", update);
     };
@@ -53,7 +62,7 @@ export function useBoardScale(): UseBoardScaleResult {
 
   return {
     scale,
-    outerRef: outerRef as React.RefObject<HTMLDivElement>,
+    outerRef,
     baseWidth: BOARD_DIMENSIONS.WIDTH,
     baseHeight: BOARD_DIMENSIONS.HEIGHT,
   };

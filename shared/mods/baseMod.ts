@@ -1,7 +1,7 @@
-import { DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../enums";
+import { CharacterEnum, DistrictIconsEnum, LocationActionsEnum, ResourceEnum } from "../enums";
 import { DEFAULT_MARKET_TIER } from "../constants";
 import { discardCost, trashCost } from "../services/actions/requirements";
-import { BASE_MOD_ID, MOD_SCHEMA_VERSION, ModCard, ModDefinition, ModLocation } from "./types";
+import { BASE_MOD_ID, MOD_SCHEMA_VERSION, ModCard, ModCharacter, ModDefinition, ModLocation } from "./types";
 import { DEFAULT_PUZZLE_REQUIREMENT } from "../services/puzzleService";
 
 /** The High Council location shared by every district in the base game. */
@@ -86,6 +86,55 @@ const getTierOneMarketCards = (): ModCard[] =>
             }))
     );
 
+/** The 4 built-in characters — same abilities as the original hardcoded
+ *  characterDefinitions, now expressed as data (an input-free effect bag,
+ *  same shape as a card's play effects) instead of imperative TS code. */
+const getBaseCharacters = (): ModCharacter[] => [
+    {
+        id: CharacterEnum.ChillDudes,
+        name: "Chill Dudes",
+        description: "They take it slow, but always come prepared.",
+        emoji: "😎",
+        color: "#93c5fd",
+        signet: {
+            resources: [{ resourceId: ResourceEnum.Loot, amount: 1 }],
+            actions: [{ actionId: LocationActionsEnum.DRAW, name: "Draw", params: { count: 1 } }],
+        },
+    },
+    {
+        id: CharacterEnum.Kawaiisis,
+        name: "Kawaiisis",
+        description: "Don't let the cute exterior fool you.",
+        emoji: "🐰",
+        color: "#f9a8d4",
+        signet: {
+            resources: [{ resourceId: ResourceEnum.Candy, amount: 2 }],
+            actions: [{ actionId: LocationActionsEnum.ADD_PRESENCE_TOKEN, name: "Fight!" }],
+        },
+    },
+    {
+        id: CharacterEnum.StreetWizards,
+        name: "Street Wizards",
+        description: "They make loot appear from thin air.",
+        emoji: "🧙",
+        color: "#c4b5fd",
+        signet: {
+            resources: [{ resourceId: ResourceEnum.Loot, amount: 3 }],
+        },
+    },
+    {
+        id: CharacterEnum.TechBros,
+        name: "Tech Bros",
+        description: "Always optimizing, always drawing.",
+        emoji: "💻",
+        color: "#86efac",
+        signet: {
+            resources: [{ resourceId: ResourceEnum.Candy, amount: 1 }],
+            actions: [{ actionId: LocationActionsEnum.DRAW, name: "Draw", params: { count: 2 } }],
+        },
+    },
+];
+
 /**
  * The built-in "Base" cartridge: the canonical game content.
  * Single source of truth — getInitialDistrictsState() derives the runtime
@@ -103,6 +152,7 @@ export const getBaseMod = (): ModDefinition => ({
             { id: DEFAULT_MARKET_TIER, name: "Tier 1", cards: getTierOneMarketCards() },
         ],
     },
+    characters: getBaseCharacters(),
     districts: [
         {
             id: DistrictIconsEnum.D1,

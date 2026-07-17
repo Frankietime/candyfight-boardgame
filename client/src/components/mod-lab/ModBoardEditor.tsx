@@ -6,6 +6,8 @@ import { DistrictIconsEnum, LocationActionsEnum } from '@candyfight/shared/enums
 import { DEFAULT_MARKET_TIER } from '@candyfight/shared/constants';
 import { DeckEditor } from './DeckEditor';
 import { DeckSetLoader } from './DeckSetLoader';
+import { CharacterEditor } from './CharacterEditor';
+import { SignetSetLoader } from './SignetSetLoader';
 import { District, Location } from '@candyfight/shared/types';
 import { useBoardScale, getScaleStyle, getBoardContainerStyle } from '../board-component/hooks/useBoardScale';
 import { locsXPos, locsYPos } from '../board-component/constants';
@@ -39,7 +41,7 @@ export const ModBoardEditor = ({
   // Consumes a pending "land on this tab" hint left by the Deck Lab's Volver
   // (returning from the "✏️ Editar Mazo" trip) — runs once, since this
   // component remounts fresh per mod (key={mod.id} in ModLabScreen).
-  const [view, setView] = useState<'board' | 'decks'>(() => {
+  const [view, setView] = useState<'board' | 'decks' | 'characters'>(() => {
     const pending = useAppStore.getState().modLabReturnView;
     if (pending) useAppStore.getState().setModLabReturnView(null);
     return pending ?? 'board';
@@ -108,6 +110,14 @@ export const ModBoardEditor = ({
     useAppStore.getState().setScreen('deckLab');
   };
 
+  // "✏️ Edit Signet Set" shortcut from the PERSONAJES view — mirrors onEditDeckSet.
+  const onEditSignetSet = (signetSetId: string) => {
+    if (isDirty && !window.confirm(t('modlab.discardUnsaved'))) return;
+    useAppStore.getState().setSignetLabReturnModId(mod.id);
+    useAppStore.getState().setSignetLabTargetId(signetSetId);
+    useAppStore.getState().setScreen('signetLab');
+  };
+
   // "✏️ Editar Mazo" shortcut from the location dialog's market-tier select:
   // apply the location's pending edits (so the chosen tier isn't lost), then
   // jump straight to that tier's card list in the MAZOS view.
@@ -144,9 +154,9 @@ export const ModBoardEditor = ({
           placeholder={t('modlab.description')}
         />
 
-        {/* View tabs: board | decks */}
+        {/* View tabs: board | decks | characters */}
         <div style={{ display: 'inline-flex', border: nb.border }}>
-          {([['board', t('modlab.viewBoard')], ['decks', t('modlab.viewDecks')]] as const).map(([id, label], i) => (
+          {([['board', t('modlab.viewBoard')], ['decks', t('modlab.viewDecks')], ['characters', t('modlab.viewCharacters')]] as const).map(([id, label], i) => (
             <button
               key={id}
               onClick={() => setView(id)}
@@ -218,6 +228,22 @@ export const ModBoardEditor = ({
             highlightTierId={highlightTierId}
             onHighlightConsumed={() => setHighlightTierId(null)}
             onChange={(decks) => setDraft(current => ({ ...current, decks }))}
+          />
+        </div>
+      )}
+
+      {/* Character editor */}
+      {view === 'characters' && (
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          <SignetSetLoader
+            currentCharacters={draft.characters ?? []}
+            lastSavedCharacters={mod.characters}
+            onLoad={(characters) => setDraft(current => ({ ...current, characters: _.cloneDeep(characters) }))}
+            onEditSignetSet={onEditSignetSet}
+          />
+          <CharacterEditor
+            characters={draft.characters ?? []}
+            onChange={(characters) => setDraft(current => ({ ...current, characters }))}
           />
         </div>
       )}

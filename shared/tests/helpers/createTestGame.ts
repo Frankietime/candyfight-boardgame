@@ -14,6 +14,7 @@ import { getSignetCard, getTierOneCards } from '../../services/cardServices';
 import { DistrictIconsEnum, ResourceEnum } from '../../enums';
 import { DEFAULT_MARKET_TIER, INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from '../../constants';
 import { DEFAULT_GAME_CONFIG } from '../../types';
+import { getBaseMod } from '../../mods/baseMod';
 
 // ─── Exported card constants used in test assertions ───────────────────────
 
@@ -90,6 +91,7 @@ export const createTestGame = (): GameInterface<GameState> => ({
         ),
         districts: getInitialDistrictsState(),
         markets: { [DEFAULT_MARKET_TIER]: [] },
+        characters: getBaseMod().characters!,
         roundEndingCounter: 0,
         gameEndingCounter: 0,
         ranking: [],

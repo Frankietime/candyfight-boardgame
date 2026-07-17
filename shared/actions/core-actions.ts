@@ -22,7 +22,7 @@ import {
 import { MIN_COLLECTION_SIZE } from "../constants";
 import { marketPileFor, marketRowFor } from "../services/marketServices";
 import { Card, MetaGameState, PlayerGameState } from "../types";
-import { characterDefinitions } from "../characters/character-definitions";
+import { executeCharacterSignet } from "../services/signetService";
 import { appendLog } from "../services/logService";
 
 // ============================================================================
@@ -400,9 +400,7 @@ export function registerCoreActions(): void {
     },
     {
       execute: (params, state, player, context) => {
-        if (!player.characterId) return;
-        const character = characterDefinitions[player.characterId];
-        character?.executeSignetAbility(state, player, context);
+        executeCharacterSignet(state, player, context);
       }
     }
   );

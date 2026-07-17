@@ -20,7 +20,8 @@ import { isWorkerPlacementValid } from "../game-helper";
 import { placeWorker, WorkerMoveParams } from "../services/moves/workerPlacementService";
 import { draw as drawService, selectCard as selectCardService } from "../services/moves/moves";
 import { executeRevealEffects, resolveCombat } from "../services/moves/phaseService";
-import { stampSignetAbility } from "../characters/character-definitions";
+import { stampSignetAbility } from "../services/signetService";
+import { getBaseMod } from "../mods/baseMod";
 import { appendLog } from "../services/logService";
 import { createDeterministicRandom, DeterministicRandom } from "./deterministicRandom";
 import { TutorMoveResult } from "./types";
@@ -73,8 +74,10 @@ export const buildTutorState = (seed: TutorStateSeed): GameState => {
             hasRevealed: false,
         };
         // Tutorial seats preset their character (no selectCharacter move), so
-        // print the signet ability onto their Signet cards here.
-        stampSignetAbility(players[p.id]);
+        // print the signet ability onto their Signet cards here. Always the
+        // BASE cartridge's roster — the tutorial is scripted content, never
+        // mod-driven.
+        stampSignetAbility(getBaseMod().characters!, players[p.id]);
     });
 
     const districts = getInitialDistrictsState();
@@ -87,6 +90,7 @@ export const buildTutorState = (seed: TutorStateSeed): GameState => {
         players,
         districts,
         markets: { [DEFAULT_MARKET_TIER]: seed.cardMarket ?? [] },
+        characters: getBaseMod().characters!,
         roundEndingCounter: 0,
         gameEndingCounter: 0,
         ranking: [],

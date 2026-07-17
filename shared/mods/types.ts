@@ -29,8 +29,9 @@ export interface ModDefinition {
     districts: ModDistrict[];
     /** PHASE 2 — deck building. Schema reserved; ignored by the phase-1 loader. */
     decks?: ModDecks;
-    /** PHASE 3 — character signets. Schema reserved. */
-    signets?: ModSignet[];
+    /** PHASE 3 — character roster. Per-mod override; falls back to the base
+     *  roster (getBaseMod().characters) when absent, same pattern as decks. */
+    characters?: ModCharacter[];
 }
 
 export interface ModDistrict {
@@ -82,8 +83,29 @@ export interface ModDecks {
     marketTiers?: ModMarketTier[];
 }
 
-// PHASE 3 placeholder — shape to be designed with the signet system.
-export type ModSignet = unknown;
+// ---------------------------------------------------------------------------
+// PHASE 3 — character roster
+// ---------------------------------------------------------------------------
+
+/** A character's Signet ability: an input-free effect bag, same shape as a
+ *  card's primaryResources/primaryEffects — executed blindly when the
+ *  Signet card is played. */
+export interface ModCharacterSignet {
+    resources?: ResourceBag[];
+    actions?: RewardAction[];
+}
+
+/** A playable character. No custom art yet — emoji + color stand in for a
+ *  portrait until that's built. */
+export interface ModCharacter {
+    id: string;
+    name: string;
+    description: string;
+    emoji: string;
+    /** Seat/accent tint (CSS color). */
+    color: string;
+    signet: ModCharacterSignet;
+}
 
 /**
  * A reusable "deck set" — a mazo base + market tiers, saved independently of
@@ -97,4 +119,18 @@ export interface DeckSetDefinition {
     description: string;
     schemaVersion: number;
     decks: ModDecks;
+}
+
+/**
+ * A reusable "signet set" — a character roster (name/emoji/color/signet),
+ * saved independently of any single mod. Mirrors DeckSetDefinition exactly:
+ * a Mod Lab mod's PERSONAJES section can load one to replace its roster
+ * wholesale; loading is a one-time copy, not a live reference.
+ */
+export interface SignetSetDefinition {
+    id: string;
+    name: string;
+    description: string;
+    schemaVersion: number;
+    characters: ModCharacter[];
 }

@@ -18,6 +18,7 @@ import { Game } from "../Game";
 import { getInitialDistrictsState } from "../services/locationServices";
 import { DEFAULT_MARKET_TIER, INITIAL_NUMBER_OF_WORKERS, NO_CARD_SELECTED } from "../constants";
 import { DEFAULT_GAME_CONFIG, GameState, Card } from "../types";
+import { getBaseMod } from "../mods/baseMod";
 
 const card = (id: string): Card => ({ id, name: id, districtIds: ["LOC1"] });
 
@@ -78,6 +79,7 @@ describe("maintenancePhase with a short-decked player", () => {
                 },
                 districts: getInitialDistrictsState(),
                 markets: { [DEFAULT_MARKET_TIER]: [] },
+                characters: getBaseMod().characters!,
                 roundEndingCounter: 0,
                 gameEndingCounter: 0,
                 ranking: [],

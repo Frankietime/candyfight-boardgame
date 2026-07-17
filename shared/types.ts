@@ -1,5 +1,6 @@
 import { Ctx, DefaultPluginAPIs, PlayerID } from "boardgame.io";
 import { CharacterEnum, DistrictIconsEnum, LocationActionsEnum, RequirementType, ResourceEnum } from "./enums";
+import { ModCharacter } from "./mods/types";
 
 export type MetaGameState = {
     G: GameState;
@@ -43,6 +44,8 @@ export interface GameState {
   /** One shuffled card pile per market tier; each market location sells from
    *  its own tier's row (see marketServices). */
   markets: Record<string, Card[]>;
+  /** The match's character roster (mod-resolved at setup, per resolveCharacters). */
+  characters: ModCharacter[];
   roundEndingCounter: number;
   gameEndingCounter: number;
   /** Seat that takes the first turn of the current round's mainPhase (rotates

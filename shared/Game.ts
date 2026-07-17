@@ -11,7 +11,7 @@ import {
     resetEndPhaseTriggers
 } from "./game-helper";
 import { getInitialDistrictsState } from "./services/locationServices";
-import { buildDistrictsFromMod, buildMarketsFromMod, resolveModConfig, validateModDefinition } from "./mods";
+import { buildDistrictsFromMod, buildMarketsFromMod, resolveCharacters, resolveModConfig, validateModDefinition } from "./mods";
 import { draw, selectCard } from "./services/moves/moves";
 import { placeWorker, validatePlacementActions } from "./services/moves/workerPlacementService";
 import {
@@ -28,7 +28,7 @@ import { playerView } from "./services/playerViewService";
 import { getCurrentLocation, getCurrentPlayer } from "./services/moves/helper";
 import { getPlayersList } from "./services/moves/playerServices";
 import { appendLog } from "./services/logService";
-import { stampSignetAbility } from "./characters/character-definitions";
+import { stampSignetAbility } from "./services/signetService";
 import { enumerate } from "./ai/botEnumerate";
 
 export const Game: GameInterface<GameState> = {
@@ -57,6 +57,7 @@ export const Game: GameInterface<GameState> = {
                     ([tierId, pile]) => [tierId, plugins.random.Shuffle(pile)]
                 )
             ),
+            characters: resolveCharacters(mod),
             roundEndingCounter: 0,
             gameEndingCounter: 0,
             ranking: [],
@@ -104,7 +105,7 @@ export const Game: GameInterface<GameState> = {
                         if (taken.includes(characterId)) return INVALID_MOVE;
                         player.characterId = characterId;
                         // Print the character's signet ability onto the Signet card.
-                        stampSignetAbility(player);
+                        stampSignetAbility(mgState.G.characters, player);
                         appendLog(mgState.G, {
                             playerID: actingPlayerID,
                             phase: mgState.ctx.phase ?? '',

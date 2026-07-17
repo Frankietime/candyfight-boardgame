@@ -8,8 +8,17 @@ import { describe, it, expect } from "vitest";
 import { Client } from "boardgame.io/client";
 import { createTestGame } from "./helpers/createTestGame";
 import { CharacterEnum, LocationActionsEnum } from "../enums";
-import { characterDefinitions } from "../characters/character-definitions";
+import { getBaseMod } from "../mods/baseMod";
 import type { Card } from "../types";
+
+const signetAbilityText = (characterId: CharacterEnum): string | undefined => {
+    const character = getBaseMod().characters!.find(c => c.id === characterId);
+    if (!character) return undefined;
+    return [
+        ...(character.signet.resources?.map(r => `+${r.amount} ${r.resourceId}`) ?? []),
+        ...(character.signet.actions?.map(a => a.name) ?? []),
+    ].join(", ");
+};
 
 const signetEffectName = (cards: Card[]): string | undefined =>
     cards
@@ -36,11 +45,7 @@ describe("Signet card shows the owner's character ability", () => {
             ...G.players[id].deck, ...G.players[id].hand, ...G.players[id].discardPile,
         ];
 
-        expect(signetEffectName(collection("0"))).toBe(
-            characterDefinitions[CharacterEnum.Kawaiisis].signetAbilityDescription
-        );
-        expect(signetEffectName(collection("1"))).toBe(
-            characterDefinitions[CharacterEnum.TechBros].signetAbilityDescription
-        );
+        expect(signetEffectName(collection("0"))).toBe(signetAbilityText(CharacterEnum.Kawaiisis));
+        expect(signetEffectName(collection("1"))).toBe(signetAbilityText(CharacterEnum.TechBros));
     });
 });
